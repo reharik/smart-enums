@@ -1,57 +1,66 @@
-import { enumFromArr } from './enumFromArr';
-import { enumFromObj, ExpandedSource } from './enumFromObj';
+import { capitalCase, constantCase } from 'case-anything';
+import { addExtensionMethods } from './extensionMethods';
 import {
   BaseEnum,
-  EnumFromArr,
-  EnumFromArrProps,
-  EnumFromObj,
-  EnumFromObjProps,
+  EnumerationProps,
+  EnumItem,
+  ExpandedSource,
+  NormalizedInputType,
+  PropertyAutoFormatter,
 } from './types';
 
 function enumeration<
-  TSource extends readonly string[],
-  TEnumItemExtension,
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  TExtraExtensionMethods = {},
+  TInput extends readonly string[] | { [k: string]: BaseEnum },
+  TEnumItemExtension = Record<string, never>,
+  TExtraExtensionMethods = Record<string, never>,
 >({
   input,
   extraExtensionMethods,
-  transform,
-  propertyAutoFormatters,
-}: EnumFromArrProps<
-  TSource,
-  TEnumItemExtension,
-  TExtraExtensionMethods
->): EnumFromArr<TSource, TEnumItemExtension, TExtraExtensionMethods>;
+  propertyAutoFormatters = [],
+}: EnumerationProps<TInput, TEnumItemExtension, TExtraExtensionMethods>) {
+  
+  // Convert array to object format with proper typing
+  type NormalizedInput = NormalizedInputType<TInput>;
 
-function enumeration<
-  TSource extends { [k: string]: BaseEnum & TEnumItemExtension },
-  TEnumItemExtension,
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  TExtraExtensionMethods = {},
->({
-  input,
-  extraExtensionMethods,
-  transform,
-  propertyAutoFormatters,
-}: EnumFromObjProps<
-  TSource,
-  TEnumItemExtension,
-  TExtraExtensionMethods
->): EnumFromObj<
-  ExpandedSource<TSource>,
-  TEnumItemExtension,
-  TExtraExtensionMethods
->;
+  const normalizedInput: NormalizedInput = (
+    Array.isArray(input)
+      ? input.reduce((acc, k) => ({ ...acc, [k]: {} }), {})
+      : input
+  ) as NormalizedInput;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function enumeration(arg: any) {
-  if (Array.isArray(arg.input)) {
-    return enumFromArr(arg);
-  }
-  if (typeof arg.input === 'object') {
-    return enumFromObj(arg);
-  }
+  // Default formatters
+  const formattersWithDefaults = [
+    { key: 'value', format: constantCase },
+    { key: 'display', format: capitalCase },
+    ...propertyAutoFormatters,
+  ];
+
+  const formatProperties = (k: string, formatters: PropertyAutoFormatter[]) =>
+    formatters.reduce((acc: Record<string, string>, formatter) => {
+      acc[formatter.key as keyof typeof acc] = formatter.format(k);
+      return acc;
+    }, {});
+
+  const rawEnum = Object.fromEntries(
+    Object.entries(normalizedInput).map(([k, v], i) => [
+      k,
+      {
+        index: i,
+        key: k,
+        ...formatProperties(k, formattersWithDefaults),
+        ...v, // Custom props from original object (or empty {} from converted array)
+      },
+    ]),
+  ) as ExpandedSource<NormalizedInput>;
+
+  return {
+    ...rawEnum,
+    // this is safe because we are certain that the rawEnum has the base properties as we have added them
+    ...addExtensionMethods(
+      Object.values(rawEnum) as EnumItem<NormalizedInput, TEnumItemExtension>[],
+      extraExtensionMethods,
+    ),
+  };
 }
 
 export { enumeration };

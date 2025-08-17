@@ -4,7 +4,7 @@ export const notEmpty = <X>(value: X | null | undefined): value is X => {
 };
 
 export type BaseEnum = {
-  value: string;
+  value?: string;
   display?: string;
   index?: number;
   deprecated?: boolean;
@@ -13,8 +13,8 @@ export type BaseEnum = {
 export type Source<T> = T extends { [k: string]: unknown }
   ? keyof T
   : T extends readonly string[]
-  ? T[number]
-  : never;
+    ? T[number]
+    : never;
 
 export type Enumeration<ENUM_OF, INPUT_TYPE> = EnumItem<INPUT_TYPE> &
   Omit<
@@ -35,55 +35,21 @@ export type EnumItem<
   deprecated?: boolean;
 } & TEnumItemExtension;
 
-export type EnumFromObj<
-  TSource extends { [k: string]: unknown },
-  TEnumItemExtension,
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  TExtraExtensionMethods = {},
+export type EnumerationProps<
+  TInput extends readonly string[] | { [k: string]: Partial<BaseEnum> },
+  TEnumItemExtension = Record<string, never>,
+  TExtraExtensionMethods = Record<string, never>,
 > = {
-  [K in Source<TSource>]: EnumItem<TSource, TEnumItemExtension, K>;
-} & ExtensionMethods<TSource, TEnumItemExtension> &
-  TExtraExtensionMethods;
-
-export type EnumFromArr<
-  TSource extends readonly string[],
-  TEnumItemExtension,
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  TExtraExtensionMethods = {},
-> = {
-  [K in Source<TSource>]: EnumItem<TSource, TEnumItemExtension, K>;
-} & ExtensionMethods<TSource, TEnumItemExtension> &
-  TExtraExtensionMethods;
+  input: TInput;
+  extraExtensionMethods?: (
+    enumItems: EnumItem<NormalizedInputType<TInput>, TEnumItemExtension>[],
+  ) => TExtraExtensionMethods;
+  propertyAutoFormatters?: PropertyAutoFormatter[];
+};
 
 export type PropertyAutoFormatter = {
   key: string;
   format: (k: string) => string;
-};
-
-export type EnumFromObjProps<
-  TSource extends { [k: string]: unknown },
-  TEnumItemExtension,
-  TExtraExtensionMethods,
-> = {
-  input: TSource;
-  extraExtensionMethods?: (
-    enumItems: EnumItem<TSource, TEnumItemExtension>[],
-  ) => TExtraExtensionMethods;
-  transform?: (v: Source<TSource>) => EnumItem<TSource, TEnumItemExtension>;
-  propertyAutoFormatters?: PropertyAutoFormatter[];
-};
-
-export type EnumFromArrProps<
-  TSource extends readonly string[],
-  TEnumItemExtension,
-  TExtraExtensionMethods,
-> = {
-  input: TSource;
-  extraExtensionMethods?: (
-    enumItems: EnumItem<TSource, TEnumItemExtension>[],
-  ) => TExtraExtensionMethods;
-  transform?: (v: Source<TSource>) => EnumItem<TSource, TEnumItemExtension>;
-  propertyAutoFormatters?: PropertyAutoFormatter[];
 };
 
 export interface EnumFilterOptions {
@@ -149,3 +115,17 @@ export type ExtensionMethods<T, TEnumItemExtension> = {
 export type ExtendedInput<T, X extends object> = {
   [k in keyof T]: BaseEnum & X;
 };
+
+export type ExpandedSource<T extends { [k: string]: unknown }> = {
+  [K in keyof T]: EnumItem<T>;
+};
+
+export type ArrayToObjectType<T extends readonly string[]> = {
+  [K in T[number]]: Record<string, never>;
+};
+
+export type NormalizedInputType<T> = T extends readonly string[]
+  ? ArrayToObjectType<T>
+  : T extends { [k: string]: Partial<BaseEnum> }
+    ? T
+    : never;
