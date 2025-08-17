@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "lib": [
+      "esnext"
+    ],
+    "strict": true,
+    "skipLibCheck": true,
+    "moduleResolution": "nodenext",
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "inlineSourceMap": true,
+    "target": "es6",
+    "module": "nodenext",
+    "outDir": "dist",
+    "baseUrl": ".",
+    "rootDir": ".",
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "declaration": true,
+    "declarationMap": true
+  },
+  "include": ["./**/*"]
+}

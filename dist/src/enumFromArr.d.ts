@@ -1,0 +1,3 @@
+import { EnumFromArr, EnumFromArrProps } from './types';
+export declare const enumFromArr: <TSource extends readonly string[], TEnumItemExtension, TExtraExtensionMethods = {}>({ input, extraExtensionMethods, propertyAutoFormatters, }: EnumFromArrProps<TSource, TEnumItemExtension, TExtraExtensionMethods>) => EnumFromArr<TSource, TEnumItemExtension, TExtraExtensionMethods>;
+//# sourceMappingURL=enumFromArr.d.ts.map

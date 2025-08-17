@@ -1,0 +1,112 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.addExtensionMethods = void 0;
+const types_1 = require("./types");
+const addExtensionMethods = (enumItems, extraExtensionMethods) => {
+    const extensionMethods = buildExtensionMethods(enumItems);
+    let extra = {};
+    if (extraExtensionMethods) {
+        extra = extraExtensionMethods(enumItems);
+    }
+    return Object.assign(Object.assign({}, extensionMethods), extra);
+};
+exports.addExtensionMethods = addExtensionMethods;
+const buildExtensionMethods = (rawEnum) => {
+    return {
+        fromValue: (target) => {
+            const item = Object.values(rawEnum).find((value) => value.value === target);
+            if (!item) {
+                throw new Error(`No enum value found for '${target}'`);
+            }
+            return item;
+        },
+        tryFromValue: (target) => {
+            if (!target) {
+                return undefined;
+            }
+            return Object.values(rawEnum).find((value) => value.value === target);
+        },
+        fromKey: (target) => {
+            const item = Object.values(rawEnum).find((value) => value.key === target);
+            if (!item) {
+                throw new Error(`No enum key found for '${target}'`);
+            }
+            return item;
+        },
+        tryFromKey: (target) => {
+            if (!target) {
+                return undefined;
+            }
+            return Object.values(rawEnum).find((value) => value.key === target);
+        },
+        tryFromCustomField: (field, target, filter) => {
+            if (!target) {
+                return undefined;
+            }
+            return Object.values(rawEnum)
+                .filter(filter || (() => true))
+                .find((value) => value[field] === target);
+        },
+        fromDisplay: (target) => {
+            const item = Object.values(rawEnum).find((value) => value.display === target);
+            if (!item) {
+                throw new Error(`No enum display found for '${target}'`);
+            }
+            return item;
+        },
+        tryFromDisplay: (target) => {
+            if (!target) {
+                return undefined;
+            }
+            return Object.values(rawEnum).find((value) => value.display === target);
+        },
+        toCustomFieldValues: (field, filter, filterOptions) => {
+            return Object.values(rawEnum)
+                .filter(x => (filter ? filter(x) : true) &&
+                ((filterOptions === null || filterOptions === void 0 ? void 0 : filterOptions.showEmpty)
+                    ? true
+                    : (0, types_1.notEmpty)(x[field])) &&
+                ((filterOptions === null || filterOptions === void 0 ? void 0 : filterOptions.showDeprecated) ? true : !x.deprecated))
+                .map(x => x[field]);
+        },
+        toOptions: (filter, filterOptions) => {
+            return [
+                ...(rawEnum || []),
+            ]
+                .sort((a, b) => ((a === null || a === void 0 ? void 0 : a.index) && (b === null || b === void 0 ? void 0 : b.index) ? ((a === null || a === void 0 ? void 0 : a.index) || 0) - ((b === null || b === void 0 ? void 0 : b.index) || 0) : 0))
+                .filter(x => (filter ? filter(x) : true) &&
+                ((filterOptions === null || filterOptions === void 0 ? void 0 : filterOptions.showEmpty) ? true : (0, types_1.notEmpty)(x)) &&
+                ((filterOptions === null || filterOptions === void 0 ? void 0 : filterOptions.showDeprecated) ? true : !x.deprecated))
+                .map(item => (Object.assign({ label: item.display || item.key, value: item.value }, (item.iconText ? { iconText: item.iconText } : {}))));
+        },
+        toValues: (filter, filterOptions) => Object.values(rawEnum)
+            .filter(x => (filter ? filter(x) : true) &&
+            ((filterOptions === null || filterOptions === void 0 ? void 0 : filterOptions.showEmpty) ? true : (0, types_1.notEmpty)(x)) &&
+            ((filterOptions === null || filterOptions === void 0 ? void 0 : filterOptions.showDeprecated) ? true : !x.deprecated))
+            .map((item) => item.value),
+        toKeys: (filter, filterOptions) => Object.values(rawEnum)
+            .filter(x => (filter ? filter(x) : true) &&
+            ((filterOptions === null || filterOptions === void 0 ? void 0 : filterOptions.showEmpty) ? true : (0, types_1.notEmpty)(x)) &&
+            ((filterOptions === null || filterOptions === void 0 ? void 0 : filterOptions.showDeprecated) ? true : !x.deprecated))
+            .map((item) => item.key),
+        toDisplays: (filter, filterOptions) => Object.values(rawEnum)
+            .filter(x => (filter ? filter(x) : true) &&
+            ((filterOptions === null || filterOptions === void 0 ? void 0 : filterOptions.showEmpty) ? true : (0, types_1.notEmpty)(x)) &&
+            ((filterOptions === null || filterOptions === void 0 ? void 0 : filterOptions.showDeprecated) ? true : !x.deprecated))
+            .map((item) => item.display),
+        toEnumItems: (filter, filterOptions) => Object.values(rawEnum).filter(x => (filter ? filter(x) : true) &&
+            ((filterOptions === null || filterOptions === void 0 ? void 0 : filterOptions.showEmpty) ? true : (0, types_1.notEmpty)(x)) &&
+            ((filterOptions === null || filterOptions === void 0 ? void 0 : filterOptions.showDeprecated) ? true : !x.deprecated)),
+        toExtendableObject: (filter, filterOptions) => {
+            return Object.values(rawEnum)
+                .filter(x => (filter ? filter(x) : true) &&
+                ((filterOptions === null || filterOptions === void 0 ? void 0 : filterOptions.showEmpty) ? true : (0, types_1.notEmpty)(x)) &&
+                ((filterOptions === null || filterOptions === void 0 ? void 0 : filterOptions.showDeprecated) ? true : !x.deprecated))
+                .reduce((acc, item) => {
+                acc[item.key] = item;
+                return acc;
+            }, {});
+        },
+    };
+};
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiZXh0ZW5zaW9uTWV0aG9kcy5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbIi4uLy4uL3NyYy9leHRlbnNpb25NZXRob2RzLnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiI7OztBQUFBLG1DQU9pQjtBQUVWLE1BQU0sbUJBQW1CLEdBQUcsQ0FPakMsU0FBNEMsRUFDNUMscUJBRTJCLEVBQzNCLEVBQUU7SUFDRixNQUFNLGdCQUFnQixHQUFHLHFCQUFxQixDQUM1QyxTQUFTLENBQ1YsQ0FBQztJQUNGLElBQUksS0FBSyxHQUFHLEVBQTRCLENBQUM7SUFDekMsSUFBSSxxQkFBcUIsRUFBRSxDQUFDO1FBQzFCLEtBQUssR0FBRyxxQkFBcUIsQ0FBQyxTQUFTLENBQUMsQ0FBQztJQUMzQyxDQUFDO0lBQ0QsdUNBQVksZ0JBQWdCLEdBQUssS0FBSyxFQUFHO0FBQzNDLENBQUMsQ0FBQztBQXBCVyxRQUFBLG1CQUFtQix1QkFvQjlCO0FBRUYsTUFBTSxxQkFBcUIsR0FBRyxDQUM1QixPQUEwQyxFQUNELEVBQUU7SUFDM0MsT0FBTztRQUNMLFNBQVMsRUFBRSxDQUFDLE1BQWMsRUFBRSxFQUFFO1lBQzVCLE1BQU0sSUFBSSxHQUNSLE1BQU0sQ0FBQyxNQUFNLENBQUMsT0FBTyxDQUN0QixDQUFDLElBQUksQ0FDSixDQUFDLEtBQXNDLEVBQUUsRUFBRSxDQUFDLEtBQUssQ0FBQyxLQUFLLEtBQUssTUFBTSxDQUNuRSxDQUFDO1lBQ0YsSUFBSSxDQUFDLElBQUksRUFBRSxDQUFDO2dCQUNWLE1BQU0sSUFBSSxLQUFLLENBQUMsNEJBQTRCLE1BQU0sR0FBRyxDQUFDLENBQUM7WUFDekQsQ0FBQztZQUNELE9BQU8sSUFBSSxDQUFDO1FBQ2QsQ0FBQztRQUVELFlBQVksRUFBRSxDQUFDLE1BQXNCLEVBQUUsRUFBRTtZQUN2QyxJQUFJLENBQUMsTUFBTSxFQUFFLENBQUM7Z0JBQ1osT0FBTyxTQUFTLENBQUM7WUFDbkIsQ0FBQztZQUNELE9BQVEsTUFBTSxDQUFDLE1BQU0sQ0FBQyxPQUFPLENBQXVDLENBQUMsSUFBSSxDQUN2RSxDQUFDLEtBQXNDLEVBQUUsRUFBRSxDQUFDLEtBQUssQ0FBQyxLQUFLLEtBQUssTUFBTSxDQUNuRSxDQUFDO1FBQ0osQ0FBQztRQUNELE9BQU8sRUFBRSxDQUFDLE1BQWMsRUFBRSxFQUFFO1lBQzFCLE1BQU0sSUFBSSxHQUNSLE1BQU0sQ0FBQyxNQUFNLENBQUMsT0FBTyxDQUN0QixDQUFDLElBQUksQ0FBQyxDQUFDLEtBQXNDLEVBQUUsRUFBRSxDQUFDLEtBQUssQ0FBQyxHQUFHLEtBQUssTUFBTSxDQUFDLENBQUM7WUFDekUsSUFBSSxDQUFDLElBQUksRUFBRSxDQUFDO2dCQUNWLE1BQU0sSUFBSSxLQUFLLENBQUMsMEJBQTBCLE1BQU0sR0FBRyxDQUFDLENBQUM7WUFDdkQsQ0FBQztZQUNELE9BQU8sSUFBSSxDQUFDO1FBQ2QsQ0FBQztRQUNELFVBQVUsRUFBRSxDQUFDLE1BQXNCLEVBQUUsRUFBRTtZQUNyQyxJQUFJLENBQUMsTUFBTSxFQUFFLENBQUM7Z0JBQ1osT0FBTyxTQUFTLENBQUM7WUFDbkIsQ0FBQztZQUNELE9BQVEsTUFBTSxDQUFDLE1BQU0sQ0FBQyxPQUFPLENBQXVDLENBQUMsSUFBSSxDQUN2RSxDQUFDLEtBQXNDLEVBQUUsRUFBRSxDQUFDLEtBQUssQ0FBQyxHQUFHLEtBQUssTUFBTSxDQUNqRSxDQUFDO1FBQ0osQ0FBQztRQUNELGtCQUFrQixFQUFFLENBQ2xCLEtBQTRDLEVBQzVDLE1BQXNCLEVBQ3RCLE1BQTJELEVBQzNELEVBQUU7WUFDRixJQUFJLENBQUMsTUFBTSxFQUFFLENBQUM7Z0JBQ1osT0FBTyxTQUFTLENBQUM7WUFDbkIsQ0FBQztZQUNELE9BQVEsTUFBTSxDQUFDLE1BQU0sQ0FBQyxPQUFPLENBQXVDO2lCQUNqRSxNQUFNLENBQUMsTUFBTSxJQUFJLENBQUMsR0FBRyxFQUFFLENBQUMsSUFBSSxDQUFDLENBQUM7aUJBQzlCLElBQUksQ0FDSCxDQUFDLEtBQXNDLEVBQUUsRUFBRSxDQUFDLEtBQUssQ0FBQyxLQUFLLENBQUMsS0FBSyxNQUFNLENBQ3BFLENBQUM7UUFDTixDQUFDO1FBQ0QsV0FBVyxFQUFFLENBQUMsTUFBYyxFQUFFLEVBQUU7WUFDOUIsTUFBTSxJQUFJLEdBQ1IsTUFBTSxDQUFDLE1BQU0sQ0FBQyxPQUFPLENBQ3RCLENBQUMsSUFBSSxDQUNKLENBQUMsS0FBc0MsRUFBRSxFQUFFLENBQUMsS0FBSyxDQUFDLE9BQU8sS0FBSyxNQUFNLENBQ3JFLENBQUM7WUFDRixJQUFJLENBQUMsSUFBSSxFQUFFLENBQUM7Z0JBQ1YsTUFBTSxJQUFJLEtBQUssQ0FBQyw4QkFBOEIsTUFBTSxHQUFHLENBQUMsQ0FBQztZQUMzRCxDQUFDO1lBQ0QsT0FBTyxJQUFJLENBQUM7UUFDZCxDQUFDO1FBQ0QsY0FBYyxFQUFFLENBQUMsTUFBc0IsRUFBRSxFQUFFO1lBQ3pDLElBQUksQ0FBQyxNQUFNLEVBQUUsQ0FBQztnQkFDWixPQUFPLFNBQVMsQ0FBQztZQUNuQixDQUFDO1lBQ0QsT0FBUSxNQUFNLENBQUMsTUFBTSxDQUFDLE9BQU8sQ0FBdUMsQ0FBQyxJQUFJLENBQ3ZFLENBQUMsS0FBc0MsRUFBRSxFQUFFLENBQUMsS0FBSyxDQUFDLE9BQU8sS0FBSyxNQUFNLENBQ3JFLENBQUM7UUFDSixDQUFDO1FBQ0QsbUJBQW1CLEVBQUUsQ0FDbkIsS0FBK0IsRUFDL0IsTUFBMkQsRUFDM0QsYUFBaUMsRUFDakMsRUFBRTtZQUNGLE9BQVEsTUFBTSxDQUFDLE1BQU0sQ0FBQyxPQUFPLENBQXVDO2lCQUNqRSxNQUFNLENBQ0wsQ0FBQyxDQUFDLEVBQUUsQ0FDRixDQUFDLE1BQU0sQ0FBQyxDQUFDLENBQUMsTUFBTSxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxJQUFJLENBQUM7Z0JBQzNCLENBQUMsQ0FBQSxhQUFhLGFBQWIsYUFBYSx1QkFBYixhQUFhLENBQUUsU0FBUztvQkFDdkIsQ0FBQyxDQUFDLElBQUk7b0JBQ04sQ0FBQyxDQUFDLElBQUEsZ0JBQVEsRUFDTixDQUFDLENBQUMsS0FBaUMsQ0FBb0IsQ0FDeEQsQ0FBQztnQkFDTixDQUFDLENBQUEsYUFBYSxhQUFiLGFBQWEsdUJBQWIsYUFBYSxDQUFFLGNBQWMsRUFBQyxDQUFDLENBQUMsSUFBSSxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxVQUFVLENBQUMsQ0FDekQ7aUJBQ0EsR0FBRyxDQUFDLENBQUMsQ0FBQyxFQUFFLENBQUMsQ0FBQyxDQUFDLEtBQWlDLENBQW9CLENBQUMsQ0FBQztRQUN2RSxDQUFDO1FBQ0QsU0FBUyxFQUFFLENBQ1QsTUFBMkQsRUFDM0QsYUFBaUMsRUFDZixFQUFFO1lBQ3BCLE9BQU87Z0JBQ0wsR0FBRyxDQUFFLE9BRUEsSUFBSSxFQUFFLENBQUM7YUFDYjtpQkFDRSxJQUFJLENBQ0gsQ0FDRSxDQUFrQyxFQUNsQyxDQUFrQyxFQUNsQyxFQUFFLENBQUMsQ0FBQyxDQUFBLENBQUMsYUFBRCxDQUFDLHVCQUFELENBQUMsQ0FBRSxLQUFLLE1BQUksQ0FBQyxhQUFELENBQUMsdUJBQUQsQ0FBQyxDQUFFLEtBQUssQ0FBQSxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUEsQ0FBQyxhQUFELENBQUMsdUJBQUQsQ0FBQyxDQUFFLEtBQUssS0FBSSxDQUFDLENBQUMsR0FBRyxDQUFDLENBQUEsQ0FBQyxhQUFELENBQUMsdUJBQUQsQ0FBQyxDQUFFLEtBQUssS0FBSSxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQ3BFO2lCQUNBLE1BQU0sQ0FDTCxDQUFDLENBQUMsRUFBRSxDQUNGLENBQUMsTUFBTSxDQUFDLENBQUMsQ0FBQyxNQUFNLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLElBQUksQ0FBQztnQkFDM0IsQ0FBQyxDQUFBLGFBQWEsYUFBYixhQUFhLHVCQUFiLGFBQWEsQ0FBRSxTQUFTLEVBQUMsQ0FBQyxDQUFDLElBQUksQ0FBQyxDQUFDLENBQUMsSUFBQSxnQkFBUSxFQUFDLENBQUMsQ0FBQyxDQUFDO2dCQUMvQyxDQUFDLENBQUEsYUFBYSxhQUFiLGFBQWEsdUJBQWIsYUFBYSxDQUFFLGNBQWMsRUFBQyxDQUFDLENBQUMsSUFBSSxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxVQUFVLENBQUMsQ0FDekQ7aUJBQ0EsR0FBRyxDQUFDLElBQUksQ0FBQyxFQUFFLENBQUMsaUJBQ1gsS0FBSyxFQUFFLElBQUksQ0FBQyxPQUFPLElBQUssSUFBSSxDQUFDLEdBQWMsRUFDM0MsS0FBSyxFQUFFLElBQUksQ0FBQyxLQUFLLElBQ2QsQ0FBQyxJQUFJLENBQUMsUUFBUSxDQUFDLENBQUMsQ0FBQyxFQUFFLFFBQVEsRUFBRSxJQUFJLENBQUMsUUFBUSxFQUFFLENBQUMsQ0FBQyxDQUFDLEVBQUUsQ0FBQyxFQUNyRCxDQUFDLENBQUM7UUFDUixDQUFDO1FBQ0QsUUFBUSxFQUFFLENBQ1IsTUFBMkQsRUFDM0QsYUFBaUMsRUFDakMsRUFBRSxDQUNELE1BQU0sQ0FBQyxNQUFNLENBQUMsT0FBTyxDQUF1QzthQUMxRCxNQUFNLENBQ0wsQ0FBQyxDQUFDLEVBQUUsQ0FDRixDQUFDLE1BQU0sQ0FBQyxDQUFDLENBQUMsTUFBTSxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxJQUFJLENBQUM7WUFDM0IsQ0FBQyxDQUFBLGFBQWEsYUFBYixhQUFhLHVCQUFiLGFBQWEsQ0FBRSxTQUFTLEVBQUMsQ0FBQyxDQUFDLElBQUksQ0FBQyxDQUFDLENBQUMsSUFBQSxnQkFBUSxFQUFDLENBQUMsQ0FBQyxDQUFDO1lBQy9DLENBQUMsQ0FBQSxhQUFhLGFBQWIsYUFBYSx1QkFBYixhQUFhLENBQUUsY0FBYyxFQUFDLENBQUMsQ0FBQyxJQUFJLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLFVBQVUsQ0FBQyxDQUN6RDthQUNBLEdBQUcsQ0FBQyxDQUFDLElBQXFDLEVBQUUsRUFBRSxDQUFDLElBQUksQ0FBQyxLQUFLLENBQUM7UUFFL0QsTUFBTSxFQUFFLENBQ04sTUFBMkQsRUFDM0QsYUFBaUMsRUFDakMsRUFBRSxDQUNELE1BQU0sQ0FBQyxNQUFNLENBQUMsT0FBTyxDQUF1QzthQUMxRCxNQUFNLENBQ0wsQ0FBQyxDQUFDLEVBQUUsQ0FDRixDQUFDLE1BQU0sQ0FBQyxDQUFDLENBQUMsTUFBTSxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxJQUFJLENBQUM7WUFDM0IsQ0FBQyxDQUFBLGFBQWEsYUFBYixhQUFhLHVCQUFiLGFBQWEsQ0FBRSxTQUFTLEVBQUMsQ0FBQyxDQUFDLElBQUksQ0FBQyxDQUFDLENBQUMsSUFBQSxnQkFBUSxFQUFDLENBQUMsQ0FBQyxDQUFDO1lBQy9DLENBQUMsQ0FBQSxhQUFhLGFBQWIsYUFBYSx1QkFBYixhQUFhLENBQUUsY0FBYyxFQUFDLENBQUMsQ0FBQyxJQUFJLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLFVBQVUsQ0FBQyxDQUN6RDthQUNBLEdBQUcsQ0FBQyxDQUFDLElBQXFDLEVBQUUsRUFBRSxDQUFDLElBQUksQ0FBQyxHQUFHLENBQWE7UUFDekUsVUFBVSxFQUFFLENBQ1YsTUFBMkQsRUFDM0QsYUFBaUMsRUFDakMsRUFBRSxDQUNELE1BQU0sQ0FBQyxNQUFNLENBQUMsT0FBTyxDQUF1QzthQUMxRCxNQUFNLENBQ0wsQ0FBQyxDQUFDLEVBQUUsQ0FDRixDQUFDLE1BQU0sQ0FBQyxDQUFDLENBQUMsTUFBTSxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxJQUFJLENBQUM7WUFDM0IsQ0FBQyxDQUFBLGFBQWEsYUFBYixhQUFhLHVCQUFiLGFBQWEsQ0FBRSxTQUFTLEVBQUMsQ0FBQyxDQUFDLElBQUksQ0FBQyxDQUFDLENBQUMsSUFBQSxnQkFBUSxFQUFDLENBQUMsQ0FBQyxDQUFDO1lBQy9DLENBQUMsQ0FBQSxhQUFhLGFBQWIsYUFBYSx1QkFBYixhQUFhLENBQUUsY0FBYyxFQUFDLENBQUMsQ0FBQyxJQUFJLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLFVBQVUsQ0FBQyxDQUN6RDthQUNBLEdBQUcsQ0FDRixDQUFDLElBQXFDLEVBQUUsRUFBRSxDQUFDLElBQUksQ0FBQyxPQUFPLENBQzVDO1FBQ2pCLFdBQVcsRUFBRSxDQUNYLE1BQTJELEVBQzNELGFBQWlDLEVBQ2pDLEVBQUUsQ0FDRCxNQUFNLENBQUMsTUFBTSxDQUFDLE9BQU8sQ0FBdUMsQ0FBQyxNQUFNLENBQ2xFLENBQUMsQ0FBQyxFQUFFLENBQ0YsQ0FBQyxNQUFNLENBQUMsQ0FBQyxDQUFDLE1BQU0sQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsSUFBSSxDQUFDO1lBQzNCLENBQUMsQ0FBQSxhQUFhLGFBQWIsYUFBYSx1QkFBYixhQUFhLENBQUUsU0FBUyxFQUFDLENBQUMsQ0FBQyxJQUFJLENBQUMsQ0FBQyxDQUFDLElBQUEsZ0JBQVEsRUFBQyxDQUFDLENBQUMsQ0FBQztZQUMvQyxDQUFDLENBQUEsYUFBYSxhQUFiLGFBQWEsdUJBQWIsYUFBYSxDQUFFLGNBQWMsRUFBQyxDQUFDLENBQUMsSUFBSSxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxVQUFVLENBQUMsQ0FDekQ7UUFDSCxrQkFBa0IsRUFBRSxDQUNsQixNQUEyRCxFQUMzRCxhQUFpQyxFQUNqQyxFQUFFO1lBRUYsT0FBTyxNQUFNLENBQUMsTUFBTSxDQUFDLE9BQU8sQ0FBQztpQkFDMUIsTUFBTSxDQUNMLENBQUMsQ0FBQyxFQUFFLENBQ0YsQ0FBQyxNQUFNLENBQUMsQ0FBQyxDQUFDLE1BQU0sQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsSUFBSSxDQUFDO2dCQUMzQixDQUFDLENBQUEsYUFBYSxhQUFiLGFBQWEsdUJBQWIsYUFBYSxDQUFFLFNBQVMsRUFBQyxDQUFDLENBQUMsSUFBSSxDQUFDLENBQUMsQ0FBQyxJQUFBLGdCQUFRLEVBQUMsQ0FBQyxDQUFDLENBQUM7Z0JBQy9DLENBQUMsQ0FBQSxhQUFhLGFBQWIsYUFBYSx1QkFBYixhQUFhLENBQUUsY0FBYyxFQUFDLENBQUMsQ0FBQyxJQUFJLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLFVBQVUsQ0FBQyxDQUN6RDtpQkFDQSxNQUFNLENBQUMsQ0FBQyxHQUFjLEVBQUUsSUFBSSxFQUFFLEVBQUU7Z0JBQy9CLEdBQUcsQ0FBQyxJQUFJLENBQUMsR0FBc0IsQ0FBQyxHQUFHLElBQTRCLENBQUM7Z0JBQ2hFLE9BQU8sR0FBRyxDQUFDO1lBQ2IsQ0FBQyxFQUFFLEVBQWUsQ0FBQyxDQUFDO1FBQ3hCLENBQUM7S0FDRixDQUFDO0FBQ0osQ0FBQyxDQUFDIn0=
