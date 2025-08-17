@@ -1,6 +1,6 @@
 # Smart Enumerations
 
-Instead of using a hash `{ME: "me", YOU: "you"}`, or a couple constants `const ME = "me"; const YOU = "you";` or an array `["me", "you"]` or a string union `type No = "please" | "Pretty please";` or any other variety, please use a new Smart Enum.
+Instead of using a hash `{ME: "me", YOU: "you"}`, or a couple constants `const ME = "me"; const YOU = "you";` or an array `["me", "you"]` or a string union `type No = "please" | "Pretty please";` use a new Smart Enum.
 
 a smart enum looks like this
 
