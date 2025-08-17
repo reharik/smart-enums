@@ -1,7 +1,7 @@
 import { cobolCase } from 'case-anything';
 
-import { enumFromObj } from './enumFromObj';
 import { Enumeration, EnumItem } from './types';
+import { enumeration } from './enumeration';
 
 describe('ENUM FROM OBJECT', () => {
   const input = {
@@ -9,10 +9,10 @@ describe('ENUM FROM OBJECT', () => {
     two: { value: 'TWO' },
     three: { value: 'THREE' },
   };
-  describe('When calling enumFromObj', () => {
+  describe('When calling enumeration', () => {
     it('should create the enum with the props from object values', () => {
       type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-      const TestEnum = enumFromObj({
+      const TestEnum = enumeration({
         input,
       });
       expect(TestEnum.toKeys()).toEqual(['one', 'two', 'three']);
@@ -20,7 +20,7 @@ describe('ENUM FROM OBJECT', () => {
   });
   it('should create the enum items with the correct properties and values', () => {
     type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-    const TestEnum = enumFromObj({
+    const TestEnum = enumeration({
       input,
     });
     expect(TestEnum.one.key).toBe('one');
@@ -39,12 +39,12 @@ describe('ENUM FROM OBJECT', () => {
         green: { value: 'GREEN' },
       };
       type ColorEnum = Enumeration<typeof ColorEnum, typeof color>;
-      const ColorEnum = enumFromObj({
+      const ColorEnum = enumeration({
         input: color,
       });
 
       type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-      const TestEnum = enumFromObj<
+      const TestEnum = enumeration<
         typeof input,
         {
           favoriteColor: ColorEnum;
@@ -63,12 +63,12 @@ describe('ENUM FROM OBJECT', () => {
         green: { value: 'GREEN' },
       };
       type ColorEnum = Enumeration<typeof ColorEnum, typeof color>;
-      const ColorEnum = enumFromObj({
+      const ColorEnum = enumeration({
         input: color,
       });
 
       type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-      const TestEnum = enumFromObj<
+      const TestEnum = enumeration<
         typeof input,
         {
           favoriteColor: ColorEnum;
@@ -97,7 +97,7 @@ describe('ENUM FROM OBJECT', () => {
           }, ''),
       });
 
-      const TestEnum = enumFromObj<typeof input, EnumItem<typeof input>, Extra>(
+      const TestEnum = enumeration<typeof input, EnumItem<typeof input>, Extra>(
         {
           input,
           extraExtensionMethods: extra,
@@ -118,7 +118,7 @@ describe('ENUM FROM OBJECT', () => {
         };
       };
 
-      const TestEnum = enumFromObj<typeof input, EnumItem<typeof input>, Extra>(
+      const TestEnum = enumeration<typeof input, EnumItem<typeof input>, Extra>(
         {
           input,
           extraExtensionMethods: extra,
@@ -135,7 +135,7 @@ describe('ENUM FROM OBJECT', () => {
         green: { value: 'GREEN' },
       };
       type ColorEnum = Enumeration<typeof ColorEnum, typeof color>;
-      const ColorEnum = enumFromObj({
+      const ColorEnum = enumeration({
         input: color,
       });
 
@@ -153,7 +153,7 @@ describe('ENUM FROM OBJECT', () => {
       };
 
       type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-      const TestEnum = enumFromObj<typeof input, EnumItemExtension, Extra>({
+      const TestEnum = enumeration<typeof input, EnumItemExtension, Extra>({
         input,
         extraExtensionMethods: extra,
       });
@@ -181,7 +181,7 @@ describe('ENUM FROM OBJECT', () => {
       ];
 
       type TestEnum = Enumeration<typeof TestEnum, typeof inputForDisplay>;
-      const TestEnum = enumFromObj({
+      const TestEnum = enumeration({
         input: inputForDisplay,
         propertyAutoFormatters,
       });
@@ -199,11 +199,11 @@ describe('ENUM FROM OBJECT', () => {
   //       green: { value: 'GREEN' },
   //     };
   //     type ColorEnum = (typeof ColorEnum)[keyof typeof color];
-  //     const ColorEnum = enumFromObj({
+  //     const ColorEnum = enumeration({
   //       input: color,
   //     });
   //     type TestEnum = (typeof TestEnum)[keyof typeof input];
-  //     const TestEnum = enumFromObj({
+  //     const TestEnum = enumeration({
   //       input,
   //     });
 

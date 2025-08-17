@@ -1,14 +1,14 @@
 import { cobolCase } from 'case-anything';
 
-import { enumFromArr } from './enumFromArr';
 import { Enumeration, EnumItem } from './types';
+import { enumeration } from './enumeration';
 
 describe('ENUM FROM ARRAY', () => {
   const input = ['one', 'two', 'three'] as const;
-  describe('When calling enumFromArr', () => {
+  describe('When calling enumeration', () => {
     it('should create the enum with the props from array values', () => {
       type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-      const TestEnum = enumFromArr({
+      const TestEnum = enumeration({
         input,
       });
       expect(TestEnum.toKeys()).toEqual(['one', 'two', 'three']);
@@ -16,7 +16,7 @@ describe('ENUM FROM ARRAY', () => {
   });
   it('should create the enum items with the correct properties and values', () => {
     type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-    const TestEnum = enumFromArr({
+    const TestEnum = enumeration({
       input,
     });
     expect(TestEnum.one.key).toBe('one');
@@ -31,12 +31,12 @@ describe('ENUM FROM ARRAY', () => {
     it('should not put those extra properties on the enum unless you add values later', () => {
       const color = ['red', 'blue', 'green'] as const;
       type ColorEnum = Enumeration<typeof ColorEnum, typeof color>;
-      const ColorEnum = enumFromArr({
+      const ColorEnum = enumeration({
         input: color,
       });
 
       type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-      const TestEnum = enumFromArr<
+      const TestEnum = enumeration<
         typeof input,
         {
           favoriteColor: ColorEnum;
@@ -51,12 +51,12 @@ describe('ENUM FROM ARRAY', () => {
     it('should allow you to set those extra properties on the enum', () => {
       const color = ['red', 'blue', 'green'] as const;
       type ColorEnum = Enumeration<typeof ColorEnum, typeof color>;
-      const ColorEnum = enumFromArr({
+      const ColorEnum = enumeration({
         input: color,
       });
 
       type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-      const TestEnum = enumFromArr<
+      const TestEnum = enumeration<
         typeof input,
         {
           favoriteColor: ColorEnum;
@@ -85,7 +85,7 @@ describe('ENUM FROM ARRAY', () => {
           }, ''),
       });
 
-      const TestEnum = enumFromArr<typeof input, EnumItem<typeof input>, Extra>(
+      const TestEnum = enumeration<typeof input, EnumItem<typeof input>, Extra>(
         {
           input,
           extraExtensionMethods: extra,
@@ -106,7 +106,7 @@ describe('ENUM FROM ARRAY', () => {
         };
       };
 
-      const TestEnum = enumFromArr<typeof input, EnumItem<typeof input>, Extra>(
+      const TestEnum = enumeration<typeof input, EnumItem<typeof input>, Extra>(
         {
           input,
           extraExtensionMethods: extra,
@@ -119,7 +119,7 @@ describe('ENUM FROM ARRAY', () => {
     it('should add the extension method which should perform against enum items in current enum', () => {
       const color = ['red', 'blue', 'green'] as const;
       type ColorEnum = Enumeration<typeof ColorEnum, typeof color>;
-      const ColorEnum = enumFromArr({
+      const ColorEnum = enumeration({
         input: color,
       });
 
@@ -137,7 +137,7 @@ describe('ENUM FROM ARRAY', () => {
       };
 
       type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-      const TestEnum = enumFromArr<typeof input, EnumItemExtension, Extra>({
+      const TestEnum = enumeration<typeof input, EnumItemExtension, Extra>({
         input,
         extraExtensionMethods: extra,
       });
@@ -161,7 +161,7 @@ describe('ENUM FROM ARRAY', () => {
         },
       ];
       type TestEnum = Enumeration<typeof TestEnum, typeof inputForDisplay>;
-      const TestEnum = enumFromArr({
+      const TestEnum = enumeration({
         input: inputForDisplay,
         propertyAutoFormatters,
       });
@@ -176,11 +176,11 @@ describe('ENUM FROM ARRAY', () => {
   //     const color = ['red', 'blue', 'green'] as const;
 
   //     type ColorEnum = Enumeration<typeof ColorEnum, typeof color>;
-  //     const ColorEnum = enumFromArr({
+  //     const ColorEnum = enumeration({
   //       input: color,
   //     });
   //     type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-  //     const TestEnum = enumFromArr({
+  //     const TestEnum = enumeration({
   //       input,
   //     });
 

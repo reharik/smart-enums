@@ -5,6 +5,7 @@ import {
   EnumerationProps,
   EnumItem,
   ExpandedSource,
+  ExtensionMethods,
   NormalizedInputType,
   PropertyAutoFormatter,
 } from './types';
@@ -16,8 +17,11 @@ function enumeration<
 >({
   input,
   extraExtensionMethods,
-  propertyAutoFormatters = [],
-}: EnumerationProps<TInput, TEnumItemExtension, TExtraExtensionMethods>) {
+  propertyAutoFormatters,
+}:{
+  [K in keyof NormalizedInputType<TInput>]: EnumItem<NormalizedInputType<TInput>, TEnumItemExtension, K>;
+} & ExtensionMethods<NormalizedInputType<TInput>, TEnumItemExtension> & TExtraExtensionMethods) {
+
   
   // Convert array to object format with proper typing
   type NormalizedInput = NormalizedInputType<TInput>;
@@ -32,7 +36,7 @@ function enumeration<
   const formattersWithDefaults = [
     { key: 'value', format: constantCase },
     { key: 'display', format: capitalCase },
-    ...propertyAutoFormatters,
+    ...propertyAutoFormatters||[],
   ];
 
   const formatProperties = (k: string, formatters: PropertyAutoFormatter[]) =>
