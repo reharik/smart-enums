@@ -1,3 +1,4 @@
+
 import {
   DropdownOption,
   BaseEnum,
@@ -7,12 +8,18 @@ import {
   notEmpty,
 } from './types';
 
+/**
+ * Adds extension methods to an enum object.
+ * This is the main factory that creates all the utility methods for enum lookup and filtering.
+ * 
+ * @param enumItems - Array of all enum items
+ * @param extraExtensionMethods - Optional factory for additional custom methods
+ * @returns An object containing all standard extension methods plus any custom methods
+ */
 export const addExtensionMethods = <
   T,
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  TEnumItemExtension = {},
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  TExtraExtensionMethods = {},
+  TEnumItemExtension = Record<string,never>,
+  TExtraExtensionMethods = Record<string,never>,
 >(
   enumItems: EnumItem<T, TEnumItemExtension>[],
   extraExtensionMethods?: (
@@ -29,10 +36,18 @@ export const addExtensionMethods = <
   return { ...extensionMethods, ...extra };
 };
 
+/**
+ * Builds all standard extension methods for enum objects.
+ * These methods provide various ways to look up, filter, and transform enum items.
+ * 
+ * @internal
+ */
 const buildExtensionMethods = <T, TEnumItemExtension>(
   rawEnum: EnumItem<T, TEnumItemExtension>[],
 ): ExtensionMethods<T, TEnumItemExtension> => {
   return {
+    // Lookup methods - these find enum items by different properties
+    
     fromValue: (target: string) => {
       const item = (
         Object.values(rawEnum) as EnumItem<T, TEnumItemExtension>[]
@@ -53,6 +68,7 @@ const buildExtensionMethods = <T, TEnumItemExtension>(
         (value: EnumItem<T, TEnumItemExtension>) => value.value === target,
       );
     },
+    
     fromKey: (target: string) => {
       const item = (
         Object.values(rawEnum) as EnumItem<T, TEnumItemExtension>[]
@@ -62,6 +78,7 @@ const buildExtensionMethods = <T, TEnumItemExtension>(
       }
       return item;
     },
+    
     tryFromKey: (target?: string | null) => {
       if (!target) {
         return undefined;
@@ -70,6 +87,11 @@ const buildExtensionMethods = <T, TEnumItemExtension>(
         (value: EnumItem<T, TEnumItemExtension>) => value.key === target,
       );
     },
+    
+    /**
+     * Flexible lookup by any custom field.
+     * Useful when enum items have additional properties beyond the standard ones.
+     */
     tryFromCustomField: (
       field: keyof EnumItem<T, TEnumItemExtension>,
       target?: string | null,
@@ -84,6 +106,7 @@ const buildExtensionMethods = <T, TEnumItemExtension>(
           (value: EnumItem<T, TEnumItemExtension>) => value[field] === target,
         );
     },
+    
     fromDisplay: (target: string) => {
       const item = (
         Object.values(rawEnum) as EnumItem<T, TEnumItemExtension>[]
@@ -95,6 +118,7 @@ const buildExtensionMethods = <T, TEnumItemExtension>(
       }
       return item;
     },
+    
     tryFromDisplay: (target?: string | null) => {
       if (!target) {
         return undefined;
@@ -103,6 +127,13 @@ const buildExtensionMethods = <T, TEnumItemExtension>(
         (value: EnumItem<T, TEnumItemExtension>) => value.display === target,
       );
     },
+    
+    // Transformation methods - these convert enum items to different formats
+    
+    /**
+     * Extract values from a specific custom field across all items.
+     * Respects filter options for empty and deprecated items.
+     */
     toCustomFieldValues: <CustomFieldType = string>(
       field: keyof TEnumItemExtension,
       filter?: (item: EnumItem<T, TEnumItemExtension>) => boolean,
@@ -121,6 +152,11 @@ const buildExtensionMethods = <T, TEnumItemExtension>(
         )
         .map(x => x[field as keyof TEnumItemExtension] as CustomFieldType);
     },
+    
+    /**
+     * Convert to dropdown options, automatically sorted by index.
+     * Includes optional iconText if present in the enum item.
+     */
     toOptions: (
       filter?: (item: EnumItem<T, TEnumItemExtension>) => boolean,
       filterOptions?: EnumFilterOptions,
@@ -148,6 +184,9 @@ const buildExtensionMethods = <T, TEnumItemExtension>(
           ...(item.iconText ? { iconText: item.iconText } : {}),
         }));
     },
+    
+    // Array extraction methods - these get arrays of specific properties
+    
     toValues: (
       filter?: (item: EnumItem<T, TEnumItemExtension>) => boolean,
       filterOptions?: EnumFilterOptions,
@@ -173,6 +212,7 @@ const buildExtensionMethods = <T, TEnumItemExtension>(
             (filterOptions?.showDeprecated ? true : !x.deprecated),
         )
         .map((item: EnumItem<T, TEnumItemExtension>) => item.key) as string[],
+        
     toDisplays: (
       filter?: (item: EnumItem<T, TEnumItemExtension>) => boolean,
       filterOptions?: EnumFilterOptions,
@@ -187,6 +227,7 @@ const buildExtensionMethods = <T, TEnumItemExtension>(
         .map(
           (item: EnumItem<T, TEnumItemExtension>) => item.display,
         ) as string[],
+        
     toEnumItems: (
       filter?: (item: EnumItem<T, TEnumItemExtension>) => boolean,
       filterOptions?: EnumFilterOptions,
@@ -197,6 +238,11 @@ const buildExtensionMethods = <T, TEnumItemExtension>(
           (filterOptions?.showEmpty ? true : notEmpty(x)) &&
           (filterOptions?.showDeprecated ? true : !x.deprecated),
       ),
+      
+    /**
+     * Creates a new object with filtered enum items.
+     * Useful for creating subset enums or when you need an object format.
+     */
     toExtendableObject: <ITEM_TYPE extends BaseEnum>(
       filter?: (item: EnumItem<T, TEnumItemExtension>) => boolean,
       filterOptions?: EnumFilterOptions,

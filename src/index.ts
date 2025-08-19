@@ -1,2 +1,2 @@
 export { enumeration } from './enumeration';
-export type { Enumeration, DropdownOption, EnumItem, BaseEnum, ExtendedInput } from './types';
+export type { Enumeration, DropdownOption, EnumItem, BaseEnum } from './types';

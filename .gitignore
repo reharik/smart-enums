@@ -9,7 +9,6 @@ newrelic_agent.log
 generated
 *.redis
 .pnpm-store/
-docker/assured-backend-db-ci/
 **/.idea
 .gitlab-ci-local/
 

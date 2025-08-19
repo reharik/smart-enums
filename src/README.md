@@ -1,270 +1,420 @@
-# Smart Enumerations
+# Smart Enums
 
-Instead of using a hash `{ME: "me", YOU: "you"}`, or a couple constants `const ME = "me"; const YOU = "you";` or an array `["me", "you"]` or a string union `type No = "please" | "Pretty please";` use a new Smart Enum.
+A TypeScript library for creating type-safe, feature-rich enumerations with built-in utility methods. Stop juggling between constants, arrays, objects, and string unions - use Smart Enums instead.
 
-a smart enum looks like this
+## Why Smart Enums?
+
+Traditional approaches to enums in JavaScript/TypeScript have limitations:
+- Plain objects `{ME: "me", YOU: "you"}` lack utility methods
+- Constants `const ME = "me"` are scattered and hard to iterate
+- Arrays `["me", "you"]` don't provide lookups
+- String unions `type No = "please" | "pretty please"` are compile-time only
+
+Smart Enums give you the best of all worlds:
 
 ```typescript
-{
-  red: {key: "red", value: "RED", display: "Red", index: 0}
-  blue: {key: "blue", value: "BLUE", display: "Blue", index: 1}
-  green: {key: "green", value: "GREEN", display: "Green", index: 2}
-}
+const Colors = enumeration({
+  input: ['red', 'blue', 'green'] as const
+});
+
+// You get a rich object structure:
+Colors.red   // { key: "red", value: "RED", display: "Red", index: 0 }
+Colors.blue  // { key: "blue", value: "BLUE", display: "Blue", index: 1 }
+
+// Plus powerful utility methods:
+Colors.fromValue('RED')        // Returns Colors.red
+Colors.toOptions()             // Returns dropdown-ready options
+Colors.toValues()              // Returns ['RED', 'BLUE', 'GREEN']
 ```
 
-A Smart Enum can be created ala carte or from an existing enum like a prisma or gql enum. The implementation is just slightly different but the end result is exactly the same.
+## Installation
 
-There are two different way of creating your own ala carte enum.
+```bash
+npm install smart-enums
+# or
+yarn add smart-enums
+# or
+pnpm add smart-enums
+```
 
-**A)** from a straight string array e.g.
+## Quick Start
+
+### Creating Enums from Arrays
+
+The simplest way to create a Smart Enum:
 
 ```typescript
-import { enumeration } from '@assured/enumerations/src';
-import { fromArray } from '@assured/enumerations/src';
+import { enumeration } from 'smart-enums';
 
-const vehicleDamageMeshType_ = [
-  'car4Door',
-  'car2Door',
-  'pickup4Door',
-  'pickup2Door',
-  'boxTruck',
-  'SUV4Door',
-  'legacyCar4Door',
-] as const;
+const Status = enumeration({
+  input: ['pending', 'active', 'completed', 'archived'] as const
+});
 
-const enumValues = fromArray<typeof vehicleDamageMeshType_>(
-  vehicleDamageMeshType_,
+// Use it:
+console.log(Status.active.value);    // "ACTIVE"
+console.log(Status.active.display);  // "Active"
+```
+
+### Creating Enums from Objects
+
+For more control over the values:
+
+```typescript
+const Priority = enumeration({
+  input: {
+    low: { value: 'LOW', display: 'Low Priority', level: 1 },
+    medium: { value: 'MED', display: 'Medium Priority', level: 2 },
+    high: { value: 'HIGH', display: 'High Priority', level: 3 },
+    urgent: { value: 'URGENT', display: 'Urgent!!!', level: 4 }
+  }
+});
+
+console.log(Priority.urgent.level);  // 4
+```
+
+## Core Features
+
+### Type Safety
+
+Smart Enums are fully type-safe:
+
+```typescript
+function processColor(color: Color) {
+  console.log(color.display);
+}
+
+processColor(Colors.red);     // ✅ Works
+processColor(Status.active);  // ❌ Type error
+```
+
+### Auto-Generated Properties
+
+Each enum item automatically gets:
+- `key` - The original key (e.g., "red")
+- `value` - Constant case version (e.g., "RED")
+- `display` - Human-readable version (e.g., "Red")
+- `index` - Position in the enum (e.g., 0, 1, 2)
+
+### Custom Property Formatters
+
+Override or add custom auto-formatting:
+
+```typescript
+const Routes = enumeration({
+  input: ['userProfile', 'adminDashboard', 'settingsPage'] as const,
+  propertyAutoFormatters: [
+    { key: 'path', format: (k) => `/${k}` },
+    { key: 'slug', format: (k) => k.toLowerCase().replace(/([A-Z])/g, '-$1') },
+    { key: 'value', format: (k) => k.toLowerCase() }
+  ]
+});
+
+console.log(Routes.userProfile.path);  // "/userProfile"
+console.log(Routes.userProfile.slug);  // "/user-profile"
+console.log(Routes.userProfile.value);  // "/user-profile"
+```
+
+## Utility Methods
+
+### Lookup Methods
+
+```typescript
+// Get enum item by value (throws if not found)
+const item = Colors.fromValue('RED');
+
+// Safe lookup (returns undefined if not found)
+const maybeItem = Colors.tryFromValue('PURPLE');
+
+// Lookup by display text
+const displayItem = Colors.fromDisplay('Red');
+
+// Lookup by key
+const keyItem = Colors.fromKey('red');
+
+// Lookup by custom field
+const customItem = Priority.tryFromCustomField('level', 3);
+```
+
+### Conversion Methods
+
+```typescript
+// Get dropdown options (for select elements)
+const options = Priority.toOptions();
+// Returns: [
+//   { value: 'LOW', label: 'Low Priority' },
+//   { value: 'MED', label: 'Medium Priority' },
+//   ...
+// ]
+
+// Get all values
+const values = Colors.toValues();  // ['RED', 'BLUE', 'GREEN']
+
+// Get all keys
+const keys = Colors.toKeys();      // ['red', 'blue', 'green']
+
+// Get all display texts
+const displays = Colors.toDisplays();  // ['Red', 'Blue', 'Green']
+
+// Get all enum items as array
+const items = Colors.toEnumItems();
+```
+
+### Filtering
+
+Most methods support filtering:
+
+```typescript
+const UserStatus = enumeration({
+  input: {
+    active: { value: 'ACTIVE' },
+    inactive: { value: 'INACTIVE' },
+    banned: { value: 'BANNED', deprecated: true },
+    deleted: { value: 'DELETED', deprecated: true }
+  }
+});
+
+// Exclude deprecated items
+const activeOptions = UserStatus.toOptions(
+  item => !item.deprecated
 );
 
-export type TVehicleDamageMeshTypeEnum = typeof enumValues;
-export const vehicleDamageMeshTypeEnum = enumeration({
-  input: enumValues,
-});
+// With filter options
+const allOptions = UserStatus.toOptions(
+  undefined,
+  { showDeprecated: true }
+);
 ```
 
-Here have an array of strings. Notice that it is suffixed with `as const` which is some TypeScript voodoo, it's best not to ask.
+## Advanced Usage
 
-Next we transform our array in to a hash using the helper function `fromArray<T>` The result of this call will be
+### Custom Extensions
+
+Add domain-specific properties and methods:
 
 ```typescript
-{
-  car4Door: { value: "CAR_4_DOOR" },
-  car2Door: { value: "CAR_2_DOOR" },
-  // ...
+interface ColorExtension {
+  hex: string;
+  rgb: [number, number, number];
 }
-```
 
-With this object in hand we create a type for use later on via `typeof enumValues`.
-We then pass the `enumValues` to the enumeration factory meathod and we are done.
+interface ExtraExtensionMethods = { 
+  getMixedColor: (c1: any, c2: any) => string,
+  getPrimaryColors: () => EnumItem<typeof input, ColorExtension>[] 
+}
 
-**B)**
+const input = {
+  red: { hex: '#FF0000', rgb: [255, 0, 0] },
+  blue: { hex: '#0000FF', rgb: [0, 0, 255] },
+  green: { hex: '#00FF00', rgb: [0, 255, 0] }
+}
 
-```typescript
-import { enumeration } from '@assured/enumerations/src';
+const extraExtensionMethods = (items) => ({
+  getMixedColor: (c1, c2) => {
+    // Custom color mixing logic
+    return `Mixed: ${c1.key} + ${c2.key}`;
+  },
+  getPrimaryColors: () => items.filter(i => ['red', 'blue'].includes(i.key))
+})
 
-const vehicleDamageMeshTypeEnum_ = {
-  car4Door: { value: 'CAR_4_DOOR' },
-  car2Door: { value: 'CAR_2_DOOR' },
-  pickup4Door: { value: 'PICKUP_4_DOOR' },
-  pickup2Door: { value: 'PICKUP_2_DOOR' },
-  boxTruck: { value: 'BOX_TRUCK' },
-  SUV4Door: { value: 'SUV_4_DOOR' },
-  legacyCar4Door: { value: 'SUV_4_DOOR' },
-};
-
-export type TVehicleDamageMeshTypeEnum = typeof vehicleDamageMeshTypeEnum_;
-export const vehicleDamageMeshTypeEnum = enumeration({
-  input: vehicleDamageMeshTypeEnum_,
+const Colors = enumeration<
+  typeof colorsInput,
+  ColorExtension,
+  ExtraExtensionMethods
+>({
+  input,
+  extraExtensionMethods
 });
+
+console.log(Colors.red.hex);  // '#FF0000'
+console.log(Colors.getMixedColor(Colors.red, Colors.blue));  // 'Mixed: red + blue'
 ```
 
-In this case we construct our inital object manually and passit directly to enumeration factory.  
-While the two methods are very much the same, method B can be useful if you would like to have some additional values on your enum. For instance Let's say you have a color enum, you may wish to do this
+### Custom Field Values
+
+Extract values from custom fields:
 
 ```typescript
-const colors_ = {
-  red: { value: 'RED', hex: '#1234', rgb: 'blah' },
-  blue: { value: 'Blue', hex: '#4321', rgb: 'blahblah' },
-};
-```
-
-These additional properties would be carried through to your enumeration values.
-
-One can also construct an enum from an existing stupid enum such as one you may get from Prisma or GQL. The syntax for creating one of these is even easier.
-
-```typescript
-import { Enum, enumeration } from './lib/enumeration';
-import { ClaimStatus } from '@prisma/client';
-
-export type TClaimStatus = Enum<typeof ClaimStatus>;
-export const claimStatus = enumeration({
-  input: ClaimStatus,
+const Pages = enumeration({
+  input: {
+    home: { slug: '/', title: 'Home Page' },
+    about: { slug: '/about', title: 'About Us' },
+    contact: { slug: '/contact', title: 'Contact' }
+  }
 });
+
+// Get all slugs
+const slugs = Pages.toCustomFieldValues<string>('slug');
+// Returns: ['/', '/about', '/contact']
+
+// Filter out undefined values
+const titles = Pages.toCustomFieldValues<string>(
+  'title',
+  undefined,
+  { showEmpty: false }
+);
 ```
 
-That's all there is to it.
+### React/Frontend Usage
 
-## `fromValue`
-
-Every Smart Enum is bestowed a number of helper functions that in fact are quite helpful. looks like this:
-
-```typescript
-type FromValue = (target?: string) => EnumItemOf<T> | undefined;
-```
-
-Takes in a string that may or may not be a value on your enum and returns and `EnumItemOf<T>`.
-
-```typescript
-// returns the EnumItem bubba: {key: "bubba", value: "BUBBA", display: "Bubba" index:3 }
-myBuddies.fromValue('BUBBA');
-```
-
-## `fromDisplay`
-
-```typescript
-type FromDisplay = (target?: string) => EnumItemOf<T> | undefined;
-```
-
-Similar to `fromValue`. It is useful when you need an EnumItem from say a select option.
-
-## `tryFromCustomField`
-
-```typescript
-type TryFromCustomField = (
-  field: keyof EnumItemOf<T, U>,
-  target?: string | null,
-) => EnumItemOf<T, U> | undefined;
-```
-
-Similar to `tryFromValue`, `tryFromDisplay`, there may be custom fields in which we may want to find and enum item by. For example, perhaps we have an enum of page types and want to get an enum item by a `slug` custom field. We could do something like the below.
-
-```typescript
-const pageEnumItem = pageEnum.tryFromCustomField('slug', 'this-is-some-slug');
-```
-
-## `toOptions`
-
-```typescript
-type ToOptions = () => DropdownOption[];
-```
-
-A frontend helper that provides you a simple dto useful for binding to select options.
+Perfect for form selects and dropdowns:
 
 ```tsx
-<select>
-  {myEnum.toOptions().map(x => (
-    <option value={x.value}>{x.display}</option>
-  ))}
-</select>
+function ColorSelector() {
+  const [selected, setSelected] = useState(Colors.red);
+  
+  return (
+    <select 
+      value={selected.value}
+      onChange={(e) => setSelected(Colors.fromValue(e.target.value))}
+    >
+      {Colors.toOptions().map(option => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  );
+}
 ```
 
-## `toValues`
+### Validation & Type Guards
 
 ```typescript
-type ToValues = () => string[];
+function processStatus(statusValue: string) {
+  const status = Status.tryFromValue(statusValue);
+  
+  if (!status) {
+    throw new Error(`Invalid status: ${statusValue}`);
+  }
+  
+  // Now status is typed as a valid enum item
+  switch (status.key) {
+    case 'pending':
+      // Handle pending
+      break;
+    case 'active':
+      // Handle active
+      break;
+    // TypeScript ensures all cases are handled
+  }
+}
 ```
 
-Retrieves an array of all the values in the enum e.g. `["BUBBA", "SISSY", "MA", "PA"]`
+## API Reference
 
-## `toKeys`
+### `enumeration(props)`
+
+Main factory function for creating Smart Enums.
+
+**Parameters:**
+- `input` - Array of strings, object with BaseEnum values, or existing enum
+- `propertyAutoFormatters` - Optional custom formatters for auto-generated properties
+- `extraExtensionMethods` - Optional factory for adding custom methods
+
+**Returns:** An enum object with all items as properties plus extension methods
+
+### Extension Methods
+
+| Method | Description | Returns |
+|--------|-------------|---------|
+| `fromValue(value)` | Get item by value (throws if not found) | `EnumItem` |
+| `tryFromValue(value)` | Get item by value (safe) | `EnumItem \| undefined` |
+| `fromKey(key)` | Get item by key (throws if not found) | `EnumItem` |
+| `tryFromKey(key)` | Get item by key (safe) | `EnumItem \| undefined` |
+| `fromDisplay(display)` | Get item by display text (throws if not found) | `EnumItem` |
+| `tryFromDisplay(display)` | Get item by display text (safe) | `EnumItem \| undefined` |
+| `tryFromCustomField(field, value, filter?)` | Get item by custom field | `EnumItem \| undefined` |
+| `toOptions(filter?, options?)` | Convert to dropdown options | `DropdownOption[]` |
+| `toValues(filter?, options?)` | Get all values | `string[]` |
+| `toKeys(filter?, options?)` | Get all keys | `string[]` |
+| `toDisplays(filter?, options?)` | Get all display texts | `string[]` |
+| `toEnumItems(filter?, options?)` | Get all items as array | `EnumItem[]` |
+| `toCustomFieldValues(field, filter?, options?)` | Get values from custom field | `T[]` |
+
+### Filter Options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `showEmpty` | `boolean` | Include items with null/undefined values |
+| `showDeprecated` | `boolean` | Include deprecated items |
+
+## TypeScript Support
+
+Smart Enums are built with TypeScript first in mind:
 
 ```typescript
-type ToKeys = () => string[];
+// Type extraction
+type StatusType = typeof Status;
+type StatusItem = typeof Status.active;
+
+// Use in function signatures
+function updateStatus(status: Status): void {
+  console.log(`Updating to: ${status.display}`);
+}
+
+updateStatus(Status.banned) // 'Updating to: Banned'
+
+// Generic constraints
+function processEnum<T extends ReturnType<typeof enumeration>>(
+  smartEnum: T,
+  value: string
+) {
+  return smartEnum.tryFromValue(value);
+}
 ```
 
-Retrieves an array of all the keys in the enum e.g. `["bubba", "sissy", "ma", "pa"]`
+## Migration Guide
 
-## `toCustomFields`
-
-```typescript
-type ToCustomFieldValues = <V>(
-  field: keyof EnumItemOf<T, U>,
-  options?: { shouldOmitUndefined?: boolean },
-) => V[];
-```
-
-Similar to the above, you may want to get all values from a custom field. And by utilizing the `shouldOmitUndefined` option, you can omit `undefined` values from the resulting array. Since fields may have a variety of types and at build time TypeScript won't know the type of value from the corresponding `field`, to utilize this method you should pass in a generic type for the expected value of the `field`, like so:
+### From Plain Objects
 
 ```typescript
-const pageSlugs = pageEnum.toCustomFields<string>('slug', {
-  shouldOmitUndefined: true,
+// Before
+const COLORS = {
+  RED: 'red',
+  BLUE: 'blue',
+  GREEN: 'green'
+};
+
+// After
+const Colors = enumeration({
+  input: ['red', 'blue', 'green'] as const
 });
+
+// Usage changes from COLORS.RED to Colors.red.value
 ```
 
-## `toEnumItems`
+### From String Unions
 
 ```typescript
-type ToEnumItems = () => EnumItemOf<T>[];
-```
+// Before
+type Status = 'pending' | 'active' | 'completed';
 
-Returns an array of EnumItems. Certainly this has been useful before or it would not be here.
-
-Smart Enums can be passed into functions as properties like this.
-
-```typescript
-const makeLove(buddy: EnumItemOf<Buddies>): baby => {
-  // do ...something to your buddy
-}
-```
-
-This would then be consumed like this.
-
-```typescript
-const newBaby = makeLove(buddies.ma);
-```
-
-In this way we can make sure that only members of our close knit group of friends are available for ... interaction.
-
-```typescript
-const newBaby = makeLove(moreDistantThanFirstCousins.frank); // Does not compile
-```
-
-**Extending Enums**
-By default when we create an enum we get a shape like this
-
-```typescript
-{
-  red: {key: "red", value: "RED", display: "Red", index: 0}
-  blue: {key: "blue", value: "BLUE", display: "Blue", index: 1}
-  green: {key: "green", value: "GREEN", display: "Green", index: 2}
-}
-```
-
-But if we would like to add to this shape we can add whatever properties we want like so
-
-```typescript
-import { enumeration } from '@assured/enumerations/src';
-import { fromArray } from '@assured/enumerations/src';
-
-const vehicleDamageMeshType_ = [
-  'car4Door',
-  'car2Door',
-  'pickup4Door',
-  'pickup2Door',
-  'boxTruck',
-  'SUV4Door',
-  'legacyCar4Door',
-] as const;
-
-const enumValues = fromArray<typeof vehicleDamageMeshType_>(
-  vehicleDamageMeshType_,
-);
-
-export type TVehicleDamageMeshTypeEnum = typeof enumValues;
-export const vehicleDamageMeshTypeEnum = enumeration<
-  TStepInputEnum,
-  SpecificEnumItem & { isCoolCar: boolean }
->({
-  input: enumValues,
+// After
+const Status = enumeration({
+  input: ['pending', 'active', 'completed'] as const
 });
 
-vehicleDamageMeshTypeEnum.car4Door.isCoolCar = false;
-vehicleDamageMeshTypeEnum.car2Door.isCoolCar = true;
-
-if (!vehicleDamageMeshTypeEnum.car4Door.isCoolCar) {
-  // get outta town!
-}
+type StatusItem = typeof Status[keyof typeof Status];
 ```
 
-Essentially we are extending the SpecificEnumItem to
-have our desired properties on it.
+## Best Practices
+
+1. **Always use `as const`** for array inputs to preserve literal types
+2. 
+3. **Use `tryFrom*` methods** when dealing with external data
+4. **Leverage filtering** to hide deprecated items from users
+5. **Add custom properties** for domain-specific needs
+
+## Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+## License
+
+MIT
+
+## Support
+
+- 📧 Email: harik.raif@gmail.com
+- 🐛 Issues: [GitHub Issues](https://github.com/reharik/smart-enums/issues)
+- 📖 Docs: [Full Documentation](https://docs.reharik.com/smart-enums)

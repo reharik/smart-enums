@@ -1,12 +1,16 @@
 import { cobolCase } from 'case-anything';
 
-import { Enumeration, EnumItem } from './types';
-import { enumeration } from './enumeration';
+import { Enumeration, EnumItem } from '../types';
+import { enumeration } from '../enumeration';
 
-describe('ENUM FROM ARRAY', () => {
-  const input = ['one', 'two', 'three'] as const;
+describe('ENUM FROM OBJECT', () => {
+  const input = {
+    one: { value: 'ONE' },
+    two: { value: 'TWO' },
+    three: { value: 'THREE' },
+  };
   describe('When calling enumeration', () => {
-    it('should create the enum with the props from array values', () => {
+    it('should create the enum with the props from object values', () => {
       type TestEnum = Enumeration<typeof TestEnum, typeof input>;
       const TestEnum = enumeration({
         input,
@@ -29,7 +33,11 @@ describe('ENUM FROM ARRAY', () => {
     // TODO this is actually a problem, perhaps insurmountable, but here's
     // a test in case someone does figure it out
     it('should not put those extra properties on the enum unless you add values later', () => {
-      const color = ['red', 'blue', 'green'] as const;
+      const color = {
+        red: { value: 'RED' },
+        blue: { value: 'BLUE' },
+        green: { value: 'GREEN' },
+      };
       type ColorEnum = Enumeration<typeof ColorEnum, typeof color>;
       const ColorEnum = enumeration({
         input: color,
@@ -49,7 +57,11 @@ describe('ENUM FROM ARRAY', () => {
       expect(TestEnum.two).not.toHaveProperty('favoriteColor');
     });
     it('should allow you to set those extra properties on the enum', () => {
-      const color = ['red', 'blue', 'green'] as const;
+      const color = {
+        red: { value: 'RED' },
+        blue: { value: 'BLUE' },
+        green: { value: 'GREEN' },
+      };
       type ColorEnum = Enumeration<typeof ColorEnum, typeof color>;
       const ColorEnum = enumeration({
         input: color,
@@ -117,7 +129,11 @@ describe('ENUM FROM ARRAY', () => {
   });
   describe('when creating an enum with extra extension methods that act against custom props', () => {
     it('should add the extension method which should perform against enum items in current enum', () => {
-      const color = ['red', 'blue', 'green'] as const;
+      const color = {
+        red: { value: 'RED' },
+        blue: { value: 'BLUE' },
+        green: { value: 'GREEN' },
+      };
       type ColorEnum = Enumeration<typeof ColorEnum, typeof color>;
       const ColorEnum = enumeration({
         input: color,
@@ -151,7 +167,10 @@ describe('ENUM FROM ARRAY', () => {
   });
   describe('when passing function for displayFormatter', () => {
     it('should return proper result for display', () => {
-      const inputForDisplay = ['favoriteColor', 'lastKnownAddress'] as const;
+      const inputForDisplay = {
+        favoriteColor: { value: 'FAVORITE_COLOR' },
+        lastKnownAddress: { value: 'LAST_KNOWN_ADDRESS' },
+      };
       const propertyAutoFormatters = [
         {
           key: 'display',
@@ -160,6 +179,7 @@ describe('ENUM FROM ARRAY', () => {
           },
         },
       ];
+
       type TestEnum = Enumeration<typeof TestEnum, typeof inputForDisplay>;
       const TestEnum = enumeration({
         input: inputForDisplay,
@@ -173,13 +193,16 @@ describe('ENUM FROM ARRAY', () => {
   });
   // describe('when using an enum as a param for a func ', () => {
   //   it('should only accept parm from specified enum. i.e. not from any other enums', () => {
-  //     const color = ['red', 'blue', 'green'] as const;
-
-  //     type ColorEnum = Enumeration<typeof ColorEnum, typeof color>;
+  //     const color = {
+  //       red: { value: 'RED' },
+  //       blue: { value: 'BLUE' },
+  //       green: { value: 'GREEN' },
+  //     };
+  //     type ColorEnum = (typeof ColorEnum)[keyof typeof color];
   //     const ColorEnum = enumeration({
   //       input: color,
   //     });
-  //     type TestEnum = Enumeration<typeof TestEnum, typeof input>;
+  //     type TestEnum = (typeof TestEnum)[keyof typeof input];
   //     const TestEnum = enumeration({
   //       input,
   //     });

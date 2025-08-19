@@ -1,8 +1,8 @@
-import { enumeration } from './enumeration';
-import { addExtensionMethods } from './extensionMethods';
-import { Enumeration, EnumItem } from './types';
+import { enumeration } from '../enumeration';
+import { addExtensionMethods } from '../extensionMethods';
+import { Enumeration, EnumItem } from '../types';
 
-const input = ['one', 'two'];
+const input = ['one', 'two'] as const;
 
 describe('ENUM EXTENSION METHODS', () => {
   describe('Add Extension Methods', () => {
@@ -272,7 +272,7 @@ describe('ENUM EXTENSION METHODS', () => {
     });
 
     describe('when calling tryFromCustomField when no custom fields have been set AND IS match', () => {
-      it('should return return propper enumItem', () => {
+      it('should return return proper enumItem', () => {
         type TestEnum = Enumeration<typeof TestEnum, typeof input>;
         const TestEnum = enumeration<typeof input, { bubba: string }>({
           input,
@@ -293,7 +293,7 @@ describe('ENUM EXTENSION METHODS', () => {
 
   describe('To Custom Field Values', () => {
     describe('when calling toCustomFieldValues with no options', () => {
-      it('should return propper array of values', () => {
+      it('should return proper array of values', () => {
         type TestEnum = Enumeration<typeof TestEnum, typeof input>;
         const TestEnum = enumeration<typeof input, { bubba: string }>({
           input,
@@ -333,7 +333,7 @@ describe('ENUM EXTENSION METHODS', () => {
   });
   describe('To Options', () => {
     describe('when calling toOptions with no filter', () => {
-      it('should return propper array of values', () => {
+      it('should return proper array of values', () => {
         type TestEnum = Enumeration<typeof TestEnum, typeof input>;
         const TestEnum = enumeration({
           input,
@@ -353,7 +353,7 @@ describe('ENUM EXTENSION METHODS', () => {
     });
 
     describe('when calling toOptions WITH filter', () => {
-      it('should return propper array of values', () => {
+      it('should return proper array of values', () => {
         const input = ['one', 'two', 'three'] as const;
 
         type TestEnum = Enumeration<typeof TestEnum, typeof input>;
