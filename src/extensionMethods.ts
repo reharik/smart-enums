@@ -1,4 +1,3 @@
-
 import {
   DropdownOption,
   BaseEnum,
@@ -6,20 +5,21 @@ import {
   EnumItem,
   ExtensionMethods,
   notEmpty,
-} from './types';
+} from './types.js';
 
 /**
  * Adds extension methods to an enum object.
  * This is the main factory that creates all the utility methods for enum lookup and filtering.
- * 
+ *
  * @param enumItems - Array of all enum items
  * @param extraExtensionMethods - Optional factory for additional custom methods
  * @returns An object containing all standard extension methods plus any custom methods
  */
+
 export const addExtensionMethods = <
   T,
-  TEnumItemExtension = Record<string,never>,
-  TExtraExtensionMethods = Record<string,never>,
+  TEnumItemExtension = Record<string, never>,
+  TExtraExtensionMethods = Record<string, never>,
 >(
   enumItems: EnumItem<T, TEnumItemExtension>[],
   extraExtensionMethods?: (
@@ -39,7 +39,7 @@ export const addExtensionMethods = <
 /**
  * Builds all standard extension methods for enum objects.
  * These methods provide various ways to look up, filter, and transform enum items.
- * 
+ *
  * @internal
  */
 const buildExtensionMethods = <T, TEnumItemExtension>(
@@ -47,11 +47,9 @@ const buildExtensionMethods = <T, TEnumItemExtension>(
 ): ExtensionMethods<T, TEnumItemExtension> => {
   return {
     // Lookup methods - these find enum items by different properties
-    
+
     fromValue: (target: string) => {
-      const item = (
-        Object.values(rawEnum) as EnumItem<T, TEnumItemExtension>[]
-      ).find(
+      const item = Object.values(rawEnum).find(
         (value: EnumItem<T, TEnumItemExtension>) => value.value === target,
       );
       if (!item) {
@@ -62,32 +60,32 @@ const buildExtensionMethods = <T, TEnumItemExtension>(
 
     tryFromValue: (target?: string | null) => {
       if (!target) {
-        return undefined;
+        return;
       }
-      return (Object.values(rawEnum) as EnumItem<T, TEnumItemExtension>[]).find(
+      return Object.values(rawEnum).find(
         (value: EnumItem<T, TEnumItemExtension>) => value.value === target,
       );
     },
-    
+
     fromKey: (target: string) => {
-      const item = (
-        Object.values(rawEnum) as EnumItem<T, TEnumItemExtension>[]
-      ).find((value: EnumItem<T, TEnumItemExtension>) => value.key === target);
+      const item = Object.values(rawEnum).find(
+        (value: EnumItem<T, TEnumItemExtension>) => value.key === target,
+      );
       if (!item) {
         throw new Error(`No enum key found for '${target}'`);
       }
       return item;
     },
-    
+
     tryFromKey: (target?: string | null) => {
       if (!target) {
-        return undefined;
+        return;
       }
-      return (Object.values(rawEnum) as EnumItem<T, TEnumItemExtension>[]).find(
+      return Object.values(rawEnum).find(
         (value: EnumItem<T, TEnumItemExtension>) => value.key === target,
       );
     },
-    
+
     /**
      * Flexible lookup by any custom field.
      * Useful when enum items have additional properties beyond the standard ones.
@@ -98,19 +96,20 @@ const buildExtensionMethods = <T, TEnumItemExtension>(
       filter?: (item: EnumItem<T, TEnumItemExtension>) => boolean,
     ) => {
       if (!target) {
-        return undefined;
+        return;
       }
-      return (Object.values(rawEnum) as EnumItem<T, TEnumItemExtension>[])
-        .filter(filter || (() => true))
-        .find(
-          (value: EnumItem<T, TEnumItemExtension>) => value[field] === target,
-        );
+      return (
+        Object.values(rawEnum)
+          // eslint-disable-next-line unicorn/no-array-callback-reference
+          .filter(filter || (() => true))
+          .find(
+            (value: EnumItem<T, TEnumItemExtension>) => value[field] === target,
+          )
+      );
     },
-    
+
     fromDisplay: (target: string) => {
-      const item = (
-        Object.values(rawEnum) as EnumItem<T, TEnumItemExtension>[]
-      ).find(
+      const item = Object.values(rawEnum).find(
         (value: EnumItem<T, TEnumItemExtension>) => value.display === target,
       );
       if (!item) {
@@ -118,18 +117,18 @@ const buildExtensionMethods = <T, TEnumItemExtension>(
       }
       return item;
     },
-    
+
     tryFromDisplay: (target?: string | null) => {
       if (!target) {
-        return undefined;
+        return;
       }
-      return (Object.values(rawEnum) as EnumItem<T, TEnumItemExtension>[]).find(
+      return Object.values(rawEnum).find(
         (value: EnumItem<T, TEnumItemExtension>) => value.display === target,
       );
     },
-    
+
     // Transformation methods - these convert enum items to different formats
-    
+
     /**
      * Extract values from a specific custom field across all items.
      * Respects filter options for empty and deprecated items.
@@ -139,20 +138,18 @@ const buildExtensionMethods = <T, TEnumItemExtension>(
       filter?: (item: EnumItem<T, TEnumItemExtension>) => boolean,
       filterOptions?: EnumFilterOptions,
     ) => {
-      return (Object.values(rawEnum) as EnumItem<T, TEnumItemExtension>[])
+      return Object.values(rawEnum)
         .filter(
           x =>
             (filter ? filter(x) : true) &&
             (filterOptions?.showEmpty
               ? true
-              : notEmpty(
-                  x[field as keyof TEnumItemExtension] as CustomFieldType,
-                )) &&
+              : notEmpty(x[field] as CustomFieldType)) &&
             (filterOptions?.showDeprecated ? true : !x.deprecated),
         )
-        .map(x => x[field as keyof TEnumItemExtension] as CustomFieldType);
+        .map(x => x[field] as CustomFieldType);
     },
-    
+
     /**
      * Convert to dropdown options, automatically sorted by index.
      * Includes optional iconText if present in the enum item.
@@ -184,14 +181,14 @@ const buildExtensionMethods = <T, TEnumItemExtension>(
           ...(item.iconText ? { iconText: item.iconText } : {}),
         }));
     },
-    
+
     // Array extraction methods - these get arrays of specific properties
-    
+
     toValues: (
       filter?: (item: EnumItem<T, TEnumItemExtension>) => boolean,
       filterOptions?: EnumFilterOptions,
     ) =>
-      (Object.values(rawEnum) as EnumItem<T, TEnumItemExtension>[])
+      Object.values(rawEnum)
         .filter(
           x =>
             (filter ? filter(x) : true) &&
@@ -204,7 +201,7 @@ const buildExtensionMethods = <T, TEnumItemExtension>(
       filter?: (item: EnumItem<T, TEnumItemExtension>) => boolean,
       filterOptions?: EnumFilterOptions,
     ) =>
-      (Object.values(rawEnum) as EnumItem<T, TEnumItemExtension>[])
+      Object.values(rawEnum)
         .filter(
           x =>
             (filter ? filter(x) : true) &&
@@ -212,12 +209,12 @@ const buildExtensionMethods = <T, TEnumItemExtension>(
             (filterOptions?.showDeprecated ? true : !x.deprecated),
         )
         .map((item: EnumItem<T, TEnumItemExtension>) => item.key) as string[],
-        
+
     toDisplays: (
       filter?: (item: EnumItem<T, TEnumItemExtension>) => boolean,
       filterOptions?: EnumFilterOptions,
     ) =>
-      (Object.values(rawEnum) as EnumItem<T, TEnumItemExtension>[])
+      Object.values(rawEnum)
         .filter(
           x =>
             (filter ? filter(x) : true) &&
@@ -227,18 +224,18 @@ const buildExtensionMethods = <T, TEnumItemExtension>(
         .map(
           (item: EnumItem<T, TEnumItemExtension>) => item.display,
         ) as string[],
-        
+
     toEnumItems: (
       filter?: (item: EnumItem<T, TEnumItemExtension>) => boolean,
       filterOptions?: EnumFilterOptions,
     ) =>
-      (Object.values(rawEnum) as EnumItem<T, TEnumItemExtension>[]).filter(
+      Object.values(rawEnum).filter(
         x =>
           (filter ? filter(x) : true) &&
           (filterOptions?.showEmpty ? true : notEmpty(x)) &&
           (filterOptions?.showDeprecated ? true : !x.deprecated),
       ),
-      
+
     /**
      * Creates a new object with filtered enum items.
      * Useful for creating subset enums or when you need an object format.

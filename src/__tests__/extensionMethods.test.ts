@@ -1,6 +1,6 @@
-import { enumeration } from '../enumeration';
-import { addExtensionMethods } from '../extensionMethods';
-import { Enumeration, EnumItem } from '../types';
+import { enumeration } from '../enumeration.js';
+import { addExtensionMethods } from '../extensionMethods.js';
+import { Enumeration, EnumItem } from '../types.js';
 
 const input = ['one', 'two'] as const;
 

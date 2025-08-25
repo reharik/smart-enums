@@ -1,7 +1,7 @@
 import { cobolCase } from 'case-anything';
 
-import { Enumeration, EnumItem } from '../types';
-import { enumeration } from '../enumeration';
+import { Enumeration, EnumItem } from '../types.js';
+import { enumeration } from '../enumeration.js';
 
 describe('ENUM FROM OBJECT', () => {
   const input = {
