@@ -3,7 +3,7 @@
  * @param value - The value to check
  * @returns True if the value is defined and not null
  */
-export declare const notEmpty: <X>(value: X | null | undefined) => value is X;
+export declare const notEmpty: <X>(value: X | null | undefined) => value is NonNullable<X>;
 /**
  * Base structure for enum items. All enum items will have these properties.
  */
@@ -65,12 +65,12 @@ export type PropertyAutoFormatter = {
 /**
  * Options for filtering enum items in various methods
  */
-export interface EnumFilterOptions {
+export type EnumFilterOptions = {
     /** Include items with null/undefined values (default: false) */
     showEmpty?: boolean;
     /** Include deprecated items (default: false) */
     showDeprecated?: boolean;
-}
+};
 /**
  * Standard dropdown/select option format
  */
@@ -155,4 +155,3 @@ export type EnumItem<T, TEnumItemExtension = Record<string, never>, K extends ke
  * Helper type for extracting the enum type from an enumeration object
  */
 export type Enumeration<ENUM_OF, INPUT_TYPE> = EnumItem<INPUT_TYPE> & Omit<ENUM_OF[keyof ENUM_OF & keyof NormalizedInputType<INPUT_TYPE>], 'key' | 'value' | 'display' | 'index' | 'deprecated'>;
-//# sourceMappingURL=types.d.ts.map

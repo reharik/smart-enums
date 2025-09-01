@@ -1,4 +1,4 @@
-import { BaseEnum, EnumerationProps, EnumItem, ExtensionMethods, NormalizedInputType } from './types';
+import { BaseEnum, EnumerationProps, EnumItem, ExtensionMethods, NormalizedInputType } from './types.js';
 /**
  * Creates a type-safe enumeration with built-in utility methods.
  *
@@ -45,4 +45,3 @@ declare function enumeration<TInput extends readonly string[] | {
     [K in keyof NormalizedInputType<TInput>]: EnumItem<NormalizedInputType<TInput>, TEnumItemExtension>;
 } & ExtensionMethods<NormalizedInputType<TInput>, TEnumItemExtension> & TExtraExtensionMethods;
 export { enumeration };
-//# sourceMappingURL=enumeration.d.ts.map
