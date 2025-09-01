@@ -1,13 +1,7 @@
 /**
- * Type guard to check if a value is not null or undefined
- * @param value - The value to check
- * @returns True if the value is defined and not null
- */
-export declare const notEmpty: <X>(value: X | null | undefined) => value is NonNullable<X>;
-/**
  * Base structure for enum items. All enum items will have these properties.
  */
-export type BaseEnum = {
+type BaseEnum = {
     /** The constant-case value (e.g., "USER_ADMIN") */
     value?: string;
     /** The human-readable display name (e.g., "User Admin") */
@@ -23,7 +17,7 @@ export type BaseEnum = {
  * @template TEnumItemExtension - Additional properties to add to each enum item
  * @template TExtraExtensionMethods - Additional methods to add to the enum object
  */
-export type EnumerationProps<TInput extends readonly string[] | {
+type EnumerationProps<TInput extends readonly string[] | {
     [k: string]: Partial<BaseEnum>;
 }, TEnumItemExtension = Record<string, never>, TExtraExtensionMethods = Record<string, never>> = {
     /**
@@ -56,7 +50,7 @@ export type EnumerationProps<TInput extends readonly string[] | {
 /**
  * Defines how to auto-generate a property from the enum key
  */
-export type PropertyAutoFormatter = {
+type PropertyAutoFormatter = {
     /** The property name to generate */
     key: string;
     /** Function to transform the key into the property value */
@@ -65,7 +59,7 @@ export type PropertyAutoFormatter = {
 /**
  * Options for filtering enum items in various methods
  */
-export type EnumFilterOptions = {
+type EnumFilterOptions = {
     /** Include items with null/undefined values (default: false) */
     showEmpty?: boolean;
     /** Include deprecated items (default: false) */
@@ -74,7 +68,7 @@ export type EnumFilterOptions = {
 /**
  * Standard dropdown/select option format
  */
-export type DropdownOption = {
+type DropdownOption = {
     value: string;
     label: string;
     iconText?: string;
@@ -83,7 +77,7 @@ export type DropdownOption = {
  * All extension methods that are automatically added to enum objects.
  * These methods provide various ways to look up and filter enum items.
  */
-export type ExtensionMethods<T, TEnumItemExtension> = {
+type ExtensionMethods<T, TEnumItemExtension> = {
     /** Get enum item by its value. Throws if not found. */
     fromValue: (target: string) => EnumItem<T, TEnumItemExtension>;
     /** Get enum item by its key. Throws if not found. */
@@ -128,7 +122,7 @@ export type ExtensionMethods<T, TEnumItemExtension> = {
  * Converts a readonly string array type to an object type with BaseEnum values
  * @internal
  */
-export type ArrayToObjectType<T extends readonly string[]> = {
+type ArrayToObjectType<T extends readonly string[]> = {
     [K in T[number]]: BaseEnum;
 };
 /**
@@ -136,14 +130,14 @@ export type ArrayToObjectType<T extends readonly string[]> = {
  * String arrays are converted to objects with empty BaseEnum values.
  * @internal
  */
-export type NormalizedInputType<T> = T extends readonly string[] ? ArrayToObjectType<T> : T extends {
+type NormalizedInputType<T> = T extends readonly string[] ? ArrayToObjectType<T> : T extends {
     [k: string]: BaseEnum;
 } ? T : never;
 /**
  * The structure of each item in an enumeration.
  * Combines BaseEnum properties with any custom extensions.
  */
-export type EnumItem<T, TEnumItemExtension = Record<string, never>, K extends keyof NormalizedInputType<T> = keyof NormalizedInputType<T>> = {
+type EnumItem<T, TEnumItemExtension = Record<string, never>, K extends keyof NormalizedInputType<T> = keyof NormalizedInputType<T>> = {
     /** The original key from the input (e.g., 'USER_ADMIN') */
     key: K;
     value: string;
@@ -154,4 +148,52 @@ export type EnumItem<T, TEnumItemExtension = Record<string, never>, K extends ke
 /**
  * Helper type for extracting the enum type from an enumeration object
  */
-export type Enumeration<ENUM_OF, INPUT_TYPE> = EnumItem<INPUT_TYPE> & Omit<ENUM_OF[keyof ENUM_OF & keyof NormalizedInputType<INPUT_TYPE>], 'key' | 'value' | 'display' | 'index' | 'deprecated'>;
+type Enumeration<ENUM_OF, INPUT_TYPE> = EnumItem<INPUT_TYPE> & Omit<ENUM_OF[keyof ENUM_OF & keyof NormalizedInputType<INPUT_TYPE>], 'key' | 'value' | 'display' | 'index' | 'deprecated'>;
+
+/**
+ * Creates a type-safe enumeration with built-in utility methods.
+ *
+ * @example
+ * // Simple string array input
+ * const Status = enumeration({
+ *   input: ['PENDING', 'ACTIVE', 'COMPLETED'] as const
+ * });
+ *
+ * // Object input with overrides
+ * const UserRole = enumeration({
+ *   input: {
+ *     ADMIN: { display: 'Administrator', value: 'admin' },
+ *     USER: { display: 'Regular User' },
+ *     GUEST: { deprecated: true }
+ *   }
+ * });
+ *
+ * // With custom extensions
+ * const Priority = enumeration({
+ *   input: {
+ *     LOW: { level: 1 },
+ *     MEDIUM: { level: 2 },
+ *     HIGH: { level: 3 }
+ *   },
+ *   extraExtensionMethods: (items) => ({
+ *     getByLevel: (level: number) => items.find(i => i.level === level),
+ *     getSorted: () => items.sort((a, b) => a.level - b.level)
+ *   })
+ * });
+ *
+ * // Usage examples:
+ * const active = Status.ACTIVE; // EnumItem with key, value, display, etc.
+ * const statusFromValue = Status.fromValue('PENDING'); // Lookup by value
+ * const allOptions = Status.toOptions(); // Convert to dropdown options
+ * const activeOnly = UserRole.toEnumItems(item => !item.deprecated);
+ *
+ * @param props Configuration for the enumeration
+ * @returns An object with enum items as properties plus all extension methods
+ */
+declare function enumeration<TInput extends readonly string[] | {
+    [k: string]: BaseEnum;
+}, TEnumItemExtension = Record<string, never>, TExtraExtensionMethods = Record<string, never>>({ input, extraExtensionMethods, propertyAutoFormatters, }: EnumerationProps<TInput, TEnumItemExtension, TExtraExtensionMethods>): {
+    [K in keyof NormalizedInputType<TInput>]: EnumItem<NormalizedInputType<TInput>, TEnumItemExtension>;
+} & ExtensionMethods<NormalizedInputType<TInput>, TEnumItemExtension> & TExtraExtensionMethods;
+
+export { type BaseEnum, type DropdownOption, type EnumItem, type Enumeration, enumeration };
