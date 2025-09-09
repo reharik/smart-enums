@@ -280,49 +280,58 @@ function ColorSelector() {
 
 ### Serialization and Reviving (Transformations)
 
-When sending data over the wire or persisting to a database, you often want to replace Smart Enum items with their string value. Use the provided helpers to serialize/deserialize safely.
+When sending data over the wire or persisting to a database, replace enum items with strings and revive them back.
 
 ```ts
 import {
   serializeSmartEnums,
   reviveSmartEnums,
   enumeration,
-  type EnumItemType,
+  type Enumeration,
 } from 'smart-enums';
 
-// Define an enum
-const input = ['pending', 'active', 'completed'] as const;
-const Status = enumeration({ input });
-type Status = Enumeration<typeof Status, typeof input>;
+const statusInput = ['pending', 'active', 'completed'] as const
+const Status = enumeration({ input: statusInput });
+type Status = Enumeration<typeof Status, typeof statusInput>;
 
+const colorInput: ['red', 'blue', 'green'] as const 
+const Color = enumeration({ input: colorInput});
+type Color = Enumeration<typeof Color, type of colorInput>;
 
-// A DTO that uses enum items
 const dto = {
   id: '123',
   status: Status.active,
+  favoriteColor: Color.red,
   history: [Status.pending, Status.completed],
 };
 
-// Serialize: replaces enum items with their .value
+// Inferred serialized type
 const wire = serializeSmartEnums(dto);
-// wire => { id: '123', status: 'ACTIVE', history: ['PENDING', 'COMPLETED'] }
 
-// Revive: provide a field->enum map to turn values back into enum items
-const revived = reviveSmartEnums(wire, {
-  status: Status,
-  // Use the same key where a string value should be mapped back to an enum item
-});
+// Inferred revived type (map keys with as const)
+const revived = reviveSmartEnums(
+  wire,
+  { status: Status, favoriteColor: Color } as const,
+);
 
-// Optional: for nested structures use the nested field keys
-const revivedNested = reviveSmartEnums(
-  { nested: { state: 'ACTIVE' } },
-  { state: Status },
+// Explicit return types (optional)
+type MyWire = { id: string; status: string };
+const wireExplicit = serializeSmartEnums<MyWire>(dto);
+
+type MyRevived = RevivedSmartEnums<
+  typeof wire,
+  { status: typeof Status; favoriteColor: typeof Color }
+>;
+const revivedExplicit = reviveSmartEnums<MyRevived>(
+  wire,
+  { status: Status, favoriteColor: Color } as const,
 );
 ```
 
 Notes:
-- Serialization detects enum items using a non-enumerable Symbol tag; JSON output stays clean.
+- Serialization uses a non-enumerable Symbol tag to detect enum items; JSON stays clean.
 - Reviving is opt-in per field name. If no mapping is provided for a field, the string is left as-is.
+- Use `as const` on the mapping object so keys remain literal for best inference.
 - Cyclic references are preserved during serialization.
 
 ### Validation & Type Guards
@@ -385,26 +394,6 @@ Main factory function for creating Smart Enums.
 |--------|------|-------------|
 | `showEmpty` | `boolean` | Include items with null/undefined values |
 | `showDeprecated` | `boolean` | Include deprecated items |
-
-## TypeScript Support
-
-Smart Enums are built with TypeScript first in mind:
-
-```typescript
-// Use in function signatures
-function updateStatus(status: Status): void {
-  console.log(`Updating to: ${status.display}`);
-}
-
-updateStatus(Status.banned); // 'Updating to: Banned'
-
-// Generic constraints
-function processEnum<T extends ReturnType<typeof enumeration>>(smartEnum: T, value: string) {
-  return smartEnum.tryFromValue(value);
-}
-```
-
- 
 
 ## Migration Guide
 

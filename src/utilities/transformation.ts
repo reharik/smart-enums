@@ -1,5 +1,10 @@
 // serializeSmartEnums.ts
 import { isSmartEnumItem } from '../enumeration.js';
+import type {
+  SerializedSmartEnums,
+  RevivedSmartEnums,
+  AnyEnumLike,
+} from '../types.js';
 
 type PlainObject = Record<string, unknown>;
 
@@ -10,7 +15,10 @@ const isPlainObject = (x: unknown): x is PlainObject =>
 
 // use isSmartEnumItem from enumeration.ts
 
-export function serializeSmartEnums<T>(input: T): T {
+// Prefer inferred return type; optional override via S
+export function serializeSmartEnums<T>(input: T): SerializedSmartEnums<T>;
+export function serializeSmartEnums<S>(input: unknown): S;
+export function serializeSmartEnums(input: unknown): unknown {
   const seen = new WeakMap<object, unknown>();
 
   const walk = (v: unknown): unknown => {
@@ -34,20 +42,23 @@ export function serializeSmartEnums<T>(input: T): T {
     return v;
   };
 
-  return walk(input) as T;
+  return walk(input);
 }
 
 // Reverse with a simple field->enum map
-type EnumLike = {
-  tryFromValue: (
-    value?: string | null,
-  ) => { key: string; value: string } | undefined;
-};
-
-export function reviveSmartEnums<T>(
-  input: T,
-  enumByField: Record<string, EnumLike>,
-): T {
+// Prefer inferred return type; optional override via R
+export function reviveSmartEnums<
+  T,
+  const M extends Record<string, AnyEnumLike>,
+>(input: T, enumByField: M): RevivedSmartEnums<T, M>;
+export function reviveSmartEnums<R>(
+  input: unknown,
+  enumByField: Record<string, AnyEnumLike>,
+): R;
+export function reviveSmartEnums(
+  input: unknown,
+  enumByField: Record<string, AnyEnumLike>,
+): unknown {
   const seen = new WeakMap<object, unknown>();
 
   const walk = (v: unknown, parentKey?: string): unknown => {
@@ -73,5 +84,5 @@ export function reviveSmartEnums<T>(
     return v;
   };
 
-  return walk(input) as T;
+  return walk(input);
 }

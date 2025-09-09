@@ -33,8 +33,9 @@ describe('TRANSFORMATION', () => {
       const wire = serializeSmartEnums(dto);
       expect(wire.user.status).toBe('PENDING');
       expect(wire.user.history).toEqual(['ACTIVE', 'COMPLETED']);
-      expect(wire.tags[0]).toBe('BLUE');
-      expect(wire.tags[1].favorite).toBe('GREEN');
+      const tags = wire.tags as readonly [string, { favorite: string }];
+      expect(tags[0]).toBe('BLUE');
+      expect(tags[1].favorite).toBe('GREEN');
     });
   });
 
@@ -64,6 +65,7 @@ describe('TRANSFORMATION', () => {
         nested: { state: 'ACTIVE' },
         list: [{ state: 'PENDING' }, 'UNCHANGED'],
       };
+
       const revived = reviveSmartEnums(wire, {
         status: Status,
         favoriteColor: Color,
@@ -73,8 +75,9 @@ describe('TRANSFORMATION', () => {
       expect(revived.status).toBe(Status.completed);
       expect(revived.favoriteColor).toBe(Color.red);
       expect(revived.nested.state).toBe(Status.active);
-      expect(revived.list[0].state).toBe(Status.pending);
-      expect(revived.list[1]).toBe('UNCHANGED');
+      const items = revived.list as readonly [Status, { state: Status }];
+      expect(items[0].state).toBe(Status.pending);
+      expect(items[1]).toBe('UNCHANGED');
     });
   });
 

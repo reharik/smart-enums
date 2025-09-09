@@ -237,3 +237,57 @@ export type Enumeration<ENUM_OF, INPUT_TYPE> = EnumItem<INPUT_TYPE> &
     ENUM_OF[keyof ENUM_OF & keyof NormalizedInputType<INPUT_TYPE>],
     'key' | 'value' | 'display' | 'index' | 'deprecated'
   >;
+
+/**
+ * Helper to get the enum item type from an enum object returned by enumeration().
+ * Usage:
+ *   const MyEnum = enumeration({ input });
+ *   type MyEnumItem = EnumItemType<typeof MyEnum>;
+ */
+export type EnumItemType<TEnum extends Record<string, unknown>> =
+  TEnum[keyof TEnum];
+
+/**
+ * Compile-time transformer: replaces Smart Enum items with string values,
+ * recursively over arrays and objects. Structural detection checks for
+ * presence of `key` and `value`.
+ */
+export type SerializedSmartEnums<T> = T extends { value: string; key: unknown }
+  ? string
+  : T extends ReadonlyArray<infer U>
+    ? ReadonlyArray<SerializedSmartEnums<U>>
+    : T extends Array<infer U>
+      ? SerializedSmartEnums<U>[]
+      : T extends object
+        ? { [K in keyof T]: SerializedSmartEnums<T[K]> }
+        : T;
+
+/**
+ * Revived shape: for keys present in mapping M, the string becomes the
+ * corresponding enum item type (derived from the provided enum object);
+ * other fields recurse.
+ */
+export type EnumItemFromEnum<TEnum> =
+  TEnum extends Record<string, infer V>
+    ? V extends { value: string }
+      ? V
+      : never
+    : never;
+
+// Structural constraint for enum objects passed to reviveSmartEnums mapping
+export type AnyEnumLike = {
+  tryFromValue: (value?: string | null) => { value: string } | undefined;
+} & Record<string, { value: string }>;
+
+export type RevivedSmartEnums<T, M extends Record<string, AnyEnumLike>> =
+  T extends ReadonlyArray<infer U>
+    ? ReadonlyArray<RevivedSmartEnums<U, M>>
+    : T extends Array<infer U>
+      ? RevivedSmartEnums<U, M>[]
+      : T extends object
+        ? {
+            [K in keyof T]: K extends Extract<keyof M, string>
+              ? EnumItemFromEnum<M[K]>
+              : RevivedSmartEnums<T[K], M>;
+          }
+        : T;
