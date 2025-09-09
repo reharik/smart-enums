@@ -2,13 +2,28 @@ import { capitalCase, constantCase } from 'case-anything';
 
 import { addExtensionMethods } from './extensionMethods.js';
 import {
-  BaseEnum,
   EnumerationProps,
   EnumItem,
   ExtensionMethods,
   NormalizedInputType,
   PropertyAutoFormatter,
+  EnumInput,
 } from './types.js';
+
+// Runtime tagging for Smart Enum items
+export const SMART_ENUM_ITEM = Symbol.for('smart-enum-item');
+export const SMART_ENUM_ID = Symbol.for('smart-enum-id');
+
+/**
+ * Runtime type guard to detect Smart Enum items created by this library.
+ */
+export const isSmartEnumItem = (
+  x: unknown,
+): x is { key: string; value: string; index?: number } => {
+  return (
+    !!x && typeof x === 'object' && Reflect.get(x, SMART_ENUM_ITEM) === true
+  );
+};
 
 /**
  * Creates a type-safe enumeration with built-in utility methods.
@@ -51,7 +66,7 @@ import {
  * @returns An object with enum items as properties plus all extension methods
  */
 function enumeration<
-  TInput extends readonly string[] | { [k: string]: BaseEnum },
+  TInput extends EnumInput,
   TEnumItemExtension = Record<string, never>,
   TExtraExtensionMethods = Record<string, never>,
 >({
@@ -105,6 +120,8 @@ function enumeration<
   };
 
   // Step 4: Populate each enum item with formatted properties and user overrides
+  // Create a per-enum instance identifier for optional identity checks
+  const enumInstanceId = Symbol('smart-enum-instance');
   let index = 0;
   for (const key in normalizedInput) {
     // eslint requires hasOwnProperty check
@@ -124,6 +141,16 @@ function enumeration<
         ...formatProperties(key, formattersWithDefaults), // Auto-generated props
         ...value, // User overrides
       } as EnumItem<NormalizedInputType<TInput>, TEnumItemExtension>;
+
+      // Attach non-enumerable runtime tags for detection and identity
+      Object.defineProperty(enumItem, SMART_ENUM_ITEM, {
+        value: true,
+        enumerable: false,
+      });
+      Object.defineProperty(enumItem, SMART_ENUM_ID, {
+        value: enumInstanceId,
+        enumerable: false,
+      });
 
       rawEnumItems[key] = enumItem;
       index++;

@@ -278,6 +278,53 @@ function ColorSelector() {
 
 ```
 
+### Serialization and Reviving (Transformations)
+
+When sending data over the wire or persisting to a database, you often want to replace Smart Enum items with their string value. Use the provided helpers to serialize/deserialize safely.
+
+```ts
+import {
+  serializeSmartEnums,
+  reviveSmartEnums,
+  enumeration,
+  type EnumItemType,
+} from 'smart-enums';
+
+// Define an enum
+const input = ['pending', 'active', 'completed'] as const;
+const Status = enumeration({ input });
+type Status = Enumeration<typeof Status, typeof input>;
+
+
+// A DTO that uses enum items
+const dto = {
+  id: '123',
+  status: Status.active,
+  history: [Status.pending, Status.completed],
+};
+
+// Serialize: replaces enum items with their .value
+const wire = serializeSmartEnums(dto);
+// wire => { id: '123', status: 'ACTIVE', history: ['PENDING', 'COMPLETED'] }
+
+// Revive: provide a field->enum map to turn values back into enum items
+const revived = reviveSmartEnums(wire, {
+  status: Status,
+  // Use the same key where a string value should be mapped back to an enum item
+});
+
+// Optional: for nested structures use the nested field keys
+const revivedNested = reviveSmartEnums(
+  { nested: { state: 'ACTIVE' } },
+  { state: Status },
+);
+```
+
+Notes:
+- Serialization detects enum items using a non-enumerable Symbol tag; JSON output stays clean.
+- Reviving is opt-in per field name. If no mapping is provided for a field, the string is left as-is.
+- Cyclic references are preserved during serialization.
+
 ### Validation & Type Guards
 
 ```typescript
@@ -356,6 +403,8 @@ function processEnum<T extends ReturnType<typeof enumeration>>(smartEnum: T, val
   return smartEnum.tryFromValue(value);
 }
 ```
+
+ 
 
 ## Migration Guide
 

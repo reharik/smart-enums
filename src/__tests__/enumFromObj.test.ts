@@ -165,6 +165,46 @@ describe('ENUM FROM OBJECT', () => {
       expect(TestEnum.concatKeys()).toBe('redgreenblue');
     });
   });
+  describe('when extending enum items with extra properties', () => {
+    it('should allow accessing custom fields defined in the input', () => {
+      type ItemExt = { slug: string; title?: string };
+
+      const inputWithExt = {
+        one: { slug: '/one' },
+        two: { slug: '/two', title: 'Two' },
+        three: { slug: '/three' },
+      } as const;
+
+      const TestEnum = enumeration<typeof inputWithExt, ItemExt>({
+        input: inputWithExt,
+      });
+
+      expect(TestEnum.one.slug).toBe('/one');
+      expect(TestEnum.two.slug).toBe('/two');
+      expect(TestEnum.two.title).toBe('Two');
+      expect(TestEnum.three.title).toBeUndefined();
+    });
+
+    it('should include custom fields in toCustomFieldValues', () => {
+      type ItemExt = { slug: string; title?: string };
+
+      const inputWithExt = {
+        one: { slug: '/one' },
+        two: { slug: '/two' },
+        three: { slug: '/three' },
+      } as const;
+
+      const TestEnum = enumeration<typeof inputWithExt, ItemExt>({
+        input: inputWithExt,
+      });
+
+      expect(TestEnum.toCustomFieldValues<string>('slug')).toEqual([
+        '/one',
+        '/two',
+        '/three',
+      ]);
+    });
+  });
   describe('when passing function for displayFormatter', () => {
     it('should return proper result for display', () => {
       const inputForDisplay = {

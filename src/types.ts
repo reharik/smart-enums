@@ -31,7 +31,7 @@ export type BaseEnum = {
  * @template TExtraExtensionMethods - Additional methods to add to the enum object
  */
 export type EnumerationProps<
-  TInput extends readonly string[] | { [k: string]: Partial<BaseEnum> },
+  TInput extends EnumInput,
   TEnumItemExtension = Record<string, never>,
   TExtraExtensionMethods = Record<string, never>,
 > = {
@@ -56,7 +56,7 @@ export type EnumerationProps<
   ) => TExtraExtensionMethods;
 
   /**
-   * Auto-formatters for generating additional properties from the key.
+   * Auto-formatters for generating additional properties from the enum key.
    * By default, 'value' uses constantCase and 'display' uses capitalCase.
    * @example
    * propertyAutoFormatters: [
@@ -95,6 +95,12 @@ export type DropdownOption = {
   label: string;
   iconText?: string;
 };
+
+// Named input shapes for enumeration()
+export type ObjectEnumInput = {
+  readonly [k: string]: Readonly<Partial<BaseEnum> & Record<string, unknown>>;
+};
+export type EnumInput = readonly string[] | ObjectEnumInput;
 
 /**
  * All extension methods that are automatically added to enum objects.
@@ -202,7 +208,7 @@ export type ArrayToObjectType<T extends readonly string[]> = {
  */
 export type NormalizedInputType<T> = T extends readonly string[]
   ? ArrayToObjectType<T>
-  : T extends { [k: string]: BaseEnum }
+  : T extends { readonly [k: string]: Readonly<Record<string, unknown>> }
     ? T
     : never;
 
