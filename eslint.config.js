@@ -18,6 +18,7 @@ export default [
       '.history',
       'eslint.config.js',
       'jest.config.js',
+      'jest.config.cjs',
     ],
   },
 

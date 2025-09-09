@@ -14,17 +14,17 @@ Smart Enums give you the best of all worlds:
 
 ```typescript
 const Colors = enumeration({
-  input: ['red', 'blue', 'green'] as const
+  input: ['red', 'blue', 'green'] as const,
 });
 
 // You get a rich object structure:
-Colors.red   // { key: "red", value: "RED", display: "Red", index: 0 }
-Colors.blue  // { key: "blue", value: "BLUE", display: "Blue", index: 1 }
+Colors.red; // { key: "red", value: "RED", display: "Red", index: 0 }
+Colors.blue; // { key: "blue", value: "BLUE", display: "Blue", index: 1 }
 
 // Plus powerful utility methods:
-Colors.fromValue('RED')        // Returns Colors.red
-Colors.toOptions()             // Returns dropdown-ready options
-Colors.toValues()              // Returns ['RED', 'BLUE', 'GREEN']
+Colors.fromValue('RED'); // Returns Colors.red
+Colors.toOptions(); // Returns dropdown-ready options
+Colors.toValues(); // Returns ['RED', 'BLUE', 'GREEN']
 ```
 
 ## Installation
@@ -44,15 +44,17 @@ pnpm add smart-enums
 The simplest way to create a Smart Enum:
 
 ```typescript
-import { enumeration } from 'smart-enums';
+import { enumeration, Enumeration } from 'smart-enums';
 
-const Status = enumeration({
-  input: ['pending', 'active', 'completed', 'archived'] as const
-});
+const input = ['pending', 'active', 'completed', 'archived'] as const;
+
+type Status = Enumeration<typeof Status, typeof input>;
+const Status = enumeration({ input });
 
 // Use it:
-console.log(Status.active.value);    // "ACTIVE"
-console.log(Status.active.display);  // "Active"
+console.log(Status.active.value); // "ACTIVE"
+console.log(Status.active.display); // "Active"
+
 ```
 
 ### Creating Enums from Objects
@@ -60,16 +62,19 @@ console.log(Status.active.display);  // "Active"
 For more control over the values:
 
 ```typescript
-const Priority = enumeration({
-  input: {
-    low: { value: 'LOW', display: 'Low Priority', level: 1 },
-    medium: { value: 'MED', display: 'Medium Priority', level: 2 },
-    high: { value: 'HIGH', display: 'High Priority', level: 3 },
-    urgent: { value: 'URGENT', display: 'Urgent!!!', level: 4 }
-  }
-});
+import { enumeration, Enumeration } from 'smart-enums';
 
-console.log(Priority.urgent.level);  // 4
+const input = {
+  low: { value: 'LOW', display: 'Low Priority' },
+  medium: { value: 'MIDDLE', display: 'Medium Priority' },
+  high: { value: 'HIGH', display: 'High Priority' },
+  urgent: { value: 'URGENT', display: 'Urgent!!!' },
+};
+
+type Priority = Enumeration<typeof Priority, typeof input>;
+const Priority = enumeration({ input });
+
+console.log(Priority.urgent.level); // 4
 ```
 
 ## Core Features
@@ -83,8 +88,8 @@ function processColor(color: Color) {
   console.log(color.display);
 }
 
-processColor(Colors.red);     // ✅ Works
-processColor(Status.active);  // ❌ Type error
+processColor(Colors.red); // ✅ Works
+processColor(Status.active); // ❌ Type error
 ```
 
 ### Auto-Generated Properties
@@ -100,18 +105,20 @@ Each enum item automatically gets:
 Override or add custom auto-formatting:
 
 ```typescript
-const Routes = enumeration({
-  input: ['userProfile', 'adminDashboard', 'settingsPage'] as const,
-  propertyAutoFormatters: [
-    { key: 'path', format: (k) => `/${k}` },
-    { key: 'slug', format: (k) => k.toLowerCase().replace(/([A-Z])/g, '-$1') },
-    { key: 'value', format: (k) => k.toLowerCase() }
-  ]
-});
 
-console.log(Routes.userProfile.path);  // "/userProfile"
-console.log(Routes.userProfile.slug);  // "/user-profile"
-console.log(Routes.userProfile.value);  // "/user-profile"
+const input = ['userProfile', 'adminDashboard', 'settingsPage'] as const;
+const propertyAutoFormatters = [
+  { key: 'path', format: k => `/${k}` },
+  { key: 'slug', format: k => k.toLowerCase().replace(/([A-Z])/g, '-$1') },
+  { key: 'value', format: k => k.toLowerCase() },
+];
+
+type Routes = Enumeration<typeof Routes, typeof input>;
+const Routes = enumeration({ input, propertyAutoFormatters });
+
+console.log(Routes.userProfile.path); // "/userProfile"
+console.log(Routes.userProfile.slug); // "/user-profile"
+console.log(Routes.userProfile.value); // "/user-profile"
 ```
 
 ## Utility Methods
@@ -147,13 +154,13 @@ const options = Priority.toOptions();
 // ]
 
 // Get all values
-const values = Colors.toValues();  // ['RED', 'BLUE', 'GREEN']
+const values = Colors.toValues(); // ['RED', 'BLUE', 'GREEN']
 
 // Get all keys
-const keys = Colors.toKeys();      // ['red', 'blue', 'green']
+const keys = Colors.toKeys(); // ['red', 'blue', 'green']
 
 // Get all display texts
-const displays = Colors.toDisplays();  // ['Red', 'Blue', 'Green']
+const displays = Colors.toDisplays(); // ['Red', 'Blue', 'Green']
 
 // Get all enum items as array
 const items = Colors.toEnumItems();
@@ -169,20 +176,15 @@ const UserStatus = enumeration({
     active: { value: 'ACTIVE' },
     inactive: { value: 'INACTIVE' },
     banned: { value: 'BANNED', deprecated: true },
-    deleted: { value: 'DELETED', deprecated: true }
-  }
+    deleted: { value: 'DELETED', deprecated: true },
+  },
 });
 
 // Exclude deprecated items
-const activeOptions = UserStatus.toOptions(
-  item => !item.deprecated
-);
+const activeOptions = UserStatus.toOptions(item => !item.deprecated);
 
 // With filter options
-const allOptions = UserStatus.toOptions(
-  undefined,
-  { showDeprecated: true }
-);
+const allOptions = UserStatus.toOptions(undefined, { showDeprecated: true });
 ```
 
 ## Advanced Usage
@@ -196,25 +198,23 @@ interface ColorExtension {
   hex: string;
   rgb: [number, number, number];
 }
-
-interface ExtraExtensionMethods = { 
-  getMixedColor: (c1: any, c2: any) => string,
-  getPrimaryColors: () => EnumItem<typeof input, ColorExtension>[] 
-}
-
 const input = {
   red: { hex: '#FF0000', rgb: [255, 0, 0] },
   blue: { hex: '#0000FF', rgb: [0, 0, 255] },
-  green: { hex: '#00FF00', rgb: [0, 255, 0] }
-}
+  green: { hex: '#00FF00', rgb: [0, 255, 0] },
+};
 
-const extraExtensionMethods = (items) => ({
+interface ExtraExtensionMethods {
+  getMixedColor: (c1: any, c2: any) => string;
+  getPrimaryColors: () => EnumItem<typeof input, ColorExtension>[];
+}
+const extraExtensionMethods = items => ({
   getMixedColor: (c1, c2) => {
     // Custom color mixing logic
     return `Mixed: ${c1.key} + ${c2.key}`;
   },
-  getPrimaryColors: () => items.filter(i => ['red', 'blue'].includes(i.key))
-})
+  getPrimaryColors: () => items.filter(i => ['red', 'blue'].includes(i.key)),
+});
 
 const Colors = enumeration<
   typeof colorsInput,
@@ -222,11 +222,11 @@ const Colors = enumeration<
   ExtraExtensionMethods
 >({
   input,
-  extraExtensionMethods
+  extraExtensionMethods,
 });
 
-console.log(Colors.red.hex);  // '#FF0000'
-console.log(Colors.getMixedColor(Colors.red, Colors.blue));  // 'Mixed: red + blue'
+console.log(Colors.red.hex); // '#FF0000'
+console.log(Colors.getMixedColor(Colors.red, Colors.blue)); // 'Mixed: red + blue'
 ```
 
 ### Custom Field Values
@@ -234,24 +234,27 @@ console.log(Colors.getMixedColor(Colors.red, Colors.blue));  // 'Mixed: red + bl
 Extract values from custom fields:
 
 ```typescript
-const Pages = enumeration({
-  input: {
-    home: { slug: '/', title: 'Home Page' },
-    about: { slug: '/about', title: 'About Us' },
-    contact: { slug: '/contact', title: 'Contact' }
-  }
-});
+type PageExtensions = { slug: string; title: string };
+const input = {
+  home: { slug: '/', title: 'Home Page' },
+  about: { slug: '/about', title: 'About Us' },
+  contact: { slug: '/contact', title: 'Contact' },
+};
+
+type Pages = Enumeration<typeof Pages, typeof input>;
+const Pages = enumeration<typeof input, PageExtensions>({ input });
+
+const slug = Pages.about.slug; // '/about'
 
 // Get all slugs
 const slugs = Pages.toCustomFieldValues<string>('slug');
 // Returns: ['/', '/about', '/contact']
 
 // Filter out undefined values
-const titles = Pages.toCustomFieldValues<string>(
-  'title',
-  undefined,
-  { showEmpty: false }
-);
+const titles = Pages.toCustomFieldValues<string>('title', undefined, {
+  showEmpty: false,
+});
+
 ```
 
 ### React/Frontend Usage
@@ -261,13 +264,10 @@ Perfect for form selects and dropdowns:
 ```tsx
 function ColorSelector() {
   const [selected, setSelected] = useState(Colors.red);
-  
+
   return (
-    <select 
-      value={selected.value}
-      onChange={(e) => setSelected(Colors.fromValue(e.target.value))}
-    >
-      {Colors.toOptions().map(option => (
+    <select value={selected.value} onChange={(e) => setSelected(Colors.fromValue(e.target.value))}>
+      {Colors.toOptions().map((option) => (
         <option key={option.value} value={option.value}>
           {option.label}
         </option>
@@ -275,6 +275,7 @@ function ColorSelector() {
     </select>
   );
 }
+
 ```
 
 ### Validation & Type Guards
@@ -282,11 +283,11 @@ function ColorSelector() {
 ```typescript
 function processStatus(statusValue: string) {
   const status = Status.tryFromValue(statusValue);
-  
+
   if (!status) {
     throw new Error(`Invalid status: ${statusValue}`);
   }
-  
+
   // Now status is typed as a valid enum item
   switch (status.key) {
     case 'pending':
@@ -343,22 +344,15 @@ Main factory function for creating Smart Enums.
 Smart Enums are built with TypeScript first in mind:
 
 ```typescript
-// Type extraction
-type StatusType = typeof Status;
-type StatusItem = typeof Status.active;
-
 // Use in function signatures
 function updateStatus(status: Status): void {
   console.log(`Updating to: ${status.display}`);
 }
 
-updateStatus(Status.banned) // 'Updating to: Banned'
+updateStatus(Status.banned); // 'Updating to: Banned'
 
 // Generic constraints
-function processEnum<T extends ReturnType<typeof enumeration>>(
-  smartEnum: T,
-  value: string
-) {
+function processEnum<T extends ReturnType<typeof enumeration>>(smartEnum: T, value: string) {
   return smartEnum.tryFromValue(value);
 }
 ```
@@ -372,12 +366,12 @@ function processEnum<T extends ReturnType<typeof enumeration>>(
 const COLORS = {
   RED: 'red',
   BLUE: 'blue',
-  GREEN: 'green'
+  GREEN: 'green',
 };
 
 // After
 const Colors = enumeration({
-  input: ['red', 'blue', 'green'] as const
+  input: ['red', 'blue', 'green'] as const,
 });
 
 // Usage changes from COLORS.RED to Colors.red.value
@@ -391,19 +385,19 @@ type Status = 'pending' | 'active' | 'completed';
 
 // After
 const Status = enumeration({
-  input: ['pending', 'active', 'completed'] as const
+  input: ['pending', 'active', 'completed'] as const,
 });
 
-type StatusItem = typeof Status[keyof typeof Status];
+type StatusItem = (typeof Status)[keyof typeof Status];
 ```
 
 ## Best Practices
 
 1. **Always use `as const`** for array inputs to preserve literal types
-2. 
-3. **Use `tryFrom*` methods** when dealing with external data
-4. **Leverage filtering** to hide deprecated items from users
-5. **Add custom properties** for domain-specific needs
+   
+2. **Use `tryFrom*` methods** when dealing with external data
+3. **Leverage filtering** to hide deprecated items from users
+4. **Add custom properties** for domain-specific needs
 
 ## Contributing
 
