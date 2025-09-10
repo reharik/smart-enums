@@ -15,9 +15,14 @@ const isPlainObject = (x: unknown): x is PlainObject =>
 
 // use isSmartEnumItem from enumeration.ts
 
-// Prefer inferred return type; optional override via S
+// Overloads:
+// 1) Inferred
 export function serializeSmartEnums<T>(input: T): SerializedSmartEnums<T>;
-export function serializeSmartEnums<S>(input: unknown): S;
+// 2) Return-type only (constrained to objects/arrays)
+export function serializeSmartEnums<
+  S extends Readonly<Record<string, unknown>> | readonly unknown[],
+>(input: unknown): S;
+// Implementation
 export function serializeSmartEnums(input: unknown): unknown {
   const seen = new WeakMap<object, unknown>();
 
@@ -46,15 +51,17 @@ export function serializeSmartEnums(input: unknown): unknown {
 }
 
 // Reverse with a simple field->enum map
-// Prefer inferred return type; optional override via R
+// Overloads:
+// 1) Inferred
 export function reviveSmartEnums<
   T,
   const M extends Record<string, AnyEnumLike>,
 >(input: T, enumByField: M): RevivedSmartEnums<T, M>;
-export function reviveSmartEnums<R>(
-  input: unknown,
-  enumByField: Record<string, AnyEnumLike>,
-): R;
+// 2) Return-type only (constrained to objects/arrays)
+export function reviveSmartEnums<
+  R extends Readonly<Record<string, unknown>> | readonly unknown[],
+>(input: unknown, enumByField: Record<string, AnyEnumLike>): R;
+// Implementation
 export function reviveSmartEnums(
   input: unknown,
   enumByField: Record<string, AnyEnumLike>,
