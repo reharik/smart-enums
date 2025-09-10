@@ -73,6 +73,7 @@ function enumeration<
   input,
   extraExtensionMethods,
   propertyAutoFormatters,
+  enumType,
 }: EnumerationProps<TInput, TEnumItemExtension, TExtraExtensionMethods>): {
   [K in keyof NormalizedInputType<TInput>]: EnumItem<
     NormalizedInputType<TInput>,
@@ -151,6 +152,15 @@ function enumeration<
         value: enumInstanceId,
         enumerable: false,
       });
+
+      // If a public enumType was provided, attach a JSON serializer that emits it
+      // Attach toJSON only when an enumType is provided in the props
+      if (enumType) {
+        Object.defineProperty(enumItem, 'toJSON', {
+          value: () => ({ __smart_enum_type: enumType, value: enumItem.value }),
+          enumerable: false,
+        });
+      }
 
       rawEnumItems[key] = enumItem;
       index++;

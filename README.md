@@ -334,6 +334,54 @@ Notes:
 - Use `as const` on the mapping object so keys remain literal for best inference.
 - Cyclic references are preserved during serialization.
 
+### Self-describing JSON with enumType
+
+If you prefer payloads that carry their enum type without an external field mapping, pass `enumType` when creating the enum. Each item exposes a custom `toJSON()` that emits `{ __smart_enum_type: '<YourId>', value: '<VALUE>' }`.
+
+```ts
+const Status = enumeration({
+  input: ['pending', 'active', 'completed'] as const,
+  enumType: 'Status',
+});
+
+JSON.stringify({ status: Status.active });
+// => {"status":{"__smart_enum_type":"Status","value":"ACTIVE"}}
+```
+
+You can then revive with a registry and a JSON.parse reviver, or using a post-parse walk.
+
+```ts
+const registry = { Status } as const;
+
+function parseAndReviveTagged<R>(json: string): R {
+  return JSON.parse(json, (_key, value) => {
+    if (
+      value &&
+      typeof value === 'object' &&
+      '__smart_enum_type' in value &&
+      'value' in value
+    ) {
+      const { __smart_enum_type, value: v } = value as {
+        __smart_enum_type: keyof typeof registry;
+        value: string;
+      };
+      return registry[__smart_enum_type]?.tryFromValue(v) ?? value;
+    }
+    return value;
+  }) as R;
+}
+
+const revived = parseAndReviveTagged<{ status: typeof Status.active }>(
+  JSON.stringify({ status: Status.active }),
+);
+```
+
+Typing JSON.parse results
+- JSON.parse returns `any` in TypeScript. Use a typed wrapper or an explicit type assertion:
+  - Wrapper: `function parseJson<T>(s: string): T { return JSON.parse(s) as T; }`
+  - Assertion: `const data = JSON.parse(json) as MyType;`
+- For validation, consider schema libraries (e.g., zod) to check the shape at runtime.
+
 ### Validation & Type Guards
 
 ```typescript

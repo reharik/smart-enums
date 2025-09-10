@@ -65,6 +65,13 @@ export type EnumerationProps<
    * ]
    */
   propertyAutoFormatters?: PropertyAutoFormatter[];
+
+  /**
+   * Optional identifier for this enum type. When provided, enum items will
+   * serialize with a toJSON() that includes this id so consumers can revive
+   * without an external field map. Example output: { __smart_enum_type: 'Status', value: 'ACTIVE' }
+   */
+  enumType?: string;
 };
 
 /**
