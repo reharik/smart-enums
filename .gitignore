@@ -26,4 +26,4 @@ bin/data/*.json
 
 .vercel
 .turbo
-dist
+# dist
