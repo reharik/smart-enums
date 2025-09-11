@@ -44,7 +44,10 @@ export const addExtensionMethods = <
  */
 const buildExtensionMethods = <T, TEnumItemExtension>(
   rawEnum: EnumItem<T, TEnumItemExtension>[],
-): ExtensionMethods<T, TEnumItemExtension> => {
+): ExtensionMethods<
+  { [k: string]: EnumItem<T, TEnumItemExtension> },
+  TEnumItemExtension
+> => {
   return {
     // Lookup methods - these find enum items by different properties
 
@@ -176,7 +179,7 @@ const buildExtensionMethods = <T, TEnumItemExtension>(
             (filterOptions?.showDeprecated ? true : !x.deprecated),
         )
         .map(item => ({
-          label: item.display || (item.key as string),
+          label: item.display || item.key,
           value: item.value,
           ...(item.iconText ? { iconText: item.iconText } : {}),
         }));
@@ -208,7 +211,7 @@ const buildExtensionMethods = <T, TEnumItemExtension>(
             (filterOptions?.showEmpty ? true : notEmpty(x)) &&
             (filterOptions?.showDeprecated ? true : !x.deprecated),
         )
-        .map((item: EnumItem<T, TEnumItemExtension>) => item.key) as string[],
+        .map((item: EnumItem<T, TEnumItemExtension>) => item.key),
 
     toDisplays: (
       filter?: (item: EnumItem<T, TEnumItemExtension>) => boolean,
@@ -253,7 +256,7 @@ const buildExtensionMethods = <T, TEnumItemExtension>(
             (filterOptions?.showDeprecated ? true : !x.deprecated),
         )
         .reduce((acc: ExtObject, item) => {
-          acc[item.key as keyof ExtObject] = item as unknown as ITEM_TYPE;
+          acc[item.key] = item as unknown as ITEM_TYPE;
           return acc;
         }, {} as ExtObject);
     },

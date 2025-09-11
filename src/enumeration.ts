@@ -8,6 +8,8 @@ import {
   NormalizedInputType,
   PropertyAutoFormatter,
   EnumInput,
+  ObjectEnumInput,
+  ArrayToObjectType,
 } from './types.js';
 
 // Runtime tagging for Smart Enum items
@@ -25,47 +27,48 @@ export const isSmartEnumItem = (
   );
 };
 
-/**
- * Creates a type-safe enumeration with built-in utility methods.
- *
- * @example
- * // Simple string array input
- * const Status = enumeration({
- *   input: ['PENDING', 'ACTIVE', 'COMPLETED'] as const
- * });
- *
- * // Object input with overrides
- * const UserRole = enumeration({
- *   input: {
- *     ADMIN: { display: 'Administrator', value: 'admin' },
- *     USER: { display: 'Regular User' },
- *     GUEST: { deprecated: true }
- *   }
- * });
- *
- * // With custom extensions
- * const Priority = enumeration({
- *   input: {
- *     LOW: { level: 1 },
- *     MEDIUM: { level: 2 },
- *     HIGH: { level: 3 }
- *   },
- *   extraExtensionMethods: (items) => ({
- *     getByLevel: (level: number) => items.find(i => i.level === level),
- *     getSorted: () => items.sort((a, b) => a.level - b.level)
- *   })
- * });
- *
- * // Usage examples:
- * const active = Status.ACTIVE; // EnumItem with key, value, display, etc.
- * const statusFromValue = Status.fromValue('PENDING'); // Lookup by value
- * const allOptions = Status.toOptions(); // Convert to dropdown options
- * const activeOnly = UserRole.toEnumItems(item => !item.deprecated);
- *
- * @param props Configuration for the enumeration
- * @returns An object with enum items as properties plus all extension methods
- */
-function enumeration<
+// Overload 1: array input (types return object form)
+export function enumeration<
+  TArr extends readonly string[],
+  TEnumItemExtension = Record<string, never>,
+  TExtraExtensionMethods = Record<string, never>,
+>(
+  props: EnumerationProps<TArr, TEnumItemExtension, TExtraExtensionMethods>,
+): {
+  [K in keyof ArrayToObjectType<TArr>]: EnumItem<
+    ArrayToObjectType<TArr>,
+    TEnumItemExtension
+  >;
+} & ExtensionMethods<
+  {
+    [K in keyof ArrayToObjectType<TArr>]: EnumItem<
+      ArrayToObjectType<TArr>,
+      TEnumItemExtension
+    >;
+  },
+  TEnumItemExtension
+> &
+  TExtraExtensionMethods;
+
+// Overload 2: object input
+export function enumeration<
+  TObj extends ObjectEnumInput,
+  TEnumItemExtension = Record<string, never>,
+  TExtraExtensionMethods = Record<string, never>,
+>(
+  props: EnumerationProps<TObj, TEnumItemExtension, TExtraExtensionMethods>,
+): {
+  [K in keyof TObj]: EnumItem<TObj, TEnumItemExtension>;
+} & ExtensionMethods<
+  {
+    [K in keyof TObj]: EnumItem<TObj, TEnumItemExtension>;
+  },
+  TEnumItemExtension
+> &
+  TExtraExtensionMethods;
+
+// Implementation
+export function enumeration<
   TInput extends EnumInput,
   TEnumItemExtension = Record<string, never>,
   TExtraExtensionMethods = Record<string, never>,
@@ -79,7 +82,15 @@ function enumeration<
     NormalizedInputType<TInput>,
     TEnumItemExtension
   >;
-} & ExtensionMethods<NormalizedInputType<TInput>, TEnumItemExtension> &
+} & ExtensionMethods<
+  {
+    [K in keyof NormalizedInputType<TInput>]: EnumItem<
+      NormalizedInputType<TInput>,
+      TEnumItemExtension
+    >;
+  },
+  TEnumItemExtension
+> &
   TExtraExtensionMethods {
   // Step 1: Normalize input to object format
   // Arrays become objects with empty values: ['A', 'B'] -> { A: {}, B: {} }
@@ -174,4 +185,3 @@ function enumeration<
     ...addExtensionMethods(Object.values(rawEnumItems), extraExtensionMethods), // All methods
   };
 }
-export { enumeration };

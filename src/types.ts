@@ -113,25 +113,21 @@ export type EnumInput = readonly string[] | ObjectEnumInput;
  * All extension methods that are automatically added to enum objects.
  * These methods provide various ways to look up and filter enum items.
  */
-export type ExtensionMethods<T, TEnumItemExtension> = {
+export type ExtensionMethods<E, TEnumItemExtension> = {
   /** Get enum item by its value. Throws if not found. */
-  fromValue: (target: string) => EnumItem<T, TEnumItemExtension>;
+  fromValue: (target: string) => ItemOf<E>;
 
   /** Get enum item by its key. Throws if not found. */
-  fromKey: (target: string) => EnumItem<T, TEnumItemExtension>;
+  fromKey: (target: string) => ItemOf<E>;
 
   /** Get enum item by its display text. Throws if not found. */
-  fromDisplay: (target: string) => EnumItem<T, TEnumItemExtension>;
+  fromDisplay: (target: string) => ItemOf<E>;
 
   /** Get enum item by its value. Returns undefined if not found. */
-  tryFromValue: (
-    target?: string | null,
-  ) => EnumItem<T, TEnumItemExtension> | undefined;
+  tryFromValue: (target?: string | null) => ItemOf<E> | undefined;
 
   /** Get enum item by its key. Returns undefined if not found. */
-  tryFromKey: (
-    target?: string | null,
-  ) => EnumItem<T, TEnumItemExtension> | undefined;
+  tryFromKey: (target?: string | null) => ItemOf<E> | undefined;
 
   /**
    * Get enum item by any custom field. Returns undefined if not found.
@@ -141,13 +137,11 @@ export type ExtensionMethods<T, TEnumItemExtension> = {
   tryFromCustomField: (
     field: keyof TEnumItemExtension,
     target?: string | null,
-    filter?: (item: EnumItem<T, TEnumItemExtension>) => boolean,
-  ) => EnumItem<T, TEnumItemExtension> | undefined;
+    filter?: (item: ItemOf<E>) => boolean,
+  ) => ItemOf<E> | undefined;
 
   /** Get enum item by its display text. Returns undefined if not found. */
-  tryFromDisplay: (
-    target?: string | null,
-  ) => EnumItem<T, TEnumItemExtension> | undefined;
+  tryFromDisplay: (target?: string | null) => ItemOf<E> | undefined;
 
   /**
    * Extract values from a custom field across all enum items
@@ -156,46 +150,46 @@ export type ExtensionMethods<T, TEnumItemExtension> = {
    */
   toCustomFieldValues: <X = string>(
     field: keyof TEnumItemExtension,
-    filter?: (item: EnumItem<T, TEnumItemExtension>) => boolean,
+    filter?: (item: ItemOf<E>) => boolean,
     filterOptions?: EnumFilterOptions,
   ) => X[];
 
   /** Convert enum items to dropdown options, sorted by index */
   toOptions: (
-    filter?: (item: EnumItem<T, TEnumItemExtension>) => boolean,
+    filter?: (item: ItemOf<E>) => boolean,
     filterOptions?: EnumFilterOptions,
   ) => DropdownOption[];
 
   /** Get all enum values as an array */
   toValues: (
-    filter?: (item: EnumItem<T, TEnumItemExtension>) => boolean,
+    filter?: (item: ItemOf<E>) => boolean,
     filterOptions?: EnumFilterOptions,
   ) => string[];
 
   /** Get all enum keys as an array */
   toKeys: (
-    filter?: (item: EnumItem<T, TEnumItemExtension>) => boolean,
+    filter?: (item: ItemOf<E>) => boolean,
     filterOptions?: EnumFilterOptions,
   ) => string[];
 
   /** Get all display values as an array */
   toDisplays: (
-    filter?: (item: EnumItem<T, TEnumItemExtension>) => boolean,
+    filter?: (item: ItemOf<E>) => boolean,
     filterOptions?: EnumFilterOptions,
   ) => string[];
 
   /** Get all enum items as an array (useful for iteration) */
   toEnumItems: (
-    filter?: (item: EnumItem<T, TEnumItemExtension>) => boolean,
+    filter?: (item: ItemOf<E>) => boolean,
     filterOptions?: EnumFilterOptions,
-  ) => EnumItem<T, TEnumItemExtension>[];
+  ) => ItemOf<E>[];
 
   /**
    * Convert to an object keyed by enum keys.
    * Useful for creating subsets or filtered versions of the enum.
    */
   toExtendableObject: <ITEM_TYPE extends BaseEnum>(
-    filter?: (item: EnumItem<T, TEnumItemExtension>) => boolean,
+    filter?: (item: ItemOf<E>) => boolean,
     filterOptions?: EnumFilterOptions,
   ) => Record<string, ITEM_TYPE>;
 };
@@ -224,17 +218,26 @@ export type NormalizedInputType<T> = T extends readonly string[]
  * Combines BaseEnum properties with any custom extensions.
  */
 export type EnumItem<
-  T,
+  T = unknown,
   TEnumItemExtension = Record<string, never>,
-  K extends keyof NormalizedInputType<T> = keyof NormalizedInputType<T>,
-> = {
+> = ({
   /** The original key from the input (e.g., 'USER_ADMIN') */
-  key: K;
+  key: string;
   value: string;
   display?: string;
   index?: number;
   deprecated?: boolean;
-} & TEnumItemExtension;
+} & TEnumItemExtension) & (T extends unknown ? object : never);
+
+/**
+ * Union of all enum item variants for a given enum input type.
+ */
+export type EnumItemUnion<T, TEnumItemExtension = Record<string, never>> = {
+  [K in keyof NormalizedInputType<T>]: EnumItem<T, TEnumItemExtension>;
+}[keyof NormalizedInputType<T>];
+
+/** Public helper alias for consumers */
+export type ItemOf<E> = E[keyof E];
 
 /**
  * Helper type for extracting the enum type from an enumeration object
