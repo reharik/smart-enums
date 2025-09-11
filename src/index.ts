@@ -8,4 +8,5 @@ export type {
   DropdownOption,
   EnumItem,
   BaseEnum,
+  EnumItemType,
 } from './types.js';
