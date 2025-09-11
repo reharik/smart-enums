@@ -229,6 +229,7 @@ export type EnumItem<
   deprecated?: boolean;
 } & TEnumItemExtension) & (T extends unknown ? object : never);
 
+
 /**
  * Union of all enum item variants for a given enum input type.
  */
@@ -240,15 +241,6 @@ export type EnumItemUnion<T, TEnumItemExtension = Record<string, never>> = {
 export type ItemOf<E> = E[keyof E];
 
 /**
- * Helper type for extracting the enum type from an enumeration object
- */
-export type Enumeration<ENUM_OF, INPUT_TYPE> = EnumItem<INPUT_TYPE> &
-  Omit<
-    ENUM_OF[keyof ENUM_OF & keyof NormalizedInputType<INPUT_TYPE>],
-    'key' | 'value' | 'display' | 'index' | 'deprecated'
-  >;
-
-/**
  * Helper to get the enum item type from an enum object returned by enumeration().
  * Usage:
  *   const MyEnum = enumeration({ input });
@@ -256,6 +248,14 @@ export type Enumeration<ENUM_OF, INPUT_TYPE> = EnumItem<INPUT_TYPE> &
  */
 export type EnumItemType<TEnum extends Record<string, unknown>> =
   TEnum[keyof TEnum];
+
+/**
+ * Helper type for extracting the enum type from an enumeration object
+ */
+// Back-compat alias: the item type of an enumeration object
+// Note: The second generic is ignored to avoid conflicts with item typing.
+export type Enumeration<ENUM_OF extends Record<string, unknown>> =
+  EnumItemType<ENUM_OF>;
 
 /**
  * Compile-time transformer: replaces Smart Enum items with string values,
