@@ -218,8 +218,7 @@ function enumeration({
       });
       if (enumType) {
         Object.defineProperty(enumItem, "toJSON", {
-          value: () => ({ __smart_enum_type: enumType, value: enumItem.value }),
-          enumerable: false
+          value: () => ({ __smart_enum_type: enumType, value: enumItem.value })
         });
       }
       rawEnumItems[key] = enumItem;
