@@ -150,7 +150,6 @@ export function enumeration<
         key: key as keyof NormalizedInputType<TInput>,
         ...formatProperties(key, formattersWithDefaults), // Auto-generated props
         ...value, // User overrides
-        __smart_enum_brand: true,
       } as EnumItem<NormalizedInputType<TInput>, TEnumItemExtension>;
 
       // Attach non-enumerable runtime tags for detection and identity
@@ -160,6 +159,12 @@ export function enumeration<
       });
       Object.defineProperty(enumItem, SMART_ENUM_ID, {
         value: enumInstanceId,
+        enumerable: false,
+      });
+
+      // Attach a non-enumerable brand for type-level filtering
+      Object.defineProperty(enumItem, '__smart_enum_brand', {
+        value: true,
         enumerable: false,
       });
 

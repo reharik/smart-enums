@@ -252,20 +252,24 @@ export type ItemOf<E> = E[keyof E];
  *   const MyEnum = enumeration({ input });
  *   type MyEnumItem = EnumItemType<typeof MyEnum>;
  */
-export type EnumItemType<TEnum extends Record<string, unknown>> = Extract<
-  TEnum[keyof TEnum],
-  { __smart_enum_brand: true }
->;
+export type EnumItemType<TEnum extends Record<string, unknown>> =
+  TEnum extends Record<string, infer V>
+    ? V extends { __smart_enum_brand: true }
+      ? V
+      : never
+    : never;
 
 /**
  * Helper type for extracting the enum type from an enumeration object
  */
 // Back-compat alias: the item type of an enumeration object
 // Note: The second generic is ignored to avoid conflicts with item typing.
-export type Enumeration<ENUM_OF extends Record<string, unknown>> = Extract<
-  ENUM_OF[keyof ENUM_OF],
-  { __smart_enum_brand: true }
->;
+export type Enumeration<ENUM_OF extends Record<string, unknown>> =
+  ENUM_OF extends Record<string, infer V>
+    ? V extends { __smart_enum_brand: true }
+      ? V
+      : never
+    : never;
 
 /**
  * Compile-time transformer: replaces Smart Enum items with string values,

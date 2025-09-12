@@ -163,15 +163,15 @@ type ItemOf<E> = E[keyof E];
  *   const MyEnum = enumeration({ input });
  *   type MyEnumItem = EnumItemType<typeof MyEnum>;
  */
-type EnumItemType<TEnum extends Record<string, unknown>> = Extract<TEnum[keyof TEnum], {
+type EnumItemType<TEnum extends Record<string, unknown>> = TEnum extends Record<string, infer V> ? V extends {
     __smart_enum_brand: true;
-}>;
+} ? V : never : never;
 /**
  * Helper type for extracting the enum type from an enumeration object
  */
-type Enumeration<ENUM_OF extends Record<string, unknown>> = Extract<ENUM_OF[keyof ENUM_OF], {
+type Enumeration<ENUM_OF extends Record<string, unknown>> = ENUM_OF extends Record<string, infer V> ? V extends {
     __smart_enum_brand: true;
-}>;
+} ? V : never : never;
 /**
  * Compile-time transformer: replaces Smart Enum items with string values,
  * recursively over arrays and objects. Structural detection checks for

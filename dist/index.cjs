@@ -205,9 +205,8 @@ function enumeration({
         key,
         ...formatProperties(key, formattersWithDefaults),
         // Auto-generated props
-        ...value,
+        ...value
         // User overrides
-        __smart_enum_brand: true
       };
       Object.defineProperty(enumItem, SMART_ENUM_ITEM, {
         value: true,
@@ -215,6 +214,10 @@ function enumeration({
       });
       Object.defineProperty(enumItem, SMART_ENUM_ID, {
         value: enumInstanceId,
+        enumerable: false
+      });
+      Object.defineProperty(enumItem, "__smart_enum_brand", {
+        value: true,
         enumerable: false
       });
       if (enumType) {
