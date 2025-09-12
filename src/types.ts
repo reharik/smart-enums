@@ -10,6 +10,10 @@ export const notEmpty = <X>(
   return value != null;
 };
 
+// Public symbols used at runtime for detection/identity (not used in type keys)
+export const SMART_ENUM_ITEM = Symbol('smart-enum-item');
+export const SMART_ENUM_ID = Symbol('smart-enum-id');
+
 /**
  * Base structure for enum items. All enum items will have these properties.
  */
@@ -227,6 +231,8 @@ export type EnumItem<
   display?: string;
   index?: number;
   deprecated?: boolean;
+  /** Type-level brand for filtering item members */
+  readonly __smart_enum_brand: true;
 } & TEnumItemExtension) & (T extends unknown ? object : never);
 
 
@@ -246,16 +252,20 @@ export type ItemOf<E> = E[keyof E];
  *   const MyEnum = enumeration({ input });
  *   type MyEnumItem = EnumItemType<typeof MyEnum>;
  */
-export type EnumItemType<TEnum extends Record<string, unknown>> =
-  TEnum[keyof TEnum];
+export type EnumItemType<TEnum extends Record<string, unknown>> = Extract<
+  TEnum[keyof TEnum],
+  { __smart_enum_brand: true }
+>;
 
 /**
  * Helper type for extracting the enum type from an enumeration object
  */
 // Back-compat alias: the item type of an enumeration object
 // Note: The second generic is ignored to avoid conflicts with item typing.
-export type Enumeration<ENUM_OF extends Record<string, unknown>> =
-  EnumItemType<ENUM_OF>;
+export type Enumeration<ENUM_OF extends Record<string, unknown>> = Extract<
+  ENUM_OF[keyof ENUM_OF],
+  { __smart_enum_brand: true }
+>;
 
 /**
  * Compile-time transformer: replaces Smart Enum items with string values,

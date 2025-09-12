@@ -34,6 +34,8 @@ var import_case_anything = require("case-anything");
 var notEmpty = (value) => {
   return value != null;
 };
+var SMART_ENUM_ITEM = Symbol("smart-enum-item");
+var SMART_ENUM_ID = Symbol("smart-enum-id");
 
 // src/extensionMethods.ts
 var addExtensionMethods = (enumItems, extraExtensionMethods) => {
@@ -170,8 +172,6 @@ var buildExtensionMethods = (rawEnum) => {
 };
 
 // src/enumeration.ts
-var SMART_ENUM_ITEM = Symbol.for("smart-enum-item");
-var SMART_ENUM_ID = Symbol.for("smart-enum-id");
 var isSmartEnumItem = (x) => {
   return !!x && typeof x === "object" && Reflect.get(x, SMART_ENUM_ITEM) === true;
 };
@@ -205,8 +205,9 @@ function enumeration({
         key,
         ...formatProperties(key, formattersWithDefaults),
         // Auto-generated props
-        ...value
+        ...value,
         // User overrides
+        __smart_enum_brand: true
       };
       Object.defineProperty(enumItem, SMART_ENUM_ITEM, {
         value: true,

@@ -10,11 +10,9 @@ import {
   EnumInput,
   ObjectEnumInput,
   ArrayToObjectType,
+  SMART_ENUM_ITEM,
+  SMART_ENUM_ID,
 } from './types.js';
-
-// Runtime tagging for Smart Enum items
-export const SMART_ENUM_ITEM = Symbol.for('smart-enum-item');
-export const SMART_ENUM_ID = Symbol.for('smart-enum-id');
 
 /**
  * Runtime type guard to detect Smart Enum items created by this library.
@@ -152,6 +150,7 @@ export function enumeration<
         key: key as keyof NormalizedInputType<TInput>,
         ...formatProperties(key, formattersWithDefaults), // Auto-generated props
         ...value, // User overrides
+        __smart_enum_brand: true,
       } as EnumItem<NormalizedInputType<TInput>, TEnumItemExtension>;
 
       // Attach non-enumerable runtime tags for detection and identity
