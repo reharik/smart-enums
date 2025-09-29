@@ -9,4 +9,5 @@ export type {
   EnumItem,
   BaseEnum,
   EnumItemType,
+  AnyEnumLike,
 } from './types.js';

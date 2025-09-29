@@ -189,7 +189,7 @@ type SerializedSmartEnums<T> = T extends {
  * other fields recurse.
  */
 type EnumItemFromEnum<TEnum> = TEnum extends Record<string, infer V> ? V extends {
-    value: string;
+    __smart_enum_brand: true;
 } ? V : never : never;
 type AnyEnumLike = {
     tryFromValue: (value?: string | null) => {
@@ -226,4 +226,4 @@ declare function serializeSmartEnums<S extends Readonly<Record<string, unknown>>
 declare function reviveSmartEnums<T, const M extends Record<string, AnyEnumLike>>(input: T, enumByField: M): RevivedSmartEnums<T, M>;
 declare function reviveSmartEnums<R extends Readonly<Record<string, unknown>> | readonly unknown[]>(input: unknown, enumByField: Record<string, AnyEnumLike>): R;
 
-export { type BaseEnum, type DropdownOption, type EnumItem, type EnumItemType, type Enumeration, enumeration, isSmartEnumItem, reviveSmartEnums, serializeSmartEnums };
+export { type AnyEnumLike, type BaseEnum, type DropdownOption, type EnumItem, type EnumItemType, type Enumeration, enumeration, isSmartEnumItem, reviveSmartEnums, serializeSmartEnums };

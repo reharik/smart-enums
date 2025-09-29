@@ -2,6 +2,9 @@
 
 A TypeScript library for creating type-safe, feature-rich enumerations with built-in utility methods. Stop juggling between constants, arrays, objects, and string unions - use Smart Enums instead.
 
+## CAVEAT?
+While I believe this library is super useful, I am currently refining it via dogfood, trying to get as smooth a process down as possible.  This is leading to somewhat frequent releases with possibly breaking changes.  As it is a new library, and I presume no one is using it I"m not being very considerate.  If you discover this library and want to use it, please tell me and I will stop breaking it :) and employ better release practices. 
+
 ## Why Smart Enums?
 
 Traditional approaches to enums in JavaScript/TypeScript have limitations:

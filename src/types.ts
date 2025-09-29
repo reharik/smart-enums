@@ -233,8 +233,8 @@ export type EnumItem<
   deprecated?: boolean;
   /** Type-level brand for filtering item members */
   readonly __smart_enum_brand: true;
-} & TEnumItemExtension) & (T extends unknown ? object : never);
-
+} & TEnumItemExtension) &
+  (T extends unknown ? object : never);
 
 /**
  * Union of all enum item variants for a given enum input type.
@@ -293,7 +293,7 @@ export type SerializedSmartEnums<T> = T extends { value: string; key: unknown }
  */
 export type EnumItemFromEnum<TEnum> =
   TEnum extends Record<string, infer V>
-    ? V extends { value: string }
+    ? V extends { __smart_enum_brand: true }
       ? V
       : never
     : never;
