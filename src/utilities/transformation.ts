@@ -57,10 +57,11 @@ export function reviveSmartEnums<
   T,
   const M extends Record<string, AnyEnumLike>,
 >(input: T, enumByField: M): RevivedSmartEnums<T, M>;
-// 2) Return-type only (constrained to objects/arrays)
-export function reviveSmartEnums<
-  R extends Readonly<Record<string, unknown>> | readonly unknown[],
->(input: unknown, enumByField: Record<string, AnyEnumLike>): R;
+// 2) Explicit return type - for when you want to specify exactly what to return
+export function reviveSmartEnums<R>(
+  input: unknown,
+  enumByField: Record<string, AnyEnumLike>,
+): R;
 // Implementation
 export function reviveSmartEnums(
   input: unknown,
@@ -90,6 +91,5 @@ export function reviveSmartEnums(
     }
     return v;
   };
-
   return walk(input);
 }

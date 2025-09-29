@@ -305,7 +305,7 @@ export type AnyEnumLike = {
 
 export type RevivedSmartEnums<T, M extends Record<string, AnyEnumLike>> =
   T extends ReadonlyArray<infer U>
-    ? ReadonlyArray<RevivedSmartEnums<U, M>>
+    ? RevivedSmartEnums<U, M>[]
     : T extends Array<infer U>
       ? RevivedSmartEnums<U, M>[]
       : T extends object

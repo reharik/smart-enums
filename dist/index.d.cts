@@ -198,7 +198,7 @@ type AnyEnumLike = {
 } & Record<string, {
     value: string;
 }>;
-type RevivedSmartEnums<T, M extends Record<string, AnyEnumLike>> = T extends ReadonlyArray<infer U> ? ReadonlyArray<RevivedSmartEnums<U, M>> : T extends Array<infer U> ? RevivedSmartEnums<U, M>[] : T extends object ? {
+type RevivedSmartEnums<T, M extends Record<string, AnyEnumLike>> = T extends ReadonlyArray<infer U> ? RevivedSmartEnums<U, M>[] : T extends Array<infer U> ? RevivedSmartEnums<U, M>[] : T extends object ? {
     [K in keyof T]: K extends Extract<keyof M, string> ? EnumItemFromEnum<M[K]> : RevivedSmartEnums<T[K], M>;
 } : T;
 
@@ -224,6 +224,6 @@ declare function enumeration<TObj extends ObjectEnumInput, TEnumItemExtension = 
 declare function serializeSmartEnums<T>(input: T): SerializedSmartEnums<T>;
 declare function serializeSmartEnums<S extends Readonly<Record<string, unknown>> | readonly unknown[]>(input: unknown): S;
 declare function reviveSmartEnums<T, const M extends Record<string, AnyEnumLike>>(input: T, enumByField: M): RevivedSmartEnums<T, M>;
-declare function reviveSmartEnums<R extends Readonly<Record<string, unknown>> | readonly unknown[]>(input: unknown, enumByField: Record<string, AnyEnumLike>): R;
+declare function reviveSmartEnums<R>(input: unknown, enumByField: Record<string, AnyEnumLike>): R;
 
 export { type AnyEnumLike, type BaseEnum, type DropdownOption, type EnumItem, type EnumItemType, type Enumeration, enumeration, isSmartEnumItem, reviveSmartEnums, serializeSmartEnums };
