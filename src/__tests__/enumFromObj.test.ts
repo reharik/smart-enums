@@ -11,16 +11,16 @@ describe('ENUM FROM OBJECT', () => {
   };
   describe('When calling enumeration', () => {
     it('should create the enum with the props from object values', () => {
-      type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-      const TestEnum = enumeration({
+      type TestEnum = Enumeration<typeof TestEnum>;
+      const TestEnum = enumeration('TestEnum', {
         input,
       });
       expect(TestEnum.toKeys()).toEqual(['one', 'two', 'three']);
     });
   });
   it('should create the enum items with the correct properties and values', () => {
-    type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-    const TestEnum = enumeration({
+    type TestEnum = Enumeration<typeof TestEnum>;
+    const TestEnum = enumeration('TestEnum', {
       input,
     });
     expect(TestEnum.one.key).toBe('one');
@@ -38,18 +38,18 @@ describe('ENUM FROM OBJECT', () => {
         blue: { value: 'BLUE' },
         green: { value: 'GREEN' },
       };
-      type ColorEnum = Enumeration<typeof ColorEnum, typeof color>;
-      const ColorEnum = enumeration({
+      type ColorEnum = Enumeration<typeof ColorEnum>;
+      const ColorEnum = enumeration('TestEnum', {
         input: color,
       });
 
-      type TestEnum = Enumeration<typeof TestEnum, typeof input>;
+      type TestEnum = Enumeration<typeof TestEnum>;
       const TestEnum = enumeration<
         typeof input,
         {
           favoriteColor: ColorEnum;
         }
-      >({
+      >('TestEnum', {
         input,
       });
 
@@ -62,18 +62,18 @@ describe('ENUM FROM OBJECT', () => {
         blue: { value: 'BLUE' },
         green: { value: 'GREEN' },
       };
-      type ColorEnum = Enumeration<typeof ColorEnum, typeof color>;
-      const ColorEnum = enumeration({
+      type ColorEnum = Enumeration<typeof ColorEnum>;
+      const ColorEnum = enumeration('TestEnum', {
         input: color,
       });
 
-      type TestEnum = Enumeration<typeof TestEnum, typeof input>;
+      type TestEnum = Enumeration<typeof TestEnum>;
       const TestEnum = enumeration<
         typeof input,
         {
           favoriteColor: ColorEnum;
         }
-      >({
+      >('TestEnum', {
         input,
       });
 
@@ -87,7 +87,7 @@ describe('ENUM FROM OBJECT', () => {
   });
   describe('when creating an enum with extra extension methods', () => {
     it('should add the extension method to the enum', () => {
-      type TestEnum = Enumeration<typeof TestEnum, typeof input>;
+      type TestEnum = Enumeration<typeof TestEnum>;
       type Extra = { concatKeys: () => string };
       const extra = (items: EnumItem<typeof input>[]) => ({
         concatKeys: () =>
@@ -98,6 +98,7 @@ describe('ENUM FROM OBJECT', () => {
       });
 
       const TestEnum = enumeration<typeof input, EnumItem<typeof input>, Extra>(
+        'TestEnum',
         {
           input,
           extraExtensionMethods: extra,
@@ -106,7 +107,7 @@ describe('ENUM FROM OBJECT', () => {
       expect(TestEnum.concatKeys).not.toBeNull();
     });
     it('should add the extension method which should perform against enum items in current enum', () => {
-      type TestEnum = Enumeration<typeof TestEnum, typeof input>;
+      type TestEnum = Enumeration<typeof TestEnum>;
       type Extra = { concatKeys: () => string };
       const extra = (items: EnumItem<typeof input>[]) => {
         return {
@@ -119,6 +120,7 @@ describe('ENUM FROM OBJECT', () => {
       };
 
       const TestEnum = enumeration<typeof input, EnumItem<typeof input>, Extra>(
+        'TestEnum',
         {
           input,
           extraExtensionMethods: extra,
@@ -134,8 +136,8 @@ describe('ENUM FROM OBJECT', () => {
         blue: { value: 'BLUE' },
         green: { value: 'GREEN' },
       };
-      type ColorEnum = Enumeration<typeof ColorEnum, typeof color>;
-      const ColorEnum = enumeration({
+      type ColorEnum = Enumeration<typeof ColorEnum>;
+      const ColorEnum = enumeration('TestEnum', {
         input: color,
       });
 
@@ -152,11 +154,14 @@ describe('ENUM FROM OBJECT', () => {
         favoriteColor: ColorEnum;
       };
 
-      type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-      const TestEnum = enumeration<typeof input, EnumItemExtension, Extra>({
-        input,
-        extraExtensionMethods: extra,
-      });
+      type TestEnum = Enumeration<typeof TestEnum>;
+      const TestEnum = enumeration<typeof input, EnumItemExtension, Extra>(
+        'TestEnum',
+        {
+          input,
+          extraExtensionMethods: extra,
+        },
+      );
 
       TestEnum.one.favoriteColor = ColorEnum.red;
       TestEnum.two.favoriteColor = ColorEnum.green;
@@ -175,7 +180,7 @@ describe('ENUM FROM OBJECT', () => {
         three: { slug: '/three' },
       } as const;
 
-      const TestEnum = enumeration<typeof inputWithExt, ItemExt>({
+      const TestEnum = enumeration<typeof inputWithExt, ItemExt>('TestEnum', {
         input: inputWithExt,
       });
 
@@ -194,7 +199,7 @@ describe('ENUM FROM OBJECT', () => {
         three: { slug: '/three' },
       } as const;
 
-      const TestEnum = enumeration<typeof inputWithExt, ItemExt>({
+      const TestEnum = enumeration<typeof inputWithExt, ItemExt>('TestEnum', {
         input: inputWithExt,
       });
 
@@ -220,8 +225,8 @@ describe('ENUM FROM OBJECT', () => {
         },
       ];
 
-      type TestEnum = Enumeration<typeof TestEnum, typeof inputForDisplay>;
-      const TestEnum = enumeration({
+      type TestEnum = Enumeration<typeof TestEnum>;
+      const TestEnum = enumeration('TestEnum', {
         input: inputForDisplay,
         propertyAutoFormatters,
       });
@@ -239,11 +244,11 @@ describe('ENUM FROM OBJECT', () => {
   //       green: { value: 'GREEN' },
   //     };
   //     type ColorEnum = (typeof ColorEnum)[keyof typeof color];
-  //     const ColorEnum = enumeration({
+  //     const ColorEnum = enumeration('TestEnum', {
   //       input: color,
   //     });
   //     type TestEnum = (typeof TestEnum)[keyof typeof input];
-  //     const TestEnum = enumeration({
+  //     const TestEnum = enumeration('TestEnum', {
   //       input,
   //     });
 

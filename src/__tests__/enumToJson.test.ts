@@ -4,7 +4,7 @@ describe('ENUM TO JSON', () => {
   describe('when enumTypeId is provided', () => {
     it('should emit { __enum, value } for enum items via JSON.stringify', () => {
       const input = ['pending', 'active', 'completed'] as const;
-      const Status = enumeration({ input, enumType: 'Status' });
+      const Status = enumeration('Status', { input });
 
       const payload = { status: Status.active };
       const json = JSON.stringify(payload);
@@ -17,7 +17,7 @@ describe('ENUM TO JSON', () => {
 
     it('should emit { __enum, value } for items nested in arrays', () => {
       const input = ['red', 'blue'] as const;
-      const Color = enumeration({ input, enumType: 'Color' });
+      const Color = enumeration('Color', { input });
 
       const payload = { items: [Color.red, Color.blue] };
       const json = JSON.stringify(payload);

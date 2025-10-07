@@ -69,13 +69,6 @@ export type EnumerationProps<
    * ]
    */
   propertyAutoFormatters?: PropertyAutoFormatter[];
-
-  /**
-   * Optional identifier for this enum type. When provided, enum items will
-   * serialize with a toJSON() that includes this id so consumers can revive
-   * without an external field map. Example output: { __smart_enum_type: 'Status', value: 'ACTIVE' }
-   */
-  enumType?: string;
 };
 
 /**
@@ -233,6 +226,8 @@ export type EnumItem<
   deprecated?: boolean;
   /** Type-level brand for filtering item members */
   readonly __smart_enum_brand: true;
+  /** Non-enumerable enum type identifier (only present when enumType is provided) */
+  readonly __smart_enum_type?: string;
 } & TEnumItemExtension) &
   (T extends unknown ? object : never);
 
@@ -300,8 +295,9 @@ export type EnumItemFromEnum<TEnum> =
 
 // Structural constraint for enum objects passed to reviveSmartEnums mapping
 export type AnyEnumLike = {
-  tryFromValue: (value?: string | null) => { value: string } | undefined;
-} & Record<string, { value: string }>;
+  tryFromValue: (value?: string | null) => unknown;
+  tryFromKey: (key?: string | null) => unknown;
+} & Record<string, unknown>;
 
 export type RevivedSmartEnums<T, M extends Record<string, AnyEnumLike>> =
   T extends ReadonlyArray<infer U>
@@ -315,3 +311,8 @@ export type RevivedSmartEnums<T, M extends Record<string, AnyEnumLike>> =
               : RevivedSmartEnums<T[K], M>;
           }
         : T;
+
+export type SmartEnumItemSerialized = {
+  __smart_enum_type: string;
+  value: string;
+};

@@ -175,11 +175,13 @@ var buildExtensionMethods = (rawEnum) => {
 var isSmartEnumItem = (x) => {
   return !!x && typeof x === "object" && Reflect.get(x, SMART_ENUM_ITEM) === true;
 };
-function enumeration({
+var isSerializedSmartEnumItem = (x) => {
+  return !!x && typeof x === "object" && Reflect.has(x, "__smart_enum_type") && Reflect.has(x, "value");
+};
+function enumeration(enumType, {
   input,
   extraExtensionMethods,
-  propertyAutoFormatters,
-  enumType
+  propertyAutoFormatters
 }) {
   const normalizedInput = Array.isArray(input) ? input.reduce(
     (acc, k) => ({ ...acc, [k]: {} }),
@@ -220,11 +222,13 @@ function enumeration({
         value: true,
         enumerable: false
       });
-      if (enumType) {
-        Object.defineProperty(enumItem, "toJSON", {
-          value: () => ({ __smart_enum_type: enumType, value: enumItem.value })
-        });
-      }
+      Object.defineProperty(enumItem, "__smart_enum_type", {
+        value: enumType,
+        enumerable: false
+      });
+      Object.defineProperty(enumItem, "toJSON", {
+        value: () => ({ __smart_enum_type: enumType, value: enumItem.value })
+      });
       rawEnumItems[key] = enumItem;
       index++;
     }
@@ -242,12 +246,19 @@ var isPlainObject = (x) => typeof x === "object" && x !== null && Object.getProt
 function serializeSmartEnums(input) {
   const seen = /* @__PURE__ */ new WeakMap();
   const walk = (v) => {
-    if (isSmartEnumItem(v)) return v.value;
+    if (isSmartEnumItem(v)) {
+      return {
+        __smart_enum_type: v.__smart_enum_type,
+        value: v.value
+      };
+    }
     if (Array.isArray(v)) {
       if (seen.has(v)) return seen.get(v);
       const arr = [];
       seen.set(v, arr);
-      for (const item of v) arr.push(walk(item));
+      for (const item of v) {
+        arr.push(walk(item));
+      }
       return arr;
     }
     if (isPlainObject(v)) {
@@ -263,11 +274,23 @@ function serializeSmartEnums(input) {
   };
   return walk(input);
 }
-function reviveSmartEnums(input, enumByField) {
+function reviveSmartEnums(input, registry) {
   const seen = /* @__PURE__ */ new WeakMap();
-  const walk = (v, parentKey) => {
-    if (typeof v === "string" && parentKey && enumByField[parentKey]) {
-      return enumByField[parentKey].tryFromValue(v) ?? v;
+  const walk = (v) => {
+    if (isSerializedSmartEnumItem(v)) {
+      const enumInstance = registry[v.__smart_enum_type];
+      if (enumInstance) {
+        const enumItem = enumInstance.tryFromValue(v.value);
+        if (enumItem) {
+          return enumItem;
+        }
+        const key = v.value.toLowerCase();
+        const enumItemFromKey = enumInstance.tryFromKey(key);
+        if (enumItemFromKey) {
+          return enumItemFromKey;
+        }
+      }
+      return v;
     }
     if (Array.isArray(v)) {
       if (seen.has(v)) return seen.get(v);
@@ -281,7 +304,7 @@ function reviveSmartEnums(input, enumByField) {
       const out = {};
       seen.set(v, out);
       for (const [k, val] of Object.entries(v)) {
-        out[k] = walk(val, k);
+        out[k] = walk(val);
       }
       return out;
     }

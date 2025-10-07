@@ -9,8 +9,8 @@ describe('ENUM EXTENSION METHODS', () => {
     beforeEach(() => {});
     describe('when calling addExtensionMethods with out extras', () => {
       it('should return extensionMethods. i.e. not break', () => {
-        const TestEnum = enumeration({ input });
-        type TestEnum = Enumeration<typeof TestEnum, typeof input>;
+        const TestEnum = enumeration('TestEnum', { input });
+        type TestEnum = Enumeration<typeof TestEnum>;
         const enumItems = TestEnum.toEnumItems();
         const result = addExtensionMethods<typeof input>(enumItems);
         expect(result).not.toBeUndefined();
@@ -19,9 +19,12 @@ describe('ENUM EXTENSION METHODS', () => {
     describe('when calling addExtensionMethods with extra functions', () => {
       it('should return extensionMethods with the extra functions', () => {
         type TEnumItemExtension = { bubba: string };
-        const testEnum = enumeration<typeof input, TEnumItemExtension>({
-          input,
-        });
+        const testEnum = enumeration<typeof input, TEnumItemExtension>(
+          'TestEnum',
+          {
+            input,
+          },
+        );
         const enumItems = testEnum.toEnumItems();
         //
         type ExtraMethods = {
@@ -47,9 +50,12 @@ describe('ENUM EXTENSION METHODS', () => {
     describe('when calling addExtensionMethods with extra functions that work', () => {
       it('should return extensionMethods and they should work', () => {
         type TEnumItemExtension = { bubba: string };
-        const testEnum = enumeration<typeof input, TEnumItemExtension>({
-          input,
-        });
+        const testEnum = enumeration<typeof input, TEnumItemExtension>(
+          'TestEnum',
+          {
+            input,
+          },
+        );
         const enumItems = testEnum.toEnumItems();
         //
         type ExtraMethods = {
@@ -78,8 +84,8 @@ describe('ENUM EXTENSION METHODS', () => {
   describe('From Value', () => {
     describe('when calling fromValue with no match', () => {
       it('should throw', () => {
-        type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-        const TestEnum = enumeration({
+        type TestEnum = Enumeration<typeof TestEnum>;
+        const TestEnum = enumeration('TestEnum', {
           input,
         });
 
@@ -90,8 +96,8 @@ describe('ENUM EXTENSION METHODS', () => {
     });
     describe('when calling fromValue WITH match', () => {
       it('should return proper item', () => {
-        type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-        const TestEnum = enumeration({
+        type TestEnum = Enumeration<typeof TestEnum>;
+        const TestEnum = enumeration('TestEnum', {
           input,
         });
 
@@ -106,8 +112,8 @@ describe('ENUM EXTENSION METHODS', () => {
     describe('Try From Value', () => {
       describe('when calling tryFomValue with no match', () => {
         it('should return undefined', () => {
-          type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-          const TestEnum = enumeration({
+          type TestEnum = Enumeration<typeof TestEnum>;
+          const TestEnum = enumeration('TestEnum', {
             input,
           });
 
@@ -116,8 +122,8 @@ describe('ENUM EXTENSION METHODS', () => {
       });
       describe('when calling fromValue WITH match', () => {
         it('should return proper item', () => {
-          type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-          const TestEnum = enumeration({
+          type TestEnum = Enumeration<typeof TestEnum>;
+          const TestEnum = enumeration('TestEnum', {
             input,
           });
 
@@ -134,8 +140,8 @@ describe('ENUM EXTENSION METHODS', () => {
     describe('From Key', () => {
       describe('when calling fromKey with no match', () => {
         it('should throw', () => {
-          type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-          const TestEnum = enumeration({
+          type TestEnum = Enumeration<typeof TestEnum>;
+          const TestEnum = enumeration('TestEnum', {
             input,
           });
 
@@ -146,8 +152,8 @@ describe('ENUM EXTENSION METHODS', () => {
       });
       describe('when calling fromKey WITH match', () => {
         it('should return proper item', () => {
-          type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-          const TestEnum = enumeration({
+          type TestEnum = Enumeration<typeof TestEnum>;
+          const TestEnum = enumeration('TestEnum', {
             input,
           });
 
@@ -162,8 +168,8 @@ describe('ENUM EXTENSION METHODS', () => {
       describe('Try From Key', () => {
         describe('when calling tryFomKey with no match', () => {
           it('should return undefined', () => {
-            type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-            const TestEnum = enumeration({
+            type TestEnum = Enumeration<typeof TestEnum>;
+            const TestEnum = enumeration('TestEnum', {
               input,
             });
 
@@ -172,8 +178,8 @@ describe('ENUM EXTENSION METHODS', () => {
         });
         describe('when calling fromKey WITH match', () => {
           it('should return proper item', () => {
-            type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-            const TestEnum = enumeration({
+            type TestEnum = Enumeration<typeof TestEnum>;
+            const TestEnum = enumeration('TestEnum', {
               input,
             });
 
@@ -191,8 +197,8 @@ describe('ENUM EXTENSION METHODS', () => {
     describe('From Display', () => {
       describe('when calling fromDisplay with no match', () => {
         it('should throw', () => {
-          type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-          const TestEnum = enumeration({
+          type TestEnum = Enumeration<typeof TestEnum>;
+          const TestEnum = enumeration('TestEnum', {
             input,
           });
 
@@ -203,8 +209,8 @@ describe('ENUM EXTENSION METHODS', () => {
       });
       describe('when calling fromDisplay WITH match', () => {
         it('should return proper item', () => {
-          type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-          const TestEnum = enumeration({
+          type TestEnum = Enumeration<typeof TestEnum>;
+          const TestEnum = enumeration('TestEnum', {
             input,
           });
 
@@ -219,8 +225,8 @@ describe('ENUM EXTENSION METHODS', () => {
       describe('Try From Display', () => {
         describe('when calling tryFomDisplay with no match', () => {
           it('should return undefined', () => {
-            type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-            const TestEnum = enumeration({
+            type TestEnum = Enumeration<typeof TestEnum>;
+            const TestEnum = enumeration('TestEnum', {
               input,
             });
 
@@ -229,8 +235,8 @@ describe('ENUM EXTENSION METHODS', () => {
         });
         describe('when calling fromDisplay WITH match', () => {
           it('should return proper item', () => {
-            type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-            const TestEnum = enumeration({
+            type TestEnum = Enumeration<typeof TestEnum>;
+            const TestEnum = enumeration('TestEnum', {
               input,
             });
 
@@ -248,10 +254,13 @@ describe('ENUM EXTENSION METHODS', () => {
     describe('Try From Custom Field', () => {
       describe('when calling tryFromCustomField when no custom fields are set', () => {
         it('should return undefined', () => {
-          type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-          const TestEnum = enumeration<typeof input, { bubba: string }>({
-            input,
-          });
+          type TestEnum = Enumeration<typeof TestEnum>;
+          const TestEnum = enumeration<typeof input, { bubba: string }>(
+            'TestEnum',
+            {
+              input,
+            },
+          );
 
           const result = TestEnum.tryFromCustomField('bubba', 'likesIt');
           expect(result).toBeUndefined();
@@ -260,10 +269,13 @@ describe('ENUM EXTENSION METHODS', () => {
     });
     describe('when calling tryFromCustomField when no custom fields have been set but no match', () => {
       it('should return undefined', () => {
-        type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-        const TestEnum = enumeration<typeof input, { bubba: string }>({
-          input,
-        });
+        type TestEnum = Enumeration<typeof TestEnum>;
+        const TestEnum = enumeration<typeof input, { bubba: string }>(
+          'TestEnum',
+          {
+            input,
+          },
+        );
         TestEnum.one.bubba = 'donLikeIt';
         TestEnum.two.bubba = 'reallyDonLikeIt';
         const result = TestEnum.tryFromCustomField('bubba', 'likesIt');
@@ -273,10 +285,13 @@ describe('ENUM EXTENSION METHODS', () => {
 
     describe('when calling tryFromCustomField when no custom fields have been set AND IS match', () => {
       it('should return return proper enumItem', () => {
-        type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-        const TestEnum = enumeration<typeof input, { bubba: string }>({
-          input,
-        });
+        type TestEnum = Enumeration<typeof TestEnum>;
+        const TestEnum = enumeration<typeof input, { bubba: string }>(
+          'TestEnum',
+          {
+            input,
+          },
+        );
         TestEnum.one.bubba = 'likesIt';
         TestEnum.two.bubba = 'reallyDonLikeIt';
         const result = TestEnum.tryFromCustomField('bubba', 'likesIt');
@@ -294,10 +309,13 @@ describe('ENUM EXTENSION METHODS', () => {
   describe('To Custom Field Values', () => {
     describe('when calling toCustomFieldValues with no options', () => {
       it('should return proper array of values', () => {
-        type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-        const TestEnum = enumeration<typeof input, { bubba: string }>({
-          input,
-        });
+        type TestEnum = Enumeration<typeof TestEnum>;
+        const TestEnum = enumeration<typeof input, { bubba: string }>(
+          'TestEnum',
+          {
+            input,
+          },
+        );
         TestEnum.one.bubba = 'donLikeIt';
         TestEnum.two.bubba = 'reallyDonLikeIt';
         const result = TestEnum.toCustomFieldValues('bubba');
@@ -305,10 +323,13 @@ describe('ENUM EXTENSION METHODS', () => {
       });
       it('should omit undefined', () => {
         const input = ['one', 'two', 'three'] as const;
-        type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-        const TestEnum = enumeration<typeof input, { bubba: string }>({
-          input,
-        });
+        type TestEnum = Enumeration<typeof TestEnum>;
+        const TestEnum = enumeration<typeof input, { bubba: string }>(
+          'TestEnum',
+          {
+            input,
+          },
+        );
         TestEnum.one.bubba = 'donLikeIt';
         TestEnum.two.bubba = 'reallyDonLikeIt';
         const result = TestEnum.toCustomFieldValues('bubba');
@@ -318,10 +339,13 @@ describe('ENUM EXTENSION METHODS', () => {
     describe('when calling toCustomFieldValues with options set', () => {
       it('should not omit undefined', () => {
         const input = ['one', 'two', 'three'] as const;
-        type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-        const TestEnum = enumeration<typeof input, { bubba: string }>({
-          input,
-        });
+        type TestEnum = Enumeration<typeof TestEnum>;
+        const TestEnum = enumeration<typeof input, { bubba: string }>(
+          'TestEnum',
+          {
+            input,
+          },
+        );
         TestEnum.one.bubba = 'donLikeIt';
         TestEnum.two.bubba = 'reallyDonLikeIt';
         const result = TestEnum.toCustomFieldValues('bubba', undefined, {
@@ -334,8 +358,8 @@ describe('ENUM EXTENSION METHODS', () => {
   describe('To Options', () => {
     describe('when calling toOptions with no filter', () => {
       it('should return proper array of values', () => {
-        type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-        const TestEnum = enumeration({
+        type TestEnum = Enumeration<typeof TestEnum>;
+        const TestEnum = enumeration('TestEnum', {
           input,
         });
         const result = TestEnum.toOptions();
@@ -356,8 +380,8 @@ describe('ENUM EXTENSION METHODS', () => {
       it('should return proper array of values', () => {
         const input = ['one', 'two', 'three'] as const;
 
-        type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-        const TestEnum = enumeration({
+        type TestEnum = Enumeration<typeof TestEnum>;
+        const TestEnum = enumeration('TestEnum', {
           input,
         });
         const result = TestEnum.toOptions(x => {
@@ -380,8 +404,8 @@ describe('ENUM EXTENSION METHODS', () => {
       it('should sort by index', () => {
         const input = ['one', 'two', 'three'] as const;
 
-        type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-        const TestEnum = enumeration({
+        type TestEnum = Enumeration<typeof TestEnum>;
+        const TestEnum = enumeration('TestEnum', {
           input,
         });
         TestEnum.one.index = 100;
@@ -408,8 +432,8 @@ describe('ENUM EXTENSION METHODS', () => {
     describe('To Values', () => {
       describe('when calling toValues', () => {
         it('should return all the values', () => {
-          type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-          const TestEnum = enumeration({
+          type TestEnum = Enumeration<typeof TestEnum>;
+          const TestEnum = enumeration('TestEnum', {
             input,
           });
           expect(TestEnum.toValues()).toEqual(['ONE', 'TWO']);
@@ -420,8 +444,8 @@ describe('ENUM EXTENSION METHODS', () => {
     describe('To Keys', () => {
       describe('when calling toKeys', () => {
         it('should return all the Keys', () => {
-          type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-          const TestEnum = enumeration({
+          type TestEnum = Enumeration<typeof TestEnum>;
+          const TestEnum = enumeration('TestEnum', {
             input,
           });
           expect(TestEnum.toKeys()).toEqual(['one', 'two']);
@@ -432,8 +456,8 @@ describe('ENUM EXTENSION METHODS', () => {
     describe('To Enum Items', () => {
       describe('when calling toEnumItems', () => {
         it('should return all the toEnumItems', () => {
-          type TestEnum = Enumeration<typeof TestEnum, typeof input>;
-          const TestEnum = enumeration({
+          type TestEnum = Enumeration<typeof TestEnum>;
+          const TestEnum = enumeration('TestEnum', {
             input,
           });
           expect(TestEnum.toEnumItems()).toEqual([

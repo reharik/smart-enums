@@ -23,7 +23,8 @@
     "build": "tsup",
     "prepare": "npm run build",
     "test": "jest",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "dance": "npm run build && npm run test && npm run lint"
   },
   "jest-junit": {
     "suiteName": "jest: smart-enums",

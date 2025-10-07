@@ -2,7 +2,7 @@ import { enumeration, isSmartEnumItem } from '../index.js';
 
 describe('isSmartEnumItem', () => {
   const input = ['one', 'two'] as const;
-  const TestEnum = enumeration({ input });
+  const TestEnum = enumeration('TestEnum', { input });
 
   it('returns true for enum items', () => {
     expect(isSmartEnumItem(TestEnum.one)).toBe(true);

@@ -12,6 +12,7 @@ import {
   ArrayToObjectType,
   SMART_ENUM_ITEM,
   SMART_ENUM_ID,
+  SmartEnumItemSerialized,
 } from './types.js';
 
 /**
@@ -19,9 +20,28 @@ import {
  */
 export const isSmartEnumItem = (
   x: unknown,
-): x is { key: string; value: string; index?: number } => {
+): x is {
+  key: string;
+  value: string;
+  index?: number;
+  __smart_enum_type?: string;
+} => {
   return (
     !!x && typeof x === 'object' && Reflect.get(x, SMART_ENUM_ITEM) === true
+  );
+};
+
+/**
+ * Runtime type guard to detect a serialized Smart Enum item created by this library.
+ */
+export const isSerializedSmartEnumItem = (
+  x: unknown,
+): x is SmartEnumItemSerialized => {
+  return (
+    !!x &&
+    typeof x === 'object' &&
+    Reflect.has(x, '__smart_enum_type') &&
+    Reflect.has(x, 'value')
   );
 };
 
@@ -31,6 +51,7 @@ export function enumeration<
   TEnumItemExtension = Record<string, never>,
   TExtraExtensionMethods = Record<string, never>,
 >(
+  enumType: string,
   props: EnumerationProps<TArr, TEnumItemExtension, TExtraExtensionMethods>,
 ): {
   [K in keyof ArrayToObjectType<TArr>]: EnumItem<
@@ -54,6 +75,7 @@ export function enumeration<
   TEnumItemExtension = Record<string, never>,
   TExtraExtensionMethods = Record<string, never>,
 >(
+  enumType: string,
   props: EnumerationProps<TObj, TEnumItemExtension, TExtraExtensionMethods>,
 ): {
   [K in keyof TObj]: EnumItem<TObj, TEnumItemExtension>;
@@ -70,12 +92,14 @@ export function enumeration<
   TInput extends EnumInput,
   TEnumItemExtension = Record<string, never>,
   TExtraExtensionMethods = Record<string, never>,
->({
-  input,
-  extraExtensionMethods,
-  propertyAutoFormatters,
-  enumType,
-}: EnumerationProps<TInput, TEnumItemExtension, TExtraExtensionMethods>): {
+>(
+  enumType: string,
+  {
+    input,
+    extraExtensionMethods,
+    propertyAutoFormatters,
+  }: EnumerationProps<TInput, TEnumItemExtension, TExtraExtensionMethods>,
+): {
   [K in keyof NormalizedInputType<TInput>]: EnumItem<
     NormalizedInputType<TInput>,
     TEnumItemExtension
@@ -168,13 +192,14 @@ export function enumeration<
         enumerable: false,
       });
 
-      // If a public enumType was provided, attach a JSON serializer that emits it
-      // Attach toJSON only when an enumType is provided in the props
-      if (enumType) {
-        Object.defineProperty(enumItem, 'toJSON', {
-          value: () => ({ __smart_enum_type: enumType, value: enumItem.value }),
-        });
-      }
+      // Store the enum type as a non-enumerable property for access during serialization
+      Object.defineProperty(enumItem, '__smart_enum_type', {
+        value: enumType,
+        enumerable: false,
+      });
+      Object.defineProperty(enumItem, 'toJSON', {
+        value: () => ({ __smart_enum_type: enumType, value: enumItem.value }),
+      });
 
       rawEnumItems[key] = enumItem;
       index++;

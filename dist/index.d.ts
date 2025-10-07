@@ -44,12 +44,6 @@ type EnumerationProps<TInput extends EnumInput, TEnumItemExtension = Record<stri
      * ]
      */
     propertyAutoFormatters?: PropertyAutoFormatter[];
-    /**
-     * Optional identifier for this enum type. When provided, enum items will
-     * serialize with a toJSON() that includes this id so consumers can revive
-     * without an external field map. Example output: { __smart_enum_type: 'Status', value: 'ACTIVE' }
-     */
-    enumType?: string;
 };
 /**
  * Defines how to auto-generate a property from the enum key
@@ -154,6 +148,8 @@ type EnumItem<T = unknown, TEnumItemExtension = Record<string, never>> = ({
     deprecated?: boolean;
     /** Type-level brand for filtering item members */
     readonly __smart_enum_brand: true;
+    /** Non-enumerable enum type identifier (only present when enumType is provided) */
+    readonly __smart_enum_type?: string;
 } & TEnumItemExtension) & (T extends unknown ? object : never);
 /** Public helper alias for consumers */
 type ItemOf<E> = E[keyof E];
@@ -183,24 +179,10 @@ type SerializedSmartEnums<T> = T extends {
 } ? string : T extends ReadonlyArray<infer U> ? ReadonlyArray<SerializedSmartEnums<U>> : T extends Array<infer U> ? SerializedSmartEnums<U>[] : T extends object ? {
     [K in keyof T]: SerializedSmartEnums<T[K]>;
 } : T;
-/**
- * Revived shape: for keys present in mapping M, the string becomes the
- * corresponding enum item type (derived from the provided enum object);
- * other fields recurse.
- */
-type EnumItemFromEnum<TEnum> = TEnum extends Record<string, infer V> ? V extends {
-    __smart_enum_brand: true;
-} ? V : never : never;
 type AnyEnumLike = {
-    tryFromValue: (value?: string | null) => {
-        value: string;
-    } | undefined;
-} & Record<string, {
-    value: string;
-}>;
-type RevivedSmartEnums<T, M extends Record<string, AnyEnumLike>> = T extends ReadonlyArray<infer U> ? RevivedSmartEnums<U, M>[] : T extends Array<infer U> ? RevivedSmartEnums<U, M>[] : T extends object ? {
-    [K in keyof T]: K extends Extract<keyof M, string> ? EnumItemFromEnum<M[K]> : RevivedSmartEnums<T[K], M>;
-} : T;
+    tryFromValue: (value?: string | null) => unknown;
+    tryFromKey: (key?: string | null) => unknown;
+} & Record<string, unknown>;
 
 /**
  * Runtime type guard to detect Smart Enum items created by this library.
@@ -209,21 +191,22 @@ declare const isSmartEnumItem: (x: unknown) => x is {
     key: string;
     value: string;
     index?: number;
+    __smart_enum_type?: string;
 };
-declare function enumeration<TArr extends readonly string[], TEnumItemExtension = Record<string, never>, TExtraExtensionMethods = Record<string, never>>(props: EnumerationProps<TArr, TEnumItemExtension, TExtraExtensionMethods>): {
+declare function enumeration<TArr extends readonly string[], TEnumItemExtension = Record<string, never>, TExtraExtensionMethods = Record<string, never>>(enumType: string, props: EnumerationProps<TArr, TEnumItemExtension, TExtraExtensionMethods>): {
     [K in keyof ArrayToObjectType<TArr>]: EnumItem<ArrayToObjectType<TArr>, TEnumItemExtension>;
 } & ExtensionMethods<{
     [K in keyof ArrayToObjectType<TArr>]: EnumItem<ArrayToObjectType<TArr>, TEnumItemExtension>;
 }, TEnumItemExtension> & TExtraExtensionMethods;
-declare function enumeration<TObj extends ObjectEnumInput, TEnumItemExtension = Record<string, never>, TExtraExtensionMethods = Record<string, never>>(props: EnumerationProps<TObj, TEnumItemExtension, TExtraExtensionMethods>): {
+declare function enumeration<TObj extends ObjectEnumInput, TEnumItemExtension = Record<string, never>, TExtraExtensionMethods = Record<string, never>>(enumType: string, props: EnumerationProps<TObj, TEnumItemExtension, TExtraExtensionMethods>): {
     [K in keyof TObj]: EnumItem<TObj, TEnumItemExtension>;
 } & ExtensionMethods<{
     [K in keyof TObj]: EnumItem<TObj, TEnumItemExtension>;
 }, TEnumItemExtension> & TExtraExtensionMethods;
 
+type PlainObject = Record<string, unknown>;
 declare function serializeSmartEnums<T>(input: T): SerializedSmartEnums<T>;
-declare function serializeSmartEnums<S extends Readonly<Record<string, unknown>> | readonly unknown[]>(input: unknown): S;
-declare function reviveSmartEnums<T, const M extends Record<string, AnyEnumLike>>(input: T, enumByField: M): RevivedSmartEnums<T, M>;
-declare function reviveSmartEnums<R>(input: unknown, enumByField: Record<string, AnyEnumLike>): R;
+declare function serializeSmartEnums<S extends Readonly<PlainObject> | readonly unknown[]>(input: unknown): S;
+declare function reviveSmartEnums<R>(input: unknown, registry: Record<string, AnyEnumLike>): R;
 
 export { type AnyEnumLike, type BaseEnum, type DropdownOption, type EnumItem, type EnumItemType, type Enumeration, enumeration, isSmartEnumItem, reviveSmartEnums, serializeSmartEnums };
