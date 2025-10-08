@@ -1,6 +1,7 @@
 import {
+  getGlobalEnumRegistry,
   learnFromData
-} from "./chunk-P7T3KURX.js";
+} from "./chunk-NQ2GSPII.js";
 import {
   isSerializedSmartEnumItem,
   isSmartEnumItem
@@ -81,8 +82,12 @@ function reviveSmartEnums(input, registry) {
 }
 
 // src/utilities/transport/reviveAfterTransport.ts
-function reviveAfterTransport(payload, config) {
-  return reviveSmartEnums(payload, config.enumRegistry);
+function reviveAfterTransport(payload) {
+  const globalEnumRegistry = getGlobalEnumRegistry();
+  if (!globalEnumRegistry) {
+    return payload;
+  }
+  return reviveSmartEnums(payload, globalEnumRegistry);
 }
 
 // src/utilities/transport/serializeForTransport.ts
@@ -97,4 +102,4 @@ export {
   reviveAfterTransport,
   serializeForTransport
 };
-//# sourceMappingURL=chunk-6ZQB3XZQ.js.map
+//# sourceMappingURL=chunk-3BU3UIKP.js.map

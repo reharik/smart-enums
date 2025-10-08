@@ -1,4 +1,4 @@
-import { d as SerializedSmartEnums, A as AnyEnumLike, S as SmartApiHelperConfig } from './core-D2kChDMb.js';
+import { d as SerializedSmartEnums, A as AnyEnumLike } from './core-D2kChDMb.js';
 export { B as BaseEnum, D as DropdownOption, a as EnumItem, b as EnumItemType, E as Enumeration, e as enumeration, i as isSmartEnumItem } from './core-D2kChDMb.js';
 
 type PlainObject = Record<string, unknown>;
@@ -9,19 +9,23 @@ declare function reviveSmartEnums<R>(input: unknown, registry: Record<string, An
 /**
  * Revives smart enums after transport (from client request or API response).
  * Use this when receiving data that contains serialized enums.
+ * Uses the global configuration set up with initializeSmartEnumMappings().
  *
  * @param payload - The payload received after transport
- * @param config - Configuration containing enum registry
  * @returns The payload with enums revived to their proper enum items
  *
  * @example
  * ```typescript
+ * // First, initialize the global configuration
+ * initializeSmartEnumMappings({ enumRegistry: { UserStatus, Priority } });
+ *
+ * // Then revive using global config
  * // Received: { user: { status: { __smart_enum_type: 'UserStatus', value: 'ACTIVE' } } }
- * const revivedPayload = reviveAfterTransport(requestBody, { enumRegistry: { UserStatus } });
+ * const revivedPayload = reviveAfterTransport(requestBody);
  * // Result: { user: { status: UserStatus.ACTIVE } }
  * ```
  */
-declare function reviveAfterTransport<T>(payload: unknown, config: SmartApiHelperConfig): T;
+declare function reviveAfterTransport<T>(payload: unknown): T;
 
 /**
  * Serializes smart enums for transport (to client or API).

@@ -21,6 +21,7 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 var database_exports = {};
 __export(database_exports, {
   enumeration: () => enumeration,
+  getGlobalEnumRegistry: () => getGlobalEnumRegistry,
   initializeSmartEnumMappings: () => initializeSmartEnumMappings,
   isSmartEnumItem: () => isSmartEnumItem,
   prepareForDatabase: () => prepareForDatabase,
@@ -283,6 +284,9 @@ function learnFromData(data) {
 function getLearnedMapping() {
   return { ...globalFieldMapping };
 }
+function getGlobalEnumRegistry() {
+  return globalEnumRegistry;
+}
 
 // src/utilities/database/prepareForDatabase.ts
 var isPlainObject2 = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
@@ -319,18 +323,14 @@ function prepareForDatabase(payload) {
 
 // src/utilities/database/reviveFromDatabase.ts
 var isPlainObject3 = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
-function reviveFromDatabase(payload, config) {
+function reviveFromDatabase(payload) {
+  const globalEnumRegistry2 = getGlobalEnumRegistry();
   const learnedMapping = getLearnedMapping();
-  const manualArrayMapping = {};
-  if (config.fieldEnumMapping) {
-    for (const [property, enumType] of Object.entries(
-      config.fieldEnumMapping
-    )) {
-      manualArrayMapping[property] = Array.isArray(enumType) ? enumType : [enumType];
-    }
+  if (!globalEnumRegistry2) {
+    return payload;
   }
-  const fieldEnumMapping = { ...learnedMapping, ...manualArrayMapping };
-  if (!fieldEnumMapping) {
+  const fieldEnumMapping = learnedMapping;
+  if (!fieldEnumMapping || Object.keys(fieldEnumMapping).length === 0) {
     return payload;
   }
   const seen = /* @__PURE__ */ new WeakMap();
@@ -359,8 +359,8 @@ function reviveFromDatabase(payload, config) {
       if (enumTypes) {
         const typesToTry = Array.isArray(enumTypes) ? enumTypes : [enumTypes];
         for (const enumType of typesToTry) {
-          if (config.enumRegistry[enumType]) {
-            const enumItem = config.enumRegistry[enumType].tryFromValue(v);
+          if (globalEnumRegistry2[enumType]) {
+            const enumItem = globalEnumRegistry2[enumType].tryFromValue(v);
             if (enumItem) {
               return enumItem;
             }
@@ -375,6 +375,7 @@ function reviveFromDatabase(payload, config) {
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   enumeration,
+  getGlobalEnumRegistry,
   initializeSmartEnumMappings,
   isSmartEnumItem,
   prepareForDatabase,

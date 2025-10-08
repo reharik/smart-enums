@@ -16,6 +16,7 @@ export {
   prepareForDatabase,
   reviveFromDatabase,
   initializeSmartEnumMappings,
+  getGlobalEnumRegistry,
 } from './utilities/database/index.js';
 
 // Re-export core types plus database-specific types

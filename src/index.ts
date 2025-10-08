@@ -32,6 +32,7 @@ export {
   prepareForDatabase,
   reviveFromDatabase,
   initializeSmartEnumMappings,
+  getGlobalEnumRegistry,
 } from './utilities/database/index.js';
 export type {
   Enumeration,

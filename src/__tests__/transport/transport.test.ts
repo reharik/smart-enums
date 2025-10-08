@@ -3,6 +3,7 @@ import {
   reviveAfterTransport,
   serializeForTransport,
 } from '../../utilities/transport/index.js';
+import { initializeSmartEnumMappings } from '../../utilities/database/index.js';
 import type { SmartApiHelperConfig } from '../../types.js';
 
 describe('Transport Helpers', () => {
@@ -34,6 +35,11 @@ describe('Transport Helpers', () => {
     },
   };
 
+  beforeEach(() => {
+    // Initialize global configuration for each test
+    initializeSmartEnumMappings({ enumRegistry: config.enumRegistry });
+  });
+
   describe('reviveAfterTransport', () => {
     it('should revive enums from client request payload', () => {
       const clientRequest = {
@@ -56,10 +62,7 @@ describe('Transport Helpers', () => {
         ],
       };
 
-      const revived = reviveAfterTransport<typeof clientRequest>(
-        clientRequest,
-        config,
-      );
+      const revived = reviveAfterTransport<typeof clientRequest>(clientRequest);
 
       expect(revived.user.status).toBe(UserStatus.active);
       expect(revived.user.profile.priority).toBe(Priority.high);
@@ -86,10 +89,8 @@ describe('Transport Helpers', () => {
         },
       };
 
-      const revived = reviveAfterTransport<typeof complexRequest>(
-        complexRequest,
-        config,
-      );
+      const revived =
+        reviveAfterTransport<typeof complexRequest>(complexRequest);
 
       expect(revived.data.users[0].status).toBe(UserStatus.pending);
       expect(revived.data.users[0].orders[0].status).toBe(OrderStatus.draft);
@@ -104,7 +105,7 @@ describe('Transport Helpers', () => {
         tags: ['tag1', 'tag2'],
       };
 
-      const revived = reviveAfterTransport(request, config);
+      const revived = reviveAfterTransport(request);
 
       expect(revived).toEqual(request);
     });

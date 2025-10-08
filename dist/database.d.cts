@@ -1,5 +1,5 @@
-import { c as DatabaseFormat, S as SmartApiHelperConfig, A as AnyEnumLike } from './core-D2kChDMb.cjs';
-export { B as BaseEnum, D as DropdownOption, a as EnumItem, b as EnumItemType, E as Enumeration, e as enumeration, i as isSmartEnumItem } from './core-D2kChDMb.cjs';
+import { c as DatabaseFormat, A as AnyEnumLike } from './core-D2kChDMb.cjs';
+export { B as BaseEnum, D as DropdownOption, a as EnumItem, b as EnumItemType, E as Enumeration, S as SmartApiHelperConfig, e as enumeration, i as isSmartEnumItem } from './core-D2kChDMb.cjs';
 
 /**
  * Converts enum items to their string values for database storage.
@@ -22,27 +22,21 @@ declare function prepareForDatabase<T>(payload: T): DatabaseFormat<T>;
 /**
  * Revives enum values from database records.
  * Use this when loading data from the database where enums are stored as string values.
+ * Uses the global configuration set up with initializeSmartEnumMappings().
  *
  * @param payload - The data loaded from database
- * @param config - Configuration containing enum registry and field mapping
  * @returns The payload with string enum values converted back to enum items
  *
  * @example
  * ```typescript
- * // Basic usage with manual mapping
- * const revivedData = reviveFromDatabase(dbRecord, {
- *   enumRegistry: { UserStatus },
- *   fieldEnumMapping: { 'user.status': 'UserStatus', 'user.profile.priority': 'Priority' }
- * });
+ * // First, initialize the global configuration
+ * initializeSmartEnumMappings({ enumRegistry: { UserStatus, Priority } });
  *
- * // Auto-learning from operations
- * const revivedData = reviveFromDatabase(dbRecord, {
- *   enumRegistry: { UserStatus, Priority },
- *   autoLearn: true
- * });
+ * // Then revive using global config
+ * const revivedData = reviveFromDatabase(dbRecord);
  * ```
  */
-declare function reviveFromDatabase<T>(payload: unknown, config: SmartApiHelperConfig): T;
+declare function reviveFromDatabase<T>(payload: unknown): T;
 
 /**
  * Initializes the global smart enum mapping system
@@ -50,5 +44,9 @@ declare function reviveFromDatabase<T>(payload: unknown, config: SmartApiHelperC
 declare function initializeSmartEnumMappings(config: {
     enumRegistry: Record<string, AnyEnumLike>;
 }): void;
+/**
+ * Gets the global enum registry
+ */
+declare function getGlobalEnumRegistry(): Record<string, AnyEnumLike> | undefined;
 
-export { AnyEnumLike, DatabaseFormat, SmartApiHelperConfig, initializeSmartEnumMappings, prepareForDatabase, reviveFromDatabase };
+export { AnyEnumLike, DatabaseFormat, getGlobalEnumRegistry, initializeSmartEnumMappings, prepareForDatabase, reviveFromDatabase };

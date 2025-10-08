@@ -1,5 +1,6 @@
 import { enumeration } from '../index.js';
 import { reviveAfterTransport, serializeForTransport } from '../index.js';
+import { initializeSmartEnumMappings } from '../utilities/database/index.js';
 import type { SmartApiHelperConfig } from '../types.js';
 
 describe('API Helpers - Edge Cases and Performance', () => {
@@ -41,13 +42,18 @@ describe('API Helpers - Edge Cases and Performance', () => {
     },
   };
 
+  beforeEach(() => {
+    // Initialize global configuration for each test
+    initializeSmartEnumMappings({ enumRegistry: config.enumRegistry });
+  });
+
   describe('Edge Cases', () => {
     it('should handle empty objects and arrays', () => {
       const emptyData = { users: [], metadata: {} };
       const serialized = serializeForTransport(emptyData);
       expect(serialized).toEqual(emptyData);
 
-      const revived = reviveAfterTransport(emptyData, config);
+      const revived = reviveAfterTransport(emptyData);
       expect(revived).toEqual(emptyData);
     });
 
@@ -61,7 +67,7 @@ describe('API Helpers - Edge Cases and Performance', () => {
       const serialized = serializeForTransport(dataWithNulls);
       expect(serialized).toEqual(dataWithNulls);
 
-      const revived = reviveAfterTransport(dataWithNulls, config);
+      const revived = reviveAfterTransport(dataWithNulls);
       expect(revived).toEqual(dataWithNulls);
     });
 
@@ -74,7 +80,6 @@ describe('API Helpers - Edge Cases and Performance', () => {
 
       const revived = reviveAfterTransport<typeof requestWithUnknownEnum>(
         requestWithUnknownEnum,
-        config,
       );
       // Should leave unknown enum types as-is
       expect(revived.user.status).toEqual({
@@ -92,7 +97,6 @@ describe('API Helpers - Edge Cases and Performance', () => {
 
       const revived = reviveAfterTransport<typeof requestWithInvalidValue>(
         requestWithInvalidValue,
-        config,
       );
       // Should leave invalid enum values as-is
       expect(revived.user.status).toEqual({
@@ -120,10 +124,7 @@ describe('API Helpers - Edge Cases and Performance', () => {
       const serializationTime = Date.now() - start;
 
       const start2 = Date.now();
-      const revived = reviveAfterTransport<typeof largeDataset>(
-        serialized,
-        config,
-      );
+      const revived = reviveAfterTransport<typeof largeDataset>(serialized);
       const revivalTime = Date.now() - start2;
 
       // Should complete within reasonable time (adjust thresholds as needed)

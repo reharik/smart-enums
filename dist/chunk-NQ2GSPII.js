@@ -46,10 +46,14 @@ function learnFromData(data) {
 function getLearnedMapping() {
   return { ...globalFieldMapping };
 }
+function getGlobalEnumRegistry() {
+  return globalEnumRegistry;
+}
 
 export {
   initializeSmartEnumMappings,
   learnFromData,
-  getLearnedMapping
+  getLearnedMapping,
+  getGlobalEnumRegistry
 };
-//# sourceMappingURL=chunk-P7T3KURX.js.map
+//# sourceMappingURL=chunk-NQ2GSPII.js.map

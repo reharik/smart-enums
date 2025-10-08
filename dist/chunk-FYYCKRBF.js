@@ -1,7 +1,8 @@
 import {
+  getGlobalEnumRegistry,
   getLearnedMapping,
   learnFromData
-} from "./chunk-P7T3KURX.js";
+} from "./chunk-NQ2GSPII.js";
 import {
   isSmartEnumItem
 } from "./chunk-EA5ZVF26.js";
@@ -41,18 +42,14 @@ function prepareForDatabase(payload) {
 
 // src/utilities/database/reviveFromDatabase.ts
 var isPlainObject2 = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
-function reviveFromDatabase(payload, config) {
+function reviveFromDatabase(payload) {
+  const globalEnumRegistry = getGlobalEnumRegistry();
   const learnedMapping = getLearnedMapping();
-  const manualArrayMapping = {};
-  if (config.fieldEnumMapping) {
-    for (const [property, enumType] of Object.entries(
-      config.fieldEnumMapping
-    )) {
-      manualArrayMapping[property] = Array.isArray(enumType) ? enumType : [enumType];
-    }
+  if (!globalEnumRegistry) {
+    return payload;
   }
-  const fieldEnumMapping = { ...learnedMapping, ...manualArrayMapping };
-  if (!fieldEnumMapping) {
+  const fieldEnumMapping = learnedMapping;
+  if (!fieldEnumMapping || Object.keys(fieldEnumMapping).length === 0) {
     return payload;
   }
   const seen = /* @__PURE__ */ new WeakMap();
@@ -81,8 +78,8 @@ function reviveFromDatabase(payload, config) {
       if (enumTypes) {
         const typesToTry = Array.isArray(enumTypes) ? enumTypes : [enumTypes];
         for (const enumType of typesToTry) {
-          if (config.enumRegistry[enumType]) {
-            const enumItem = config.enumRegistry[enumType].tryFromValue(v);
+          if (globalEnumRegistry[enumType]) {
+            const enumItem = globalEnumRegistry[enumType].tryFromValue(v);
             if (enumItem) {
               return enumItem;
             }
@@ -99,4 +96,4 @@ export {
   prepareForDatabase,
   reviveFromDatabase
 };
-//# sourceMappingURL=chunk-ZBW5YJOG.js.map
+//# sourceMappingURL=chunk-FYYCKRBF.js.map

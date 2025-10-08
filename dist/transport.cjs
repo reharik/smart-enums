@@ -317,11 +317,6 @@ function reviveSmartEnums(input, registry) {
   return walk(input);
 }
 
-// src/utilities/transport/reviveAfterTransport.ts
-function reviveAfterTransport(payload, config) {
-  return reviveSmartEnums(payload, config.enumRegistry);
-}
-
 // src/utilities/database/fieldMappingBuilder.ts
 var isPlainObject2 = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
 var globalEnumRegistry;
@@ -358,6 +353,18 @@ function learnFromData(data) {
     }
   };
   walk(data);
+}
+function getGlobalEnumRegistry() {
+  return globalEnumRegistry;
+}
+
+// src/utilities/transport/reviveAfterTransport.ts
+function reviveAfterTransport(payload) {
+  const globalEnumRegistry2 = getGlobalEnumRegistry();
+  if (!globalEnumRegistry2) {
+    return payload;
+  }
+  return reviveSmartEnums(payload, globalEnumRegistry2);
 }
 
 // src/utilities/transport/serializeForTransport.ts

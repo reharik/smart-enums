@@ -1,6 +1,7 @@
-import type { SmartApiHelperConfig } from '../../types.js';
-
-import { getLearnedMapping } from './fieldMappingBuilder.js';
+import {
+  getLearnedMapping,
+  getGlobalEnumRegistry,
+} from './fieldMappingBuilder.js';
 
 type PlainObject = Record<string, unknown>;
 
@@ -12,50 +13,34 @@ const isPlainObject = (x: unknown): x is PlainObject =>
 /**
  * Revives enum values from database records.
  * Use this when loading data from the database where enums are stored as string values.
+ * Uses the global configuration set up with initializeSmartEnumMappings().
  *
  * @param payload - The data loaded from database
- * @param config - Configuration containing enum registry and field mapping
  * @returns The payload with string enum values converted back to enum items
  *
  * @example
  * ```typescript
- * // Basic usage with manual mapping
- * const revivedData = reviveFromDatabase(dbRecord, {
- *   enumRegistry: { UserStatus },
- *   fieldEnumMapping: { 'user.status': 'UserStatus', 'user.profile.priority': 'Priority' }
- * });
+ * // First, initialize the global configuration
+ * initializeSmartEnumMappings({ enumRegistry: { UserStatus, Priority } });
  *
- * // Auto-learning from operations
- * const revivedData = reviveFromDatabase(dbRecord, {
- *   enumRegistry: { UserStatus, Priority },
- *   autoLearn: true
- * });
+ * // Then revive using global config
+ * const revivedData = reviveFromDatabase(dbRecord);
  * ```
  */
-export function reviveFromDatabase<T>(
-  payload: unknown,
-  config: SmartApiHelperConfig,
-): T {
-  // Use learned mappings from previous operations (if initialized)
+export function reviveFromDatabase<T>(payload: unknown): T {
+  // Get global configuration
+  const globalEnumRegistry = getGlobalEnumRegistry();
   const learnedMapping = getLearnedMapping();
 
-  // Convert manual mappings to array format and merge with learned mappings
-  const manualArrayMapping: Record<string, string[]> = {};
-  if (config.fieldEnumMapping) {
-    for (const [property, enumType] of Object.entries(
-      config.fieldEnumMapping,
-    )) {
-      // Check if enumType is already an array (new format) or a string (old format)
-      manualArrayMapping[property] = Array.isArray(enumType)
-        ? enumType
-        : [enumType];
-    }
+  if (!globalEnumRegistry) {
+    // If no global configuration, return as-is
+    return payload as T;
   }
 
-  // Learned mappings take precedence, manual mappings override
-  const fieldEnumMapping = { ...learnedMapping, ...manualArrayMapping };
+  // Use learned mappings
+  const fieldEnumMapping = learnedMapping;
 
-  if (!fieldEnumMapping) {
+  if (!fieldEnumMapping || Object.keys(fieldEnumMapping).length === 0) {
     // If no field mapping provided, return as-is
     return payload as T;
   }
@@ -93,8 +78,8 @@ export function reviveFromDatabase<T>(
         const typesToTry = Array.isArray(enumTypes) ? enumTypes : [enumTypes];
 
         for (const enumType of typesToTry) {
-          if (config.enumRegistry[enumType]) {
-            const enumItem = config.enumRegistry[enumType].tryFromValue(v);
+          if (globalEnumRegistry[enumType]) {
+            const enumItem = globalEnumRegistry[enumType].tryFromValue(v);
             if (enumItem) {
               return enumItem;
             }

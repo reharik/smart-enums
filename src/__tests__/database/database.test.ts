@@ -2,6 +2,7 @@ import { enumeration } from '../../index.js';
 import {
   prepareForDatabase,
   reviveFromDatabase,
+  initializeSmartEnumMappings,
 } from '../../utilities/database/index.js';
 import type { SmartApiHelperConfig } from '../../types.js';
 
@@ -37,6 +38,11 @@ describe('Database Helpers', () => {
       priority: ['Priority'],
     },
   };
+
+  beforeEach(() => {
+    // Initialize global configuration for each test
+    initializeSmartEnumMappings({ enumRegistry: config.enumRegistry });
+  });
 
   describe('prepareForDatabase', () => {
     it('should convert enum items to string values for database storage', () => {
@@ -83,6 +89,24 @@ describe('Database Helpers', () => {
 
   describe('reviveFromDatabase', () => {
     it('should revive enum values from database records', () => {
+      // First, learn the mappings by processing some data
+      const learningData = {
+        user: {
+          id: '123',
+          status: UserStatus.active,
+          profile: {
+            priority: Priority.high,
+          },
+        },
+        orders: [
+          { id: 'o1', status: OrderStatus.processing },
+          { id: 'o2', status: OrderStatus.shipped },
+        ],
+      };
+
+      // This will learn the field mappings
+      prepareForDatabase(learningData);
+
       const dbRecord = {
         user: {
           id: '123',
@@ -103,7 +127,7 @@ describe('Database Helpers', () => {
         ],
       };
 
-      const revived = reviveFromDatabase<typeof dbRecord>(dbRecord, config);
+      const revived = reviveFromDatabase<typeof dbRecord>(dbRecord);
 
       expect(revived.user.status).toBe(UserStatus.active);
       expect(revived.user.profile.priority).toBe(Priority.high);
@@ -112,6 +136,21 @@ describe('Database Helpers', () => {
     });
 
     it('should handle nested objects and arrays', () => {
+      // First, learn the mappings by processing some data
+      const learningData = {
+        data: {
+          users: [
+            {
+              status: UserStatus.pending,
+              orders: [{ status: OrderStatus.draft }],
+            },
+          ],
+        },
+      };
+
+      // This will learn the field mappings
+      prepareForDatabase(learningData);
+
       const complexRecord = {
         data: {
           users: [
@@ -127,10 +166,7 @@ describe('Database Helpers', () => {
         },
       };
 
-      const revived = reviveFromDatabase<typeof complexRecord>(
-        complexRecord,
-        config,
-      );
+      const revived = reviveFromDatabase<typeof complexRecord>(complexRecord);
 
       expect(revived.data.users[0].status).toBe(UserStatus.pending);
       expect(revived.data.users[0].orders[0].status).toBe(OrderStatus.draft);
@@ -147,19 +183,9 @@ describe('Database Helpers', () => {
         },
       };
 
-      const configWithoutMapping: SmartApiHelperConfig = {
-        enumRegistry: {
-          UserStatus,
-          OrderStatus,
-          Priority,
-        },
-        // No fieldEnumMapping provided
-      };
+      // No fieldEnumMapping provided - should return data as-is
 
-      const revived = reviveFromDatabase<typeof dbRecord>(
-        dbRecord,
-        configWithoutMapping,
-      );
+      const revived = reviveFromDatabase<typeof dbRecord>(dbRecord);
 
       // Should return data as-is since no mapping provided
       expect(revived.user.status).toBe('ACTIVE');

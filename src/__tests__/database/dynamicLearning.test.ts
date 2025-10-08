@@ -5,7 +5,6 @@ import {
   initializeSmartEnumMappings,
   getLearnedMapping,
 } from '../../utilities/database/index.js';
-import type { SmartApiHelperConfig } from '../../types.js';
 
 describe('Dynamic Field Mapping Learning', () => {
   // Setup test enums
@@ -105,11 +104,7 @@ describe('Dynamic Field Mapping Learning', () => {
         ],
       };
 
-      const config: SmartApiHelperConfig = {
-        enumRegistry,
-      };
-
-      const revived = reviveFromDatabase(dbRecord, config);
+      const revived = reviveFromDatabase(dbRecord);
 
       expect(revived).toEqual({
         user: {
@@ -132,21 +127,21 @@ describe('Dynamic Field Mapping Learning', () => {
       };
       prepareForDatabase(userData);
 
-      // Manual override should take precedence
-      const config: SmartApiHelperConfig = {
-        enumRegistry,
-        fieldEnumMapping: {
-          status: 'Priority', // Override learned mapping
+      // Now learn Priority mapping for the same field
+      const priorityData = {
+        user: {
+          status: Priority.high, // This will add Priority to the status field mapping
         },
       };
+      prepareForDatabase(priorityData);
 
       const dbRecord = {
         user: {
-          status: 'HIGH', // This should be treated as Priority, not UserStatus
+          status: 'HIGH', // This should be treated as Priority since it matches
         },
       };
 
-      const revived = reviveFromDatabase(dbRecord, config);
+      const revived = reviveFromDatabase(dbRecord);
 
       expect(revived).toEqual({
         user: {
@@ -164,21 +159,21 @@ describe('Dynamic Field Mapping Learning', () => {
       };
       prepareForDatabase(userData);
 
-      // Use manual mapping instead of learned mapping
-      const config: SmartApiHelperConfig = {
-        enumRegistry,
-        fieldEnumMapping: {
-          status: 'OrderStatus',
+      // Now learn OrderStatus mapping for the same field
+      const orderData = {
+        user: {
+          status: OrderStatus.processing, // This will add OrderStatus to the status field mapping
         },
       };
+      prepareForDatabase(orderData);
 
       const dbRecord = {
         user: {
-          status: 'PROCESSING', // Should match OrderStatus, not learned UserStatus
+          status: 'PROCESSING', // This should be treated as OrderStatus since it matches
         },
       };
 
-      const revived = reviveFromDatabase(dbRecord, config);
+      const revived = reviveFromDatabase(dbRecord);
 
       expect(revived).toEqual({
         user: {
@@ -235,11 +230,8 @@ describe('Dynamic Field Mapping Learning', () => {
       });
 
       // 5. Later, revive from database using learned mappings
-      const config: SmartApiHelperConfig = {
-        enumRegistry,
-      };
 
-      const revived = reviveFromDatabase(dbData, config);
+      const revived = reviveFromDatabase(dbData);
 
       // 6. Verify the round-trip worked
       expect(revived).toEqual(apiData);

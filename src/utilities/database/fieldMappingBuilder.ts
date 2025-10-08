@@ -79,3 +79,12 @@ export function learnFromData(data: unknown): void {
 export function getLearnedMapping(): Record<string, string[]> {
   return { ...globalFieldMapping };
 }
+
+/**
+ * Gets the global enum registry
+ */
+export function getGlobalEnumRegistry():
+  | Record<string, AnyEnumLike>
+  | undefined {
+  return globalEnumRegistry;
+}
