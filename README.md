@@ -3,11 +3,13 @@
 A TypeScript library for creating type-safe, feature-rich enumerations with built-in utility methods. Stop juggling between constants, arrays, objects, and string unions - use Smart Enums instead.
 
 ## CAVEAT?
-While I believe this library is super useful, I am currently refining it via dogfood, trying to get as smooth a process down as possible.  This is leading to somewhat frequent releases with possibly breaking changes.  As it is a new library, and I presume no one is using it I"m not being very considerate.  If you discover this library and want to use it, please tell me and I will stop breaking it :) and employ better release practices. 
+
+While I believe this library is super useful, I am currently refining it via dogfood, trying to get as smooth a process down as possible. This is leading to somewhat frequent releases with possibly breaking changes. As it is a new library, and I presume no one is using it I"m not being very considerate. If you discover this library and want to use it, please tell me and I will stop breaking it :) and employ better release practices.
 
 ## Why Smart Enums?
 
 Traditional approaches to enums in JavaScript/TypeScript have limitations:
+
 - Plain objects `{ME: "me", YOU: "you"}` lack utility methods
 - Constants `const ME = "me"` are scattered and hard to iterate
 - Arrays `["me", "you"]` don't provide lookups
@@ -16,7 +18,7 @@ Traditional approaches to enums in JavaScript/TypeScript have limitations:
 Smart Enums give you the best of all worlds:
 
 ```typescript
-const Colors = enumeration({
+const Colors = enumeration('Colors', {
   input: ['red', 'blue', 'green'] as const,
 });
 
@@ -51,13 +53,12 @@ import { enumeration, Enumeration } from 'smart-enums';
 
 const input = ['pending', 'active', 'completed', 'archived'] as const;
 
-type Status = Enumeration<typeof Status, typeof input>;
-const Status = enumeration({ input });
+const Status = enumeration('Status', { input });
+type Status = Enumeration<typeof Status>;
 
 // Use it:
 console.log(Status.active.value); // "ACTIVE"
 console.log(Status.active.display); // "Active"
-
 ```
 
 ### Creating Enums from Objects
@@ -74,10 +75,10 @@ const input = {
   urgent: { value: 'URGENT', display: 'Urgent!!!' },
 };
 
-type Priority = Enumeration<typeof Priority, typeof input>;
-const Priority = enumeration({ input });
+const Priority = enumeration('Priority', { input });
+type Priority = Enumeration<typeof Priority>;
 
-console.log(Priority.urgent.level); // 4
+console.log(Priority.urgent.value); // "URGENT"
 ```
 
 ## Core Features
@@ -98,6 +99,7 @@ processColor(Status.active); // ❌ Type error
 ### Auto-Generated Properties
 
 Each enum item automatically gets:
+
 - `key` - The original key (e.g., "red")
 - `value` - Constant case version (e.g., "RED")
 - `display` - Human-readable version (e.g., "Red")
@@ -108,7 +110,6 @@ Each enum item automatically gets:
 Override or add custom auto-formatting:
 
 ```typescript
-
 const input = ['userProfile', 'adminDashboard', 'settingsPage'] as const;
 const propertyAutoFormatters = [
   { key: 'path', format: k => `/${k}` },
@@ -116,8 +117,8 @@ const propertyAutoFormatters = [
   { key: 'value', format: k => k.toLowerCase() },
 ];
 
-type Routes = Enumeration<typeof Routes, typeof input>;
-const Routes = enumeration({ input, propertyAutoFormatters });
+const Routes = enumeration('Routes', { input, propertyAutoFormatters });
+type Routes = Enumeration<typeof Routes>;
 
 console.log(Routes.userProfile.path); // "/userProfile"
 console.log(Routes.userProfile.slug); // "/user-profile"
@@ -174,7 +175,7 @@ const items = Colors.toEnumItems();
 Most methods support filtering:
 
 ```typescript
-const UserStatus = enumeration({
+const UserStatus = enumeration('UserStatus', {
   input: {
     active: { value: 'ACTIVE' },
     inactive: { value: 'INACTIVE' },
@@ -219,11 +220,7 @@ const extraExtensionMethods = items => ({
   getPrimaryColors: () => items.filter(i => ['red', 'blue'].includes(i.key)),
 });
 
-const Colors = enumeration<
-  typeof colorsInput,
-  ColorExtension,
-  ExtraExtensionMethods
->({
+const Colors = enumeration('Colors', {
   input,
   extraExtensionMethods,
 });
@@ -244,8 +241,8 @@ const input = {
   contact: { slug: '/contact', title: 'Contact' },
 };
 
-type Pages = Enumeration<typeof Pages, typeof input>;
-const Pages = enumeration<typeof input, PageExtensions>({ input });
+const Pages = enumeration('Pages', { input });
+type Pages = Enumeration<typeof Pages>;
 
 const slug = Pages.about.slug; // '/about'
 
@@ -257,7 +254,6 @@ const slugs = Pages.toCustomFieldValues<string>('slug');
 const titles = Pages.toCustomFieldValues<string>('title', undefined, {
   showEmpty: false,
 });
-
 ```
 
 ### React/Frontend Usage
@@ -269,8 +265,11 @@ function ColorSelector() {
   const [selected, setSelected] = useState(Colors.red);
 
   return (
-    <select value={selected.value} onChange={(e) => setSelected(Colors.fromValue(e.target.value))}>
-      {Colors.toOptions().map((option) => (
+    <select
+      value={selected.value}
+      onChange={e => setSelected(Colors.fromValue(e.target.value))}
+    >
+      {Colors.toOptions().map(option => (
         <option key={option.value} value={option.value}>
           {option.label}
         </option>
@@ -278,7 +277,6 @@ function ColorSelector() {
     </select>
   );
 }
-
 ```
 
 ### Serialization and Reviving (Transformations)
@@ -293,13 +291,13 @@ import {
   type Enumeration,
 } from 'smart-enums';
 
-const statusInput = ['pending', 'active', 'completed'] as const
-const Status = enumeration({ input: statusInput });
-type Status = Enumeration<typeof Status, typeof statusInput>;
+const statusInput = ['pending', 'active', 'completed'] as const;
+const Status = enumeration('Status', { input: statusInput });
+type Status = Enumeration<typeof Status>;
 
-const colorInput: ['red', 'blue', 'green'] as const 
-const Color = enumeration({ input: colorInput});
-type Color = Enumeration<typeof Color, type of colorInput>;
+const colorInput = ['red', 'blue', 'green'] as const;
+const Color = enumeration('Color', { input: colorInput });
+type Color = Enumeration<typeof Color>;
 
 const dto = {
   id: '123',
@@ -308,82 +306,35 @@ const dto = {
   history: [Status.pending, Status.completed],
 };
 
-// Inferred serialized type
+// Serialize enum items to self-describing objects
 const wire = serializeSmartEnums(dto);
+// Result: {
+//   id: '123',
+//   status: { __smart_enum_type: 'Status', value: 'ACTIVE' },
+//   favoriteColor: { __smart_enum_type: 'Color', value: 'RED' },
+//   history: [
+//     { __smart_enum_type: 'Status', value: 'PENDING' },
+//     { __smart_enum_type: 'Status', value: 'COMPLETED' }
+//   ]
+// }
 
-// Inferred revived type (map keys with as const)
-const revived = reviveSmartEnums(
-  wire,
-  { status: Status, favoriteColor: Color } as const,
-);
-
-// Explicit return types (optional)
-type MyWire = { id: string; status: string };
-const wireExplicit = serializeSmartEnums<MyWire>(dto);
-
-type MyRevived = RevivedSmartEnums<
-  typeof wire,
-  { status: typeof Status; favoriteColor: typeof Color }
->;
-const revivedExplicit = reviveSmartEnums<MyRevived>(
-  wire,
-  { status: Status, favoriteColor: Color } as const,
-);
+// Revive using registry
+const revived = reviveSmartEnums(wire, { Status, Color });
+// Result: {
+//   id: '123',
+//   status: Status.active,        // Full enum item restored
+//   favoriteColor: Color.red,     // Full enum item restored
+//   history: [Status.pending, Status.completed]
+// }
 ```
 
 Notes:
-- Serialization uses a non-enumerable Symbol tag to detect enum items; JSON stays clean.
-- Reviving is opt-in per field name. If no mapping is provided for a field, the string is left as-is.
-- Use `as const` on the mapping object so keys remain literal for best inference.
-- Cyclic references are preserved during serialization.
 
-### Self-describing JSON with enumType
-
-If you prefer payloads that carry their enum type without an external field mapping, pass `enumType` when creating the enum. Each item exposes a custom `toJSON()` that emits `{ __smart_enum_type: '<YourId>', value: '<VALUE>' }`.
-
-```ts
-const Status = enumeration({
-  input: ['pending', 'active', 'completed'] as const,
-  enumType: 'Status',
-});
-
-JSON.stringify({ status: Status.active });
-// => {"status":{"__smart_enum_type":"Status","value":"ACTIVE"}}
-```
-
-You can then revive with a registry and a JSON.parse reviver, or using a post-parse walk.
-
-```ts
-const registry = { Status } as const;
-
-function parseAndReviveTagged<R>(json: string): R {
-  return JSON.parse(json, (_key, value) => {
-    if (
-      value &&
-      typeof value === 'object' &&
-      '__smart_enum_type' in value &&
-      'value' in value
-    ) {
-      const { __smart_enum_type, value: v } = value as {
-        __smart_enum_type: keyof typeof registry;
-        value: string;
-      };
-      return registry[__smart_enum_type]?.tryFromValue(v) ?? value;
-    }
-    return value;
-  }) as R;
-}
-
-const revived = parseAndReviveTagged<{ status: typeof Status.active }>(
-  JSON.stringify({ status: Status.active }),
-);
-```
-
-Typing JSON.parse results
-- JSON.parse returns `any` in TypeScript. Use a typed wrapper or an explicit type assertion:
-  - Wrapper: `function parseJson<T>(s: string): T { return JSON.parse(s) as T; }`
-  - Assertion: `const data = JSON.parse(json) as MyType;`
-- For validation, consider schema libraries (e.g., zod) to check the shape at runtime.
+- All enums now require an `enumType` parameter for serialization/revival
+- Serialization creates self-describing objects with `__smart_enum_type` and `value`
+- Reviving uses a registry to map enum types back to their instances
+- Cyclic references are preserved during serialization
+- Use `as const` on the registry object for best type inference
 
 ### Validation & Type Guards
 
@@ -410,41 +361,43 @@ function processStatus(statusValue: string) {
 
 ## API Reference
 
-### `enumeration(props)`
+### `enumeration(enumType, props)`
 
 Main factory function for creating Smart Enums.
 
 **Parameters:**
-- `input` - Array of strings, object with BaseEnum values, or existing enum
-- `propertyAutoFormatters` - Optional custom formatters for auto-generated properties
-- `extraExtensionMethods` - Optional factory for adding custom methods
+
+- `enumType` - String identifier for the enum type (required for serialization/revival)
+- `props.input` - Array of strings, object with BaseEnum values, or existing enum
+- `props.propertyAutoFormatters` - Optional custom formatters for auto-generated properties
+- `props.extraExtensionMethods` - Optional factory for adding custom methods
 
 **Returns:** An enum object with all items as properties plus extension methods
 
 ### Extension Methods
 
-| Method | Description | Returns |
-|--------|-------------|---------|
-| `fromValue(value)` | Get item by value (throws if not found) | `EnumItem` |
-| `tryFromValue(value)` | Get item by value (safe) | `EnumItem \| undefined` |
-| `fromKey(key)` | Get item by key (throws if not found) | `EnumItem` |
-| `tryFromKey(key)` | Get item by key (safe) | `EnumItem \| undefined` |
-| `fromDisplay(display)` | Get item by display text (throws if not found) | `EnumItem` |
-| `tryFromDisplay(display)` | Get item by display text (safe) | `EnumItem \| undefined` |
-| `tryFromCustomField(field, value, filter?)` | Get item by custom field | `EnumItem \| undefined` |
-| `toOptions(filter?, options?)` | Convert to dropdown options | `DropdownOption[]` |
-| `toValues(filter?, options?)` | Get all values | `string[]` |
-| `toKeys(filter?, options?)` | Get all keys | `string[]` |
-| `toDisplays(filter?, options?)` | Get all display texts | `string[]` |
-| `toEnumItems(filter?, options?)` | Get all items as array | `EnumItem[]` |
-| `toCustomFieldValues(field, filter?, options?)` | Get values from custom field | `T[]` |
+| Method                                          | Description                                    | Returns                 |
+| ----------------------------------------------- | ---------------------------------------------- | ----------------------- |
+| `fromValue(value)`                              | Get item by value (throws if not found)        | `EnumItem`              |
+| `tryFromValue(value)`                           | Get item by value (safe)                       | `EnumItem \| undefined` |
+| `fromKey(key)`                                  | Get item by key (throws if not found)          | `EnumItem`              |
+| `tryFromKey(key)`                               | Get item by key (safe)                         | `EnumItem \| undefined` |
+| `fromDisplay(display)`                          | Get item by display text (throws if not found) | `EnumItem`              |
+| `tryFromDisplay(display)`                       | Get item by display text (safe)                | `EnumItem \| undefined` |
+| `tryFromCustomField(field, value, filter?)`     | Get item by custom field                       | `EnumItem \| undefined` |
+| `toOptions(filter?, options?)`                  | Convert to dropdown options                    | `DropdownOption[]`      |
+| `toValues(filter?, options?)`                   | Get all values                                 | `string[]`              |
+| `toKeys(filter?, options?)`                     | Get all keys                                   | `string[]`              |
+| `toDisplays(filter?, options?)`                 | Get all display texts                          | `string[]`              |
+| `toEnumItems(filter?, options?)`                | Get all items as array                         | `EnumItem[]`            |
+| `toCustomFieldValues(field, filter?, options?)` | Get values from custom field                   | `T[]`                   |
 
 ### Filter Options
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `showEmpty` | `boolean` | Include items with null/undefined values |
-| `showDeprecated` | `boolean` | Include deprecated items |
+| Option           | Type      | Description                              |
+| ---------------- | --------- | ---------------------------------------- |
+| `showEmpty`      | `boolean` | Include items with null/undefined values |
+| `showDeprecated` | `boolean` | Include deprecated items                 |
 
 ## Migration Guide
 
@@ -459,7 +412,7 @@ const COLORS = {
 };
 
 // After
-const Colors = enumeration({
+const Colors = enumeration('Colors', {
   input: ['red', 'blue', 'green'] as const,
 });
 
@@ -473,20 +426,19 @@ const Colors = enumeration({
 type Status = 'pending' | 'active' | 'completed';
 
 // After
-const Status = enumeration({
+const Status = enumeration('Status', {
   input: ['pending', 'active', 'completed'] as const,
 });
-
-type StatusItem = (typeof Status)[keyof typeof Status];
+type Status = Enumeration<typeof Status>;
 ```
 
 ## Best Practices
 
 1. **Always use `as const`** for array inputs to preserve literal types
-   
-2. **Use `tryFrom*` methods** when dealing with external data
-3. **Leverage filtering** to hide deprecated items from users
-4. **Add custom properties** for domain-specific needs
+2. **Always provide `enumType`** parameter for serialization/revival support
+3. **Use `tryFrom*` methods** when dealing with external data
+4. **Leverage filtering** to hide deprecated items from users
+5. **Add custom properties** for domain-specific needs
 
 ## Contributing
 
