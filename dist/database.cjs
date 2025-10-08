@@ -17,20 +17,16 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// src/index.ts
-var index_exports = {};
-__export(index_exports, {
+// src/database.ts
+var database_exports = {};
+__export(database_exports, {
   enumeration: () => enumeration,
   initializeSmartEnumMappings: () => initializeSmartEnumMappings,
   isSmartEnumItem: () => isSmartEnumItem,
   prepareForDatabase: () => prepareForDatabase,
-  reviveAfterTransport: () => reviveAfterTransport,
-  reviveFromDatabase: () => reviveFromDatabase,
-  reviveSmartEnums: () => reviveSmartEnums,
-  serializeForTransport: () => serializeForTransport,
-  serializeSmartEnums: () => serializeSmartEnums
+  reviveFromDatabase: () => reviveFromDatabase
 });
-module.exports = __toCommonJS(index_exports);
+module.exports = __toCommonJS(database_exports);
 
 // src/enumeration.ts
 var import_case_anything = require("case-anything");
@@ -180,9 +176,6 @@ var buildExtensionMethods = (rawEnum) => {
 var isSmartEnumItem = (x) => {
   return !!x && typeof x === "object" && Reflect.get(x, SMART_ENUM_ITEM) === true;
 };
-var isSerializedSmartEnumItem = (x) => {
-  return !!x && typeof x === "object" && Reflect.has(x, "__smart_enum_type") && Reflect.has(x, "value");
-};
 function enumeration(enumType, {
   input,
   extraExtensionMethods,
@@ -246,87 +239,8 @@ function enumeration(enumType, {
   };
 }
 
-// src/utilities/transformation.ts
-var isPlainObject = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
-function serializeSmartEnums(input) {
-  const seen = /* @__PURE__ */ new WeakMap();
-  const walk = (v) => {
-    if (isSmartEnumItem(v)) {
-      return {
-        __smart_enum_type: v.__smart_enum_type,
-        value: v.value
-      };
-    }
-    if (typeof v === "object" && v !== null && seen.has(v)) {
-      return seen.get(v);
-    }
-    if (Array.isArray(v)) {
-      const arr = [];
-      seen.set(v, arr);
-      for (const item of v) {
-        arr.push(walk(item));
-      }
-      return arr;
-    }
-    if (isPlainObject(v)) {
-      const out = {};
-      seen.set(v, out);
-      for (const [k, val] of Object.entries(v)) {
-        out[k] = walk(val);
-      }
-      return out;
-    }
-    return v;
-  };
-  return walk(input);
-}
-function reviveSmartEnums(input, registry) {
-  const seen = /* @__PURE__ */ new WeakMap();
-  const walk = (v) => {
-    if (isSerializedSmartEnumItem(v)) {
-      const enumInstance = registry[v.__smart_enum_type];
-      if (enumInstance) {
-        const enumItem = enumInstance.tryFromValue(v.value);
-        if (enumItem) {
-          return enumItem;
-        }
-        const key = v.value.toLowerCase();
-        const enumItemFromKey = enumInstance.tryFromKey(key);
-        if (enumItemFromKey) {
-          return enumItemFromKey;
-        }
-      }
-      return v;
-    }
-    if (typeof v === "object" && v !== null && seen.has(v)) {
-      return seen.get(v);
-    }
-    if (Array.isArray(v)) {
-      const arr = [];
-      seen.set(v, arr);
-      for (const item of v) arr.push(walk(item));
-      return arr;
-    }
-    if (isPlainObject(v)) {
-      const out = {};
-      seen.set(v, out);
-      for (const [k, val] of Object.entries(v)) {
-        out[k] = walk(val);
-      }
-      return out;
-    }
-    return v;
-  };
-  return walk(input);
-}
-
-// src/utilities/transport/reviveAfterTransport.ts
-function reviveAfterTransport(payload, config) {
-  return reviveSmartEnums(payload, config.enumRegistry);
-}
-
 // src/utilities/database/fieldMappingBuilder.ts
-var isPlainObject2 = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
+var isPlainObject = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
 var globalEnumRegistry;
 var globalFieldMapping = {};
 function initializeSmartEnumMappings(config) {
@@ -358,7 +272,7 @@ function learnFromData(data) {
       for (const item of v) {
         walk(item, propertyName);
       }
-    } else if (isPlainObject2(v)) {
+    } else if (isPlainObject(v)) {
       for (const [key, value] of Object.entries(v)) {
         walk(value, key);
       }
@@ -370,14 +284,8 @@ function getLearnedMapping() {
   return { ...globalFieldMapping };
 }
 
-// src/utilities/transport/serializeForTransport.ts
-function serializeForTransport(payload) {
-  learnFromData(payload);
-  return serializeSmartEnums(payload);
-}
-
 // src/utilities/database/prepareForDatabase.ts
-var isPlainObject3 = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
+var isPlainObject2 = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
 function prepareForDatabase(payload) {
   learnFromData(payload);
   const seen = /* @__PURE__ */ new WeakMap();
@@ -396,7 +304,7 @@ function prepareForDatabase(payload) {
       }
       return arr;
     }
-    if (isPlainObject3(v)) {
+    if (isPlainObject2(v)) {
       const out = {};
       seen.set(v, out);
       for (const [k, val] of Object.entries(v)) {
@@ -410,7 +318,7 @@ function prepareForDatabase(payload) {
 }
 
 // src/utilities/database/reviveFromDatabase.ts
-var isPlainObject4 = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
+var isPlainObject3 = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
 function reviveFromDatabase(payload, config) {
   const learnedMapping = getLearnedMapping();
   const manualArrayMapping = {};
@@ -438,7 +346,7 @@ function reviveFromDatabase(payload, config) {
       }
       return arr;
     }
-    if (isPlainObject4(v)) {
+    if (isPlainObject3(v)) {
       const out = {};
       seen.set(v, out);
       for (const [k, val] of Object.entries(v)) {
@@ -470,10 +378,6 @@ function reviveFromDatabase(payload, config) {
   initializeSmartEnumMappings,
   isSmartEnumItem,
   prepareForDatabase,
-  reviveAfterTransport,
-  reviveFromDatabase,
-  reviveSmartEnums,
-  serializeForTransport,
-  serializeSmartEnums
+  reviveFromDatabase
 });
-//# sourceMappingURL=index.cjs.map
+//# sourceMappingURL=database.cjs.map

@@ -17,20 +17,13 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// src/index.ts
-var index_exports = {};
-__export(index_exports, {
+// src/core.ts
+var core_exports = {};
+__export(core_exports, {
   enumeration: () => enumeration,
-  initializeSmartEnumMappings: () => initializeSmartEnumMappings,
-  isSmartEnumItem: () => isSmartEnumItem,
-  prepareForDatabase: () => prepareForDatabase,
-  reviveAfterTransport: () => reviveAfterTransport,
-  reviveFromDatabase: () => reviveFromDatabase,
-  reviveSmartEnums: () => reviveSmartEnums,
-  serializeForTransport: () => serializeForTransport,
-  serializeSmartEnums: () => serializeSmartEnums
+  isSmartEnumItem: () => isSmartEnumItem
 });
-module.exports = __toCommonJS(index_exports);
+module.exports = __toCommonJS(core_exports);
 
 // src/enumeration.ts
 var import_case_anything = require("case-anything");
@@ -180,9 +173,6 @@ var buildExtensionMethods = (rawEnum) => {
 var isSmartEnumItem = (x) => {
   return !!x && typeof x === "object" && Reflect.get(x, SMART_ENUM_ITEM) === true;
 };
-var isSerializedSmartEnumItem = (x) => {
-  return !!x && typeof x === "object" && Reflect.has(x, "__smart_enum_type") && Reflect.has(x, "value");
-};
 function enumeration(enumType, {
   input,
   extraExtensionMethods,
@@ -245,235 +235,9 @@ function enumeration(enumType, {
     // All methods
   };
 }
-
-// src/utilities/transformation.ts
-var isPlainObject = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
-function serializeSmartEnums(input) {
-  const seen = /* @__PURE__ */ new WeakMap();
-  const walk = (v) => {
-    if (isSmartEnumItem(v)) {
-      return {
-        __smart_enum_type: v.__smart_enum_type,
-        value: v.value
-      };
-    }
-    if (typeof v === "object" && v !== null && seen.has(v)) {
-      return seen.get(v);
-    }
-    if (Array.isArray(v)) {
-      const arr = [];
-      seen.set(v, arr);
-      for (const item of v) {
-        arr.push(walk(item));
-      }
-      return arr;
-    }
-    if (isPlainObject(v)) {
-      const out = {};
-      seen.set(v, out);
-      for (const [k, val] of Object.entries(v)) {
-        out[k] = walk(val);
-      }
-      return out;
-    }
-    return v;
-  };
-  return walk(input);
-}
-function reviveSmartEnums(input, registry) {
-  const seen = /* @__PURE__ */ new WeakMap();
-  const walk = (v) => {
-    if (isSerializedSmartEnumItem(v)) {
-      const enumInstance = registry[v.__smart_enum_type];
-      if (enumInstance) {
-        const enumItem = enumInstance.tryFromValue(v.value);
-        if (enumItem) {
-          return enumItem;
-        }
-        const key = v.value.toLowerCase();
-        const enumItemFromKey = enumInstance.tryFromKey(key);
-        if (enumItemFromKey) {
-          return enumItemFromKey;
-        }
-      }
-      return v;
-    }
-    if (typeof v === "object" && v !== null && seen.has(v)) {
-      return seen.get(v);
-    }
-    if (Array.isArray(v)) {
-      const arr = [];
-      seen.set(v, arr);
-      for (const item of v) arr.push(walk(item));
-      return arr;
-    }
-    if (isPlainObject(v)) {
-      const out = {};
-      seen.set(v, out);
-      for (const [k, val] of Object.entries(v)) {
-        out[k] = walk(val);
-      }
-      return out;
-    }
-    return v;
-  };
-  return walk(input);
-}
-
-// src/utilities/transport/reviveAfterTransport.ts
-function reviveAfterTransport(payload, config) {
-  return reviveSmartEnums(payload, config.enumRegistry);
-}
-
-// src/utilities/database/fieldMappingBuilder.ts
-var isPlainObject2 = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
-var globalEnumRegistry;
-var globalFieldMapping = {};
-function initializeSmartEnumMappings(config) {
-  globalEnumRegistry = config.enumRegistry;
-  globalFieldMapping = {};
-}
-function learnFromData(data) {
-  if (!globalEnumRegistry) return;
-  const seen = /* @__PURE__ */ new WeakSet();
-  const walk = (v, propertyName) => {
-    if (isSmartEnumItem(v) && propertyName) {
-      const enumTypeName = v.__smart_enum_type;
-      if (!enumTypeName) return;
-      if (!globalFieldMapping[propertyName] || !globalFieldMapping[propertyName].includes(enumTypeName)) {
-        globalFieldMapping[propertyName] = [
-          ...globalFieldMapping[propertyName] || [],
-          enumTypeName
-        ];
-      }
-      return;
-    }
-    if (typeof v === "object" && v !== null) {
-      if (seen.has(v)) {
-        return;
-      }
-      seen.add(v);
-    }
-    if (Array.isArray(v)) {
-      for (const item of v) {
-        walk(item, propertyName);
-      }
-    } else if (isPlainObject2(v)) {
-      for (const [key, value] of Object.entries(v)) {
-        walk(value, key);
-      }
-    }
-  };
-  walk(data);
-}
-function getLearnedMapping() {
-  return { ...globalFieldMapping };
-}
-
-// src/utilities/transport/serializeForTransport.ts
-function serializeForTransport(payload) {
-  learnFromData(payload);
-  return serializeSmartEnums(payload);
-}
-
-// src/utilities/database/prepareForDatabase.ts
-var isPlainObject3 = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
-function prepareForDatabase(payload) {
-  learnFromData(payload);
-  const seen = /* @__PURE__ */ new WeakMap();
-  const walk = (v) => {
-    if (isSmartEnumItem(v)) {
-      return v.value;
-    }
-    if (typeof v === "object" && v !== null && seen.has(v)) {
-      return seen.get(v);
-    }
-    if (Array.isArray(v)) {
-      const arr = [];
-      seen.set(v, arr);
-      for (const item of v) {
-        arr.push(walk(item));
-      }
-      return arr;
-    }
-    if (isPlainObject3(v)) {
-      const out = {};
-      seen.set(v, out);
-      for (const [k, val] of Object.entries(v)) {
-        out[k] = walk(val);
-      }
-      return out;
-    }
-    return v;
-  };
-  return walk(payload);
-}
-
-// src/utilities/database/reviveFromDatabase.ts
-var isPlainObject4 = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
-function reviveFromDatabase(payload, config) {
-  const learnedMapping = getLearnedMapping();
-  const manualArrayMapping = {};
-  if (config.fieldEnumMapping) {
-    for (const [property, enumType] of Object.entries(
-      config.fieldEnumMapping
-    )) {
-      manualArrayMapping[property] = Array.isArray(enumType) ? enumType : [enumType];
-    }
-  }
-  const fieldEnumMapping = { ...learnedMapping, ...manualArrayMapping };
-  if (!fieldEnumMapping) {
-    return payload;
-  }
-  const seen = /* @__PURE__ */ new WeakMap();
-  const walk = (v, propertyName) => {
-    if (typeof v === "object" && v !== null && seen.has(v)) {
-      return seen.get(v);
-    }
-    if (Array.isArray(v)) {
-      const arr = [];
-      seen.set(v, arr);
-      for (const item of v) {
-        arr.push(walk(item, propertyName));
-      }
-      return arr;
-    }
-    if (isPlainObject4(v)) {
-      const out = {};
-      seen.set(v, out);
-      for (const [k, val] of Object.entries(v)) {
-        out[k] = walk(val, k);
-      }
-      return out;
-    }
-    if (typeof v === "string" && propertyName && fieldEnumMapping) {
-      const enumTypes = fieldEnumMapping[propertyName];
-      if (enumTypes) {
-        const typesToTry = Array.isArray(enumTypes) ? enumTypes : [enumTypes];
-        for (const enumType of typesToTry) {
-          if (config.enumRegistry[enumType]) {
-            const enumItem = config.enumRegistry[enumType].tryFromValue(v);
-            if (enumItem) {
-              return enumItem;
-            }
-          }
-        }
-      }
-    }
-    return v;
-  };
-  return walk(payload);
-}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   enumeration,
-  initializeSmartEnumMappings,
-  isSmartEnumItem,
-  prepareForDatabase,
-  reviveAfterTransport,
-  reviveFromDatabase,
-  reviveSmartEnums,
-  serializeForTransport,
-  serializeSmartEnums
+  isSmartEnumItem
 });
-//# sourceMappingURL=index.cjs.map
+//# sourceMappingURL=core.cjs.map

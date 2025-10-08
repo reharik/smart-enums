@@ -316,3 +316,27 @@ export type SmartEnumItemSerialized = {
   __smart_enum_type: string;
   value: string;
 };
+
+/**
+ * Configuration for API helpers with auto-learning capabilities
+ */
+export type SmartApiHelperConfig = {
+  /** Registry of enum types for revival */
+  enumRegistry: Record<string, AnyEnumLike>;
+  /** Optional mapping of field paths to enum types for database revival */
+  fieldEnumMapping?: Record<string, string | string[]>;
+};
+
+/**
+ * Compile-time transformer: replaces Smart Enum items with string values,
+ * recursively over arrays and objects. Used for database storage.
+ */
+export type DatabaseFormat<T> = T extends { value: string; key: unknown }
+  ? string
+  : T extends ReadonlyArray<infer U>
+    ? ReadonlyArray<DatabaseFormat<U>>
+    : T extends Array<infer U>
+      ? DatabaseFormat<U>[]
+      : T extends object
+        ? { [K in keyof T]: DatabaseFormat<T[K]> }
+        : T;

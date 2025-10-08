@@ -17,20 +17,17 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// src/index.ts
-var index_exports = {};
-__export(index_exports, {
+// src/transport.ts
+var transport_exports = {};
+__export(transport_exports, {
   enumeration: () => enumeration,
-  initializeSmartEnumMappings: () => initializeSmartEnumMappings,
   isSmartEnumItem: () => isSmartEnumItem,
-  prepareForDatabase: () => prepareForDatabase,
   reviveAfterTransport: () => reviveAfterTransport,
-  reviveFromDatabase: () => reviveFromDatabase,
   reviveSmartEnums: () => reviveSmartEnums,
   serializeForTransport: () => serializeForTransport,
   serializeSmartEnums: () => serializeSmartEnums
 });
-module.exports = __toCommonJS(index_exports);
+module.exports = __toCommonJS(transport_exports);
 
 // src/enumeration.ts
 var import_case_anything = require("case-anything");
@@ -329,10 +326,6 @@ function reviveAfterTransport(payload, config) {
 var isPlainObject2 = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
 var globalEnumRegistry;
 var globalFieldMapping = {};
-function initializeSmartEnumMappings(config) {
-  globalEnumRegistry = config.enumRegistry;
-  globalFieldMapping = {};
-}
 function learnFromData(data) {
   if (!globalEnumRegistry) return;
   const seen = /* @__PURE__ */ new WeakSet();
@@ -366,114 +359,19 @@ function learnFromData(data) {
   };
   walk(data);
 }
-function getLearnedMapping() {
-  return { ...globalFieldMapping };
-}
 
 // src/utilities/transport/serializeForTransport.ts
 function serializeForTransport(payload) {
   learnFromData(payload);
   return serializeSmartEnums(payload);
 }
-
-// src/utilities/database/prepareForDatabase.ts
-var isPlainObject3 = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
-function prepareForDatabase(payload) {
-  learnFromData(payload);
-  const seen = /* @__PURE__ */ new WeakMap();
-  const walk = (v) => {
-    if (isSmartEnumItem(v)) {
-      return v.value;
-    }
-    if (typeof v === "object" && v !== null && seen.has(v)) {
-      return seen.get(v);
-    }
-    if (Array.isArray(v)) {
-      const arr = [];
-      seen.set(v, arr);
-      for (const item of v) {
-        arr.push(walk(item));
-      }
-      return arr;
-    }
-    if (isPlainObject3(v)) {
-      const out = {};
-      seen.set(v, out);
-      for (const [k, val] of Object.entries(v)) {
-        out[k] = walk(val);
-      }
-      return out;
-    }
-    return v;
-  };
-  return walk(payload);
-}
-
-// src/utilities/database/reviveFromDatabase.ts
-var isPlainObject4 = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
-function reviveFromDatabase(payload, config) {
-  const learnedMapping = getLearnedMapping();
-  const manualArrayMapping = {};
-  if (config.fieldEnumMapping) {
-    for (const [property, enumType] of Object.entries(
-      config.fieldEnumMapping
-    )) {
-      manualArrayMapping[property] = Array.isArray(enumType) ? enumType : [enumType];
-    }
-  }
-  const fieldEnumMapping = { ...learnedMapping, ...manualArrayMapping };
-  if (!fieldEnumMapping) {
-    return payload;
-  }
-  const seen = /* @__PURE__ */ new WeakMap();
-  const walk = (v, propertyName) => {
-    if (typeof v === "object" && v !== null && seen.has(v)) {
-      return seen.get(v);
-    }
-    if (Array.isArray(v)) {
-      const arr = [];
-      seen.set(v, arr);
-      for (const item of v) {
-        arr.push(walk(item, propertyName));
-      }
-      return arr;
-    }
-    if (isPlainObject4(v)) {
-      const out = {};
-      seen.set(v, out);
-      for (const [k, val] of Object.entries(v)) {
-        out[k] = walk(val, k);
-      }
-      return out;
-    }
-    if (typeof v === "string" && propertyName && fieldEnumMapping) {
-      const enumTypes = fieldEnumMapping[propertyName];
-      if (enumTypes) {
-        const typesToTry = Array.isArray(enumTypes) ? enumTypes : [enumTypes];
-        for (const enumType of typesToTry) {
-          if (config.enumRegistry[enumType]) {
-            const enumItem = config.enumRegistry[enumType].tryFromValue(v);
-            if (enumItem) {
-              return enumItem;
-            }
-          }
-        }
-      }
-    }
-    return v;
-  };
-  return walk(payload);
-}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   enumeration,
-  initializeSmartEnumMappings,
   isSmartEnumItem,
-  prepareForDatabase,
   reviveAfterTransport,
-  reviveFromDatabase,
   reviveSmartEnums,
   serializeForTransport,
   serializeSmartEnums
 });
-//# sourceMappingURL=index.cjs.map
+//# sourceMappingURL=transport.cjs.map

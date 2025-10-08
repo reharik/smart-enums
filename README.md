@@ -42,6 +42,43 @@ yarn add smart-enums
 pnpm add smart-enums
 ```
 
+## Tree-Shaking Support
+
+Smart Enums supports tree-shaking with multiple entry points for optimal bundle sizes:
+
+```typescript
+// Core functionality only (smallest bundle)
+import { enumeration, isSmartEnumItem } from 'smart-enums/core';
+
+// Core + API transport utilities
+import {
+  enumeration,
+  serializeForTransport,
+  reviveAfterTransport,
+} from 'smart-enums/transport';
+
+// Core + database utilities
+import {
+  enumeration,
+  prepareForDatabase,
+  reviveFromDatabase,
+} from 'smart-enums/database';
+
+// Full API (backward compatible)
+import {
+  enumeration,
+  serializeSmartEnums,
+  prepareForDatabase,
+} from 'smart-enums';
+```
+
+**Bundle Size Comparison:**
+
+- `smart-enums/core`: ~149 bytes (minimal)
+- `smart-enums/transport`: ~406 bytes (core + serialization)
+- `smart-enums/database`: ~379 bytes (core + database utilities)
+- `smart-enums`: ~598 bytes (everything)
+
 ## Quick Start
 
 ### Creating Enums from Arrays
@@ -335,6 +372,384 @@ Notes:
 - Reviving uses a registry to map enum types back to their instances
 - Cyclic references are preserved during serialization
 - Use `as const` on the registry object for best type inference
+
+## Transport Utilities
+
+For API communication, use the transport utilities to serialize enums for sending over the wire and revive them on the receiving end.
+
+### Basic Transport Usage
+
+```typescript
+import { enumeration } from 'smart-enums/core';
+import {
+  serializeForTransport,
+  reviveAfterTransport,
+} from 'smart-enums/transport';
+
+// Create enums
+const UserStatus = enumeration('UserStatus', {
+  input: ['pending', 'active', 'suspended'] as const,
+});
+
+const Priority = enumeration('Priority', {
+  input: ['low', 'medium', 'high', 'urgent'] as const,
+});
+
+// API endpoint - serialize for sending
+const apiData = {
+  user: {
+    id: '123',
+    status: UserStatus.active,
+    profile: {
+      priority: Priority.high,
+    },
+  },
+  orders: [
+    { id: 'o1', status: UserStatus.pending },
+    { id: 'o2', status: UserStatus.active },
+  ],
+};
+
+// Serialize for transport (creates self-describing objects)
+const wireData = serializeForTransport(apiData);
+// Result: {
+//   user: {
+//     id: '123',
+//     status: { __smart_enum_type: 'UserStatus', value: 'ACTIVE' },
+//     profile: {
+//       priority: { __smart_enum_type: 'Priority', value: 'HIGH' }
+//     }
+//   },
+//   orders: [
+//     { id: 'o1', status: { __smart_enum_type: 'UserStatus', value: 'PENDING' } },
+//     { id: 'o2', status: { __smart_enum_type: 'UserStatus', value: 'ACTIVE' } }
+//   ]
+// }
+
+// Client-side - revive after receiving
+const revivedData = reviveAfterTransport(wireData, {
+  UserStatus,
+  Priority,
+});
+// Result: Original apiData with full enum items restored
+```
+
+### Express.js Integration
+
+```typescript
+import express from 'express';
+import {
+  serializeForTransport,
+  reviveAfterTransport,
+} from 'smart-enums/transport';
+
+const app = express();
+
+// Middleware to revive enums from incoming requests
+app.use(express.json());
+app.use((req, res, next) => {
+  if (req.body) {
+    req.body = reviveAfterTransport(req.body, {
+      UserStatus,
+      Priority,
+      OrderStatus,
+    });
+  }
+  next();
+});
+
+// API endpoint
+app.get('/api/users/:id', (req, res) => {
+  const user = getUserById(req.params.id);
+
+  // Serialize for response
+  res.json(serializeForTransport(user));
+});
+
+// POST endpoint
+app.post('/api/users', (req, res) => {
+  // req.body is automatically revived with enum items
+  const { status, priority } = req.body;
+
+  // Use enum items directly
+  if (status === UserStatus.active) {
+    // Handle active user
+  }
+
+  const newUser = createUser(req.body);
+  res.json(serializeForTransport(newUser));
+});
+```
+
+### React/Fetch Integration
+
+```typescript
+// API client with automatic enum handling
+class ApiClient {
+  private enumRegistry = { UserStatus, Priority, OrderStatus };
+
+  async get<T>(url: string): Promise<T> {
+    const response = await fetch(url);
+    const data = await response.json();
+
+    // Revive enums in response
+    return reviveAfterTransport(data, this.enumRegistry) as T;
+  }
+
+  async post<T>(url: string, data: any): Promise<T> {
+    // Serialize enums for sending
+    const serializedData = serializeForTransport(data);
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(serializedData),
+    });
+
+    const result = await response.json();
+    return reviveAfterTransport(result, this.enumRegistry) as T;
+  }
+}
+
+// Usage in React component
+function UserProfile({ userId }: { userId: string }) {
+  const [user, setUser] = useState<User | null>(null);
+  const apiClient = new ApiClient();
+
+  useEffect(() => {
+    apiClient.get<User>(`/api/users/${userId}`).then(setUser);
+  }, [userId]);
+
+  const updateStatus = async (newStatus: typeof UserStatus.active) => {
+    const updatedUser = await apiClient.post<User>(`/api/users/${userId}`, {
+      status: newStatus, // Enum item sent directly
+    });
+    setUser(updatedUser);
+  };
+
+  return (
+    <div>
+      <h2>{user?.name}</h2>
+      <p>Status: {user?.status.display}</p>
+      <button onClick={() => updateStatus(UserStatus.active)}>
+        Activate User
+      </button>
+    </div>
+  );
+}
+```
+
+## Database Utilities
+
+For database operations, use the database utilities to convert enums to strings for storage and revive them when loading.
+
+### Basic Database Usage
+
+```typescript
+import { enumeration } from 'smart-enums/core';
+import { prepareForDatabase, reviveFromDatabase } from 'smart-enums/database';
+
+// Create enums
+const UserStatus = enumeration('UserStatus', {
+  input: ['pending', 'active', 'suspended'] as const,
+});
+
+const Priority = enumeration('Priority', {
+  input: ['low', 'medium', 'high', 'urgent'] as const,
+});
+
+// Save to database - convert enums to strings
+const apiData = {
+  user: {
+    id: '123',
+    status: UserStatus.active,
+    profile: {
+      priority: Priority.high,
+    },
+  },
+};
+
+const dbData = prepareForDatabase(apiData);
+// Result: {
+//   user: {
+//     id: '123',
+//     status: 'ACTIVE',        // String value
+//     profile: {
+//       priority: 'HIGH'      // String value
+//     }
+//   }
+// }
+
+// Save to database
+await db.users.insert(dbData);
+
+// Load from database - revive strings back to enums
+const dbRecord = await db.users.findById('123');
+const revivedData = reviveFromDatabase(dbRecord, {
+  enumRegistry: { UserStatus, Priority },
+  fieldEnumMapping: {
+    status: ['UserStatus'], // Try UserStatus first
+    priority: ['Priority'], // Try Priority first
+  },
+});
+// Result: Original apiData with full enum items restored
+```
+
+### Automatic Field Mapping Learning
+
+The database utilities can automatically learn field-to-enum mappings, eliminating the need for manual configuration.
+
+```typescript
+import { enumeration } from 'smart-enums/core';
+import {
+  initializeSmartEnumMappings,
+  prepareForDatabase,
+  reviveFromDatabase,
+} from 'smart-enums/database';
+
+// 1. Initialize learning system
+const enumRegistry = {
+  UserStatus: enumeration('UserStatus', {
+    input: ['pending', 'active', 'suspended'] as const,
+  }),
+  Priority: enumeration('Priority', {
+    input: ['low', 'medium', 'high'] as const,
+  }),
+  OrderStatus: enumeration('OrderStatus', {
+    input: ['draft', 'processing', 'shipped'] as const,
+  }),
+};
+
+initializeSmartEnumMappings({ enumRegistry });
+
+// 2. Process data - learning happens automatically
+const userData = {
+  user: {
+    status: enumRegistry.UserStatus.active,
+    profile: {
+      priority: enumRegistry.Priority.high,
+    },
+  },
+};
+
+// This learns: { status: ['UserStatus'], priority: ['Priority'] }
+const dbData = prepareForDatabase(userData);
+
+// 3. Later, revive using learned mappings
+const revived = reviveFromDatabase(dbData, {
+  enumRegistry,
+  // No fieldEnumMapping needed - uses learned mappings!
+});
+
+// 4. Process more data - continues learning
+const orderData = {
+  orders: [{ status: enumRegistry.OrderStatus.processing }],
+};
+
+// This learns: { status: ['UserStatus', 'OrderStatus'] }
+const orderDbData = prepareForDatabase(orderData);
+```
+
+### Prisma Integration
+
+```typescript
+import { PrismaClient } from '@prisma/client';
+import { prepareForDatabase, reviveFromDatabase } from 'smart-enums/database';
+
+const prisma = new PrismaClient();
+
+// Create user with enum data
+async function createUser(userData: {
+  name: string;
+  status: typeof UserStatus.active;
+  priority: typeof Priority.high;
+}) {
+  // Convert enums to strings for database
+  const dbData = prepareForDatabase(userData);
+
+  return prisma.user.create({
+    data: {
+      name: dbData.name,
+      status: dbData.status, // 'ACTIVE'
+      priority: dbData.priority, // 'HIGH'
+    },
+  });
+}
+
+// Get user and revive enums
+async function getUser(id: string) {
+  const dbUser = await prisma.user.findUnique({
+    where: { id },
+  });
+
+  if (!dbUser) return null;
+
+  // Revive enums from database strings
+  return reviveFromDatabase(dbUser, {
+    enumRegistry: { UserStatus, Priority },
+    fieldEnumMapping: {
+      status: ['UserStatus'],
+      priority: ['Priority'],
+    },
+  });
+}
+
+// Usage
+const user = await getUser('123');
+if (user) {
+  console.log(user.status.display); // "Active"
+  console.log(user.priority.value); // "HIGH"
+}
+```
+
+### TypeORM Integration
+
+```typescript
+import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { prepareForDatabase, reviveFromDatabase } from 'smart-enums/database';
+
+@Entity()
+export class User {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column()
+  name: string;
+
+  @Column()
+  status: string; // Stores enum value as string
+
+  @Column()
+  priority: string; // Stores enum value as string
+}
+
+// Repository with enum handling
+export class UserRepository {
+  constructor(private repository: Repository<User>) {}
+
+  async save(userData: {
+    name: string;
+    status: typeof UserStatus.active;
+    priority: typeof Priority.high;
+  }) {
+    const dbData = prepareForDatabase(userData);
+    return this.repository.save(dbData);
+  }
+
+  async findById(id: number) {
+    const dbUser = await this.repository.findOne({ where: { id } });
+    if (!dbUser) return null;
+
+    return reviveFromDatabase(dbUser, {
+      enumRegistry: { UserStatus, Priority },
+      fieldEnumMapping: {
+        status: ['UserStatus'],
+        priority: ['Priority'],
+      },
+    });
+  }
+}
+```
 
 ### Validation & Type Guards
 

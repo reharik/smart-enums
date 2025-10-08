@@ -29,8 +29,11 @@ export function serializeSmartEnums(input: unknown): unknown {
         value: v.value,
       };
     }
+    if (typeof v === 'object' && v !== null && seen.has(v)) {
+      return seen.get(v);
+    }
+
     if (Array.isArray(v)) {
-      if (seen.has(v)) return seen.get(v);
       const arr: unknown[] = [];
       seen.set(v, arr);
       for (const item of v) {
@@ -39,7 +42,6 @@ export function serializeSmartEnums(input: unknown): unknown {
       return arr;
     }
     if (isPlainObject(v)) {
-      if (seen.has(v)) return seen.get(v);
       const out: PlainObject = {};
       seen.set(v, out);
       for (const [k, val] of Object.entries(v)) {
@@ -81,15 +83,17 @@ export function reviveSmartEnums<R>(
       return v;
     }
 
+    if (typeof v === 'object' && v !== null && seen.has(v)) {
+      return seen.get(v);
+    }
+
     if (Array.isArray(v)) {
-      if (seen.has(v)) return seen.get(v);
       const arr: unknown[] = [];
       seen.set(v, arr);
       for (const item of v) arr.push(walk(item));
       return arr;
     }
     if (isPlainObject(v)) {
-      if (seen.has(v)) return seen.get(v);
       const out: PlainObject = {};
       seen.set(v, out);
       for (const [k, val] of Object.entries(v)) {
