@@ -59,6 +59,10 @@ declare function initializeSmartEnumMappings(config: {
     enumRegistry: Record<string, AnyEnumLike>;
 }): void;
 /**
+ * Gets the learned mapping from the global field mapping system
+ */
+declare function getLearnedMapping(): Record<string, string[]>;
+/**
  * Gets the global enum registry
  */
 declare function getGlobalEnumRegistry(): Record<string, AnyEnumLike> | undefined;
@@ -69,4 +73,4 @@ declare function getGlobalEnumRegistry(): Record<string, AnyEnumLike> | undefine
  */
 declare function mergeFieldMappings(learnedMapping: Record<string, string[]>, manualMapping?: Record<string, string[]>): Record<string, string[]>;
 
-export { AnyEnumLike, DatabaseFormat, getGlobalEnumRegistry, initializeSmartEnumMappings, mergeFieldMappings, prepareForDatabase, reviveFromDatabase };
+export { AnyEnumLike, DatabaseFormat, getGlobalEnumRegistry, getLearnedMapping, initializeSmartEnumMappings, mergeFieldMappings, prepareForDatabase, reviveFromDatabase };

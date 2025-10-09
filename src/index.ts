@@ -33,6 +33,7 @@ export {
   reviveFromDatabase,
   initializeSmartEnumMappings,
   getGlobalEnumRegistry,
+  getLearnedMapping,
 } from './utilities/database/index.js';
 export type {
   Enumeration,

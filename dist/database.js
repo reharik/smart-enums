@@ -4,6 +4,7 @@ import {
 } from "./chunk-NXA3EKHZ.js";
 import {
   getGlobalEnumRegistry,
+  getLearnedMapping,
   initializeSmartEnumMappings,
   mergeFieldMappings
 } from "./chunk-PDRBKYTH.js";
@@ -14,6 +15,7 @@ import {
 export {
   enumeration,
   getGlobalEnumRegistry,
+  getLearnedMapping,
   initializeSmartEnumMappings,
   isSmartEnumItem,
   mergeFieldMappings,

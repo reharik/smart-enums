@@ -22,6 +22,7 @@ var database_exports = {};
 __export(database_exports, {
   enumeration: () => enumeration,
   getGlobalEnumRegistry: () => getGlobalEnumRegistry,
+  getLearnedMapping: () => getLearnedMapping,
   initializeSmartEnumMappings: () => initializeSmartEnumMappings,
   isSmartEnumItem: () => isSmartEnumItem,
   mergeFieldMappings: () => mergeFieldMappings,
@@ -396,6 +397,7 @@ function reviveFromDatabase(payload, options) {
 0 && (module.exports = {
   enumeration,
   getGlobalEnumRegistry,
+  getLearnedMapping,
   initializeSmartEnumMappings,
   isSmartEnumItem,
   mergeFieldMappings,

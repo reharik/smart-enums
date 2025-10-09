@@ -10,6 +10,7 @@ import {
 } from "./chunk-NQ5QFKWI.js";
 import {
   getGlobalEnumRegistry,
+  getLearnedMapping,
   initializeSmartEnumMappings
 } from "./chunk-PDRBKYTH.js";
 import {
@@ -19,6 +20,7 @@ import {
 export {
   enumeration,
   getGlobalEnumRegistry,
+  getLearnedMapping,
   initializeSmartEnumMappings,
   isSmartEnumItem,
   prepareForDatabase,

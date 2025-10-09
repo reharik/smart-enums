@@ -17,6 +17,7 @@ export {
   reviveFromDatabase,
   initializeSmartEnumMappings,
   getGlobalEnumRegistry,
+  getLearnedMapping,
   mergeFieldMappings,
 } from './utilities/database/index.js';
 

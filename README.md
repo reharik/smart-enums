@@ -597,6 +597,7 @@ import {
   initializeSmartEnumMappings,
   prepareForDatabase,
   reviveFromDatabase,
+  getLearnedMapping,
 } from 'smart-enums/database';
 
 // 1. Initialize learning system
@@ -638,6 +639,11 @@ const orderData = {
 
 // This learns: { status: ['UserStatus', 'OrderStatus'] }
 const orderDbData = prepareForDatabase(orderData);
+
+// 5. Inspect learned mappings
+const learnedMappings = getLearnedMapping();
+console.log(learnedMappings);
+// { status: ['UserStatus', 'OrderStatus'], priority: ['Priority'] }
 ```
 
 ### Hybrid Field Mapping (Manual + Learning)
