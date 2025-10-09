@@ -1,8 +1,9 @@
 import {
   getGlobalEnumRegistry,
   getLearnedMapping,
-  learnFromData
-} from "./chunk-NQ2GSPII.js";
+  learnFromData,
+  mergeFieldMappings
+} from "./chunk-CFLDAVKR.js";
 import {
   isSmartEnumItem
 } from "./chunk-EA5ZVF26.js";
@@ -42,13 +43,16 @@ function prepareForDatabase(payload) {
 
 // src/utilities/database/reviveFromDatabase.ts
 var isPlainObject2 = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
-function reviveFromDatabase(payload) {
+function reviveFromDatabase(payload, options) {
   const globalEnumRegistry = getGlobalEnumRegistry();
   const learnedMapping = getLearnedMapping();
   if (!globalEnumRegistry) {
     return payload;
   }
-  const fieldEnumMapping = learnedMapping;
+  const fieldEnumMapping = mergeFieldMappings(
+    learnedMapping,
+    options?.fieldEnumMapping
+  );
   if (!fieldEnumMapping || Object.keys(fieldEnumMapping).length === 0) {
     return payload;
   }
@@ -96,4 +100,4 @@ export {
   prepareForDatabase,
   reviveFromDatabase
 };
-//# sourceMappingURL=chunk-FYYCKRBF.js.map
+//# sourceMappingURL=chunk-2U4IACNC.js.map

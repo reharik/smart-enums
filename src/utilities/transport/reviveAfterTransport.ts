@@ -14,7 +14,6 @@ import { getGlobalEnumRegistry } from '../database/fieldMappingBuilder.js';
  * // First, initialize the global configuration
  * initializeSmartEnumMappings({ enumRegistry: { UserStatus, Priority } });
  *
- * // Then revive using global config
  * // Received: { user: { status: { __smart_enum_type: 'UserStatus', value: 'ACTIVE' } } }
  * const revivedPayload = reviveAfterTransport(requestBody);
  * // Result: { user: { status: UserStatus.ACTIVE } }
@@ -28,5 +27,8 @@ export function reviveAfterTransport<T>(payload: unknown): T {
     return payload as T;
   }
 
+  // For transport revival, we don't need field mapping since serialized enums
+  // already contain the __smart_enum_type information. But we keep the same
+  // signature for consistency and future extensibility.
   return reviveSmartEnums(payload, globalEnumRegistry);
 }

@@ -368,6 +368,23 @@ function getLearnedMapping() {
 function getGlobalEnumRegistry() {
   return globalEnumRegistry;
 }
+function mergeFieldMappings(learnedMapping, manualMapping) {
+  if (!manualMapping) {
+    return learnedMapping;
+  }
+  const merged = { ...learnedMapping };
+  for (const [field, manualEnumTypes] of Object.entries(manualMapping)) {
+    const existingEnumTypes = merged[field] || [];
+    const combinedEnumTypes = [...manualEnumTypes];
+    for (const learnedEnumType of existingEnumTypes) {
+      if (!combinedEnumTypes.includes(learnedEnumType)) {
+        combinedEnumTypes.push(learnedEnumType);
+      }
+    }
+    merged[field] = combinedEnumTypes;
+  }
+  return merged;
+}
 
 // src/utilities/transport/reviveAfterTransport.ts
 function reviveAfterTransport(payload) {
@@ -419,13 +436,16 @@ function prepareForDatabase(payload) {
 
 // src/utilities/database/reviveFromDatabase.ts
 var isPlainObject4 = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
-function reviveFromDatabase(payload) {
+function reviveFromDatabase(payload, options) {
   const globalEnumRegistry2 = getGlobalEnumRegistry();
   const learnedMapping = getLearnedMapping();
   if (!globalEnumRegistry2) {
     return payload;
   }
-  const fieldEnumMapping = learnedMapping;
+  const fieldEnumMapping = mergeFieldMappings(
+    learnedMapping,
+    options?.fieldEnumMapping
+  );
   if (!fieldEnumMapping || Object.keys(fieldEnumMapping).length === 0) {
     return payload;
   }

@@ -49,11 +49,29 @@ function getLearnedMapping() {
 function getGlobalEnumRegistry() {
   return globalEnumRegistry;
 }
+function mergeFieldMappings(learnedMapping, manualMapping) {
+  if (!manualMapping) {
+    return learnedMapping;
+  }
+  const merged = { ...learnedMapping };
+  for (const [field, manualEnumTypes] of Object.entries(manualMapping)) {
+    const existingEnumTypes = merged[field] || [];
+    const combinedEnumTypes = [...manualEnumTypes];
+    for (const learnedEnumType of existingEnumTypes) {
+      if (!combinedEnumTypes.includes(learnedEnumType)) {
+        combinedEnumTypes.push(learnedEnumType);
+      }
+    }
+    merged[field] = combinedEnumTypes;
+  }
+  return merged;
+}
 
 export {
   initializeSmartEnumMappings,
   learnFromData,
   getLearnedMapping,
-  getGlobalEnumRegistry
+  getGlobalEnumRegistry,
+  mergeFieldMappings
 };
-//# sourceMappingURL=chunk-NQ2GSPII.js.map
+//# sourceMappingURL=chunk-CFLDAVKR.js.map

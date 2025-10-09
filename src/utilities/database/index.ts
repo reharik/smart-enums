@@ -5,5 +5,6 @@ export {
   learnFromData,
   getLearnedMapping,
   getGlobalEnumRegistry,
+  mergeFieldMappings,
 } from './fieldMappingBuilder.js';
 export type { SmartApiHelperConfig } from '../../types.js';

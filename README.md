@@ -427,10 +427,7 @@ const wireData = serializeForTransport(apiData);
 // }
 
 // Client-side - revive after receiving
-const revivedData = reviveAfterTransport(wireData, {
-  UserStatus,
-  Priority,
-});
+const revivedData = reviveAfterTransport(wireData);
 // Result: Original apiData with full enum items restored
 ```
 
@@ -449,11 +446,7 @@ const app = express();
 app.use(express.json());
 app.use((req, res, next) => {
   if (req.body) {
-    req.body = reviveAfterTransport(req.body, {
-      UserStatus,
-      Priority,
-      OrderStatus,
-    });
+    req.body = reviveAfterTransport(req.body);
   }
   next();
 });
@@ -493,7 +486,7 @@ class ApiClient {
     const data = await response.json();
 
     // Revive enums in response
-    return reviveAfterTransport(data, this.enumRegistry) as T;
+    return reviveAfterTransport(data) as T;
   }
 
   async post<T>(url: string, data: any): Promise<T> {
@@ -507,7 +500,7 @@ class ApiClient {
     });
 
     const result = await response.json();
-    return reviveAfterTransport(result, this.enumRegistry) as T;
+    return reviveAfterTransport(result) as T;
   }
 }
 
@@ -586,7 +579,6 @@ await db.users.insert(dbData);
 // Load from database - revive strings back to enums
 const dbRecord = await db.users.findById('123');
 const revivedData = reviveFromDatabase(dbRecord, {
-  enumRegistry: { UserStatus, Priority },
   fieldEnumMapping: {
     status: ['UserStatus'], // Try UserStatus first
     priority: ['Priority'], // Try Priority first
@@ -636,10 +628,8 @@ const userData = {
 const dbData = prepareForDatabase(userData);
 
 // 3. Later, revive using learned mappings
-const revived = reviveFromDatabase(dbData, {
-  enumRegistry,
-  // No fieldEnumMapping needed - uses learned mappings!
-});
+const revived = reviveFromDatabase(dbData);
+// No fieldEnumMapping needed - uses learned mappings!
 
 // 4. Process more data - continues learning
 const orderData = {
@@ -649,6 +639,35 @@ const orderData = {
 // This learns: { status: ['UserStatus', 'OrderStatus'] }
 const orderDbData = prepareForDatabase(orderData);
 ```
+
+### Hybrid Field Mapping (Manual + Learning)
+
+For cases where you need to read from the database before any learning has occurred, you can provide manual field mappings as a fallback:
+
+```typescript
+// Option 1: Pure learning (uses learned mappings only)
+const revived = reviveFromDatabase(dbData);
+
+// Option 2: Manual fallback when no learning has occurred yet
+const revived = reviveFromDatabase(dbData, {
+  fieldEnumMapping: {
+    status: ['UserStatus', 'OrderStatus'], // Try these enum types
+    priority: ['Priority'],
+    method: ['ContactMethod'],
+  },
+});
+
+// Option 3: Hybrid - manual mappings + learning
+// Manual mappings take precedence, but learned enum types are added if not already present
+// This is useful when you want to ensure certain mappings work immediately
+// while still benefiting from automatic learning over time
+```
+
+The hybrid approach merges manual and learned mappings with deduplication:
+
+- Manual enum types are tried first
+- Learned enum types are added if not already in the manual list
+- This ensures backward compatibility while providing immediate functionality
 
 ### Prisma Integration
 
@@ -686,7 +705,6 @@ async function getUser(id: string) {
 
   // Revive enums from database strings
   return reviveFromDatabase(dbUser, {
-    enumRegistry: { UserStatus, Priority },
     fieldEnumMapping: {
       status: ['UserStatus'],
       priority: ['Priority'],
@@ -741,7 +759,6 @@ export class UserRepository {
     if (!dbUser) return null;
 
     return reviveFromDatabase(dbUser, {
-      enumRegistry: { UserStatus, Priority },
       fieldEnumMapping: {
         status: ['UserStatus'],
         priority: ['Priority'],

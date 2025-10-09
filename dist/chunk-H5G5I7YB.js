@@ -1,7 +1,7 @@
 import {
   getGlobalEnumRegistry,
   learnFromData
-} from "./chunk-NQ2GSPII.js";
+} from "./chunk-CFLDAVKR.js";
 import {
   isSerializedSmartEnumItem,
   isSmartEnumItem
@@ -102,4 +102,4 @@ export {
   reviveAfterTransport,
   serializeForTransport
 };
-//# sourceMappingURL=chunk-3BU3UIKP.js.map
+//# sourceMappingURL=chunk-H5G5I7YB.js.map

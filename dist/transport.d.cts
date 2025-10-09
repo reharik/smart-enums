@@ -19,7 +19,6 @@ declare function reviveSmartEnums<R>(input: unknown, registry: Record<string, An
  * // First, initialize the global configuration
  * initializeSmartEnumMappings({ enumRegistry: { UserStatus, Priority } });
  *
- * // Then revive using global config
  * // Received: { user: { status: { __smart_enum_type: 'UserStatus', value: 'ACTIVE' } } }
  * const revivedPayload = reviveAfterTransport(requestBody);
  * // Result: { user: { status: UserStatus.ACTIVE } }

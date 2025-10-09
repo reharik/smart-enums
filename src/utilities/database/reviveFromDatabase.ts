@@ -1,6 +1,7 @@
 import {
   getLearnedMapping,
   getGlobalEnumRegistry,
+  mergeFieldMappings,
 } from './fieldMappingBuilder.js';
 
 type PlainObject = Record<string, unknown>;
@@ -16,6 +17,7 @@ const isPlainObject = (x: unknown): x is PlainObject =>
  * Uses the global configuration set up with initializeSmartEnumMappings().
  *
  * @param payload - The data loaded from database
+ * @param options - Optional configuration for manual field mappings
  * @returns The payload with string enum values converted back to enum items
  *
  * @example
@@ -23,11 +25,27 @@ const isPlainObject = (x: unknown): x is PlainObject =>
  * // First, initialize the global configuration
  * initializeSmartEnumMappings({ enumRegistry: { UserStatus, Priority } });
  *
- * // Then revive using global config
+ * // Option 1: Pure learning (uses learned mappings only)
  * const revivedData = reviveFromDatabase(dbRecord);
+ *
+ * // Option 2: Manual fallback when no learning has occurred yet
+ * const revivedData = reviveFromDatabase(dbRecord, {
+ *   fieldEnumMapping: {
+ *     status: ['UserStatus', 'OrderStatus'],
+ *     priority: ['Priority'],
+ *   }
+ * });
+ *
+ * // Option 3: Hybrid - manual mappings + learning (manual takes precedence)
+ * // Manual mappings work immediately, learning improves over time
  * ```
  */
-export function reviveFromDatabase<T>(payload: unknown): T {
+export function reviveFromDatabase<T>(
+  payload: unknown,
+  options?: {
+    fieldEnumMapping?: Record<string, string[]>;
+  },
+): T {
   // Get global configuration
   const globalEnumRegistry = getGlobalEnumRegistry();
   const learnedMapping = getLearnedMapping();
@@ -37,8 +55,11 @@ export function reviveFromDatabase<T>(payload: unknown): T {
     return payload as T;
   }
 
-  // Use learned mappings
-  const fieldEnumMapping = learnedMapping;
+  // Merge learned mappings with manual mappings (manual takes precedence)
+  const fieldEnumMapping = mergeFieldMappings(
+    learnedMapping,
+    options?.fieldEnumMapping,
+  );
 
   if (!fieldEnumMapping || Object.keys(fieldEnumMapping).length === 0) {
     // If no field mapping provided, return as-is

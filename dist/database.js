@@ -1,11 +1,12 @@
 import {
   prepareForDatabase,
   reviveFromDatabase
-} from "./chunk-FYYCKRBF.js";
+} from "./chunk-2U4IACNC.js";
 import {
   getGlobalEnumRegistry,
-  initializeSmartEnumMappings
-} from "./chunk-NQ2GSPII.js";
+  initializeSmartEnumMappings,
+  mergeFieldMappings
+} from "./chunk-CFLDAVKR.js";
 import {
   enumeration,
   isSmartEnumItem
@@ -15,6 +16,7 @@ export {
   getGlobalEnumRegistry,
   initializeSmartEnumMappings,
   isSmartEnumItem,
+  mergeFieldMappings,
   prepareForDatabase,
   reviveFromDatabase
 };
