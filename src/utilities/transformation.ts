@@ -2,6 +2,8 @@
 import { isSerializedSmartEnumItem, isSmartEnumItem } from '../enumeration.js';
 import type { SerializedSmartEnums, AnyEnumLike } from '../types.js';
 
+import { debug } from './logger.js';
+
 type PlainObject = Record<string, unknown>;
 
 const isPlainObject = (x: unknown): x is PlainObject =>
@@ -65,17 +67,21 @@ export function reviveSmartEnums<R>(
   const walk = (v: unknown): unknown => {
     // Handle self-describing enum objects with __smart_enum_type and value
     if (isSerializedSmartEnumItem(v)) {
+      debug(`Found serialized smartEnum: ${v.__smart_enum_type}`);
       const enumInstance = registry[v.__smart_enum_type];
       if (enumInstance) {
+        debug(`Found enumInstance in registry: ${v.__smart_enum_type}`);
         // Try to find the enum item by value first
         const enumItem = enumInstance.tryFromValue(v.value);
         if (enumItem) {
+          debug(`Revived enumItem using value: ${v.value}`);
           return enumItem;
         }
         // If that fails, try to find by key (convert value to key format)
         const key = v.value.toLowerCase();
         const enumItemFromKey = enumInstance.tryFromKey(key);
         if (enumItemFromKey) {
+          debug(`Revived enumItem using key: ${key}`);
           return enumItemFromKey;
         }
       }

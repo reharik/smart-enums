@@ -1,7 +1,8 @@
 import {
+  debug,
   getGlobalEnumRegistry,
   learnFromData
-} from "./chunk-JSIRBRDZ.js";
+} from "./chunk-YPFFFOHQ.js";
 import {
   isSerializedSmartEnumItem,
   isSmartEnumItem
@@ -45,15 +46,19 @@ function reviveSmartEnums(input, registry) {
   const seen = /* @__PURE__ */ new WeakMap();
   const walk = (v) => {
     if (isSerializedSmartEnumItem(v)) {
+      debug(`Found serialized smartEnum: ${v.__smart_enum_type}`);
       const enumInstance = registry[v.__smart_enum_type];
       if (enumInstance) {
+        debug(`Found enumInstance in registry: ${v.__smart_enum_type}`);
         const enumItem = enumInstance.tryFromValue(v.value);
         if (enumItem) {
+          debug(`Revived enumItem using value: ${v.value}`);
           return enumItem;
         }
         const key = v.value.toLowerCase();
         const enumItemFromKey = enumInstance.tryFromKey(key);
         if (enumItemFromKey) {
+          debug(`Revived enumItem using key: ${key}`);
           return enumItemFromKey;
         }
       }
@@ -102,4 +107,4 @@ export {
   reviveAfterTransport,
   serializeForTransport
 };
-//# sourceMappingURL=chunk-VSJCW3JS.js.map
+//# sourceMappingURL=chunk-T2RW7CFW.js.map

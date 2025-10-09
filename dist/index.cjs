@@ -248,6 +248,38 @@ function enumeration(enumType, {
   };
 }
 
+// src/utilities/logger.ts
+var consoleLogger = {
+  debug(message, ...args) {
+    console.debug(`[smart-enums:debug] ${message}`, ...args);
+  },
+  info(message, ...args) {
+    console.info(`[smart-enums:info] ${message}`, ...args);
+  },
+  warn(message, ...args) {
+    console.warn(`[smart-enums:warn] ${message}`, ...args);
+  },
+  error(message, ...args) {
+    console.error(`[smart-enums:error] ${message}`, ...args);
+  }
+};
+var globalLogger = consoleLogger;
+function setLogger(logger) {
+  globalLogger = logger;
+}
+function getLogger() {
+  return globalLogger;
+}
+function debug(message, ...args) {
+  globalLogger.debug(message, ...args);
+}
+function info(message, ...args) {
+  globalLogger.info(message, ...args);
+}
+function warn(message, ...args) {
+  globalLogger.warn(message, ...args);
+}
+
 // src/utilities/transformation.ts
 var isPlainObject = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
 function serializeSmartEnums(input) {
@@ -286,15 +318,19 @@ function reviveSmartEnums(input, registry) {
   const seen = /* @__PURE__ */ new WeakMap();
   const walk = (v) => {
     if (isSerializedSmartEnumItem(v)) {
+      debug(`Found serialized smartEnum: ${v.__smart_enum_type}`);
       const enumInstance = registry[v.__smart_enum_type];
       if (enumInstance) {
+        debug(`Found enumInstance in registry: ${v.__smart_enum_type}`);
         const enumItem = enumInstance.tryFromValue(v.value);
         if (enumItem) {
+          debug(`Revived enumItem using value: ${v.value}`);
           return enumItem;
         }
         const key = v.value.toLowerCase();
         const enumItemFromKey = enumInstance.tryFromKey(key);
         if (enumItemFromKey) {
+          debug(`Revived enumItem using key: ${key}`);
           return enumItemFromKey;
         }
       }
@@ -320,38 +356,6 @@ function reviveSmartEnums(input, registry) {
     return v;
   };
   return walk(input);
-}
-
-// src/utilities/logger.ts
-var consoleLogger = {
-  debug(message, ...args) {
-    console.debug(`[smart-enums:debug] ${message}`, ...args);
-  },
-  info(message, ...args) {
-    console.info(`[smart-enums:info] ${message}`, ...args);
-  },
-  warn(message, ...args) {
-    console.warn(`[smart-enums:warn] ${message}`, ...args);
-  },
-  error(message, ...args) {
-    console.error(`[smart-enums:error] ${message}`, ...args);
-  }
-};
-var globalLogger = consoleLogger;
-function setLogger(logger) {
-  globalLogger = logger;
-}
-function getLogger() {
-  return globalLogger;
-}
-function debug(message, ...args) {
-  globalLogger.debug(message, ...args);
-}
-function info(message, ...args) {
-  globalLogger.info(message, ...args);
-}
-function warn(message, ...args) {
-  globalLogger.warn(message, ...args);
 }
 
 // src/utilities/database/fieldMappingBuilder.ts

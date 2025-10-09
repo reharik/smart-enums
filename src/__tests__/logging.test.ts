@@ -1,4 +1,3 @@
-import { enumeration } from '../enumeration.js';
 import {
   setLogger,
   getLogger,
@@ -8,22 +7,8 @@ import {
   error,
   type Logger,
 } from '../utilities/logger.js';
-import {
-  initializeSmartEnumMappings,
-  prepareForDatabase,
-  reviveFromDatabase,
-} from '../utilities/database/index.js';
 
 describe('Logging', () => {
-  // Create test enums
-  const UserStatus = enumeration('UserStatus', {
-    input: ['ACTIVE', 'INACTIVE', 'PENDING'],
-  });
-
-  const Priority = enumeration('Priority', {
-    input: ['LOW', 'MEDIUM', 'HIGH'],
-  });
-
   beforeEach(() => {
     // Reset to console logger for each test
     setLogger({
