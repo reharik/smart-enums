@@ -372,18 +372,17 @@ function mergeFieldMappings(learnedMapping, manualMapping) {
   if (!manualMapping) {
     return learnedMapping;
   }
-  const merged = { ...learnedMapping };
   for (const [field, manualEnumTypes] of Object.entries(manualMapping)) {
-    const existingEnumTypes = merged[field] || [];
+    const existingEnumTypes = globalFieldMapping[field] || [];
     const combinedEnumTypes = [...manualEnumTypes];
-    for (const learnedEnumType of existingEnumTypes) {
-      if (!combinedEnumTypes.includes(learnedEnumType)) {
-        combinedEnumTypes.push(learnedEnumType);
+    for (const existingEnumType of existingEnumTypes) {
+      if (!combinedEnumTypes.includes(existingEnumType)) {
+        combinedEnumTypes.push(existingEnumType);
       }
     }
-    merged[field] = combinedEnumTypes;
+    globalFieldMapping[field] = combinedEnumTypes;
   }
-  return merged;
+  return { ...globalFieldMapping };
 }
 
 // src/utilities/transport/reviveAfterTransport.ts

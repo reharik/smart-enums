@@ -90,8 +90,9 @@ export function getGlobalEnumRegistry():
 }
 
 /**
- * Merges learned mappings with manual mappings.
+ * Merges learned mappings with manual mappings and persists manual mappings to global state.
  * Manual mappings take precedence, but learned enum types are added if not already present.
+ * Manual mappings are added to the global singleton so they persist across calls.
  */
 export function mergeFieldMappings(
   learnedMapping: Record<string, string[]>,
@@ -101,23 +102,24 @@ export function mergeFieldMappings(
     return learnedMapping;
   }
 
-  const merged: Record<string, string[]> = { ...learnedMapping };
-
+  // Add manual mappings to global state so they persist
   for (const [field, manualEnumTypes] of Object.entries(manualMapping)) {
-    const existingEnumTypes = merged[field] || [];
+    const existingEnumTypes = globalFieldMapping[field] || [];
 
     // Start with manual enum types
     const combinedEnumTypes = [...manualEnumTypes];
 
-    // Add learned enum types that aren't already in the manual list
-    for (const learnedEnumType of existingEnumTypes) {
-      if (!combinedEnumTypes.includes(learnedEnumType)) {
-        combinedEnumTypes.push(learnedEnumType);
+    // Add existing enum types that aren't already in the manual list
+    for (const existingEnumType of existingEnumTypes) {
+      if (!combinedEnumTypes.includes(existingEnumType)) {
+        combinedEnumTypes.push(existingEnumType);
       }
     }
 
-    merged[field] = combinedEnumTypes;
+    // Update global state
+    globalFieldMapping[field] = combinedEnumTypes;
   }
 
-  return merged;
+  // Return the merged result (which now includes the updated global state)
+  return { ...globalFieldMapping };
 }

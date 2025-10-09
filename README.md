@@ -667,6 +667,7 @@ The hybrid approach merges manual and learned mappings with deduplication:
 
 - Manual enum types are tried first
 - Learned enum types are added if not already in the manual list
+- Manual mappings are persisted to the global singleton for future use
 - This ensures backward compatibility while providing immediate functionality
 
 ### Prisma Integration

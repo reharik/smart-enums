@@ -63,8 +63,9 @@ declare function initializeSmartEnumMappings(config: {
  */
 declare function getGlobalEnumRegistry(): Record<string, AnyEnumLike> | undefined;
 /**
- * Merges learned mappings with manual mappings.
+ * Merges learned mappings with manual mappings and persists manual mappings to global state.
  * Manual mappings take precedence, but learned enum types are added if not already present.
+ * Manual mappings are added to the global singleton so they persist across calls.
  */
 declare function mergeFieldMappings(learnedMapping: Record<string, string[]>, manualMapping?: Record<string, string[]>): Record<string, string[]>;
 

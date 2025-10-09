@@ -4,6 +4,7 @@ import {
   prepareForDatabase,
   reviveFromDatabase,
   mergeFieldMappings,
+  getLearnedMapping,
 } from '../utilities/database/index.js';
 
 describe('Hybrid Field Mapping', () => {
@@ -29,10 +30,23 @@ describe('Hybrid Field Mapping', () => {
 
   describe('mergeFieldMappings', () => {
     it('should merge learned and manual mappings with deduplication', () => {
-      const learnedMapping = {
-        status: ['UserStatus'],
-        priority: ['Priority'],
+      // Clear global state first
+      initializeSmartEnumMappings({
+        enumRegistry: { UserStatus, Priority, OrderStatus },
+      });
+
+      // Simulate learned mappings by preparing data
+      const dataToLearn = {
+        user: {
+          status: UserStatus.ACTIVE,
+          priority: Priority.HIGH,
+        },
       };
+
+      prepareForDatabase(dataToLearn);
+
+      // Get the learned mappings
+      const learnedMapping = getLearnedMapping();
 
       const manualMapping = {
         status: ['OrderStatus'], // Different enum type
@@ -170,6 +184,50 @@ describe('Hybrid Field Mapping', () => {
 
       expect(revived.user.status).toBe(UserStatus.INACTIVE);
       expect(revived.user.priority).toBe(Priority.MEDIUM);
+    });
+
+    it('should persist manual mappings to global singleton', () => {
+      // Clear any existing mappings
+      initializeSmartEnumMappings({
+        enumRegistry: { UserStatus, Priority, OrderStatus },
+      });
+
+      // Initially no mappings
+      expect(getLearnedMapping()).toEqual({});
+
+      // Use manual mappings
+      const dbData = {
+        user: {
+          status: 'ACTIVE',
+          priority: 'HIGH',
+        },
+      };
+
+      reviveFromDatabase<typeof dbData>(dbData, {
+        fieldEnumMapping: {
+          status: ['UserStatus'],
+          priority: ['Priority'],
+        },
+      });
+
+      // Manual mappings should now be persisted in global state
+      const globalMappings = getLearnedMapping();
+      expect(globalMappings).toEqual({
+        status: ['UserStatus'],
+        priority: ['Priority'],
+      });
+
+      // Subsequent calls without manual mappings should still work
+      const dbData2 = {
+        user: {
+          status: 'INACTIVE',
+          priority: 'MEDIUM',
+        },
+      };
+
+      const revived2 = reviveFromDatabase<typeof dbData2>(dbData2);
+      expect(revived2.user.status).toBe(UserStatus.INACTIVE);
+      expect(revived2.user.priority).toBe(Priority.MEDIUM);
     });
   });
 });
