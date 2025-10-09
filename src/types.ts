@@ -340,3 +340,17 @@ export type DatabaseFormat<T> = T extends { value: string; key: unknown }
       : T extends object
         ? { [K in keyof T]: DatabaseFormat<T[K]> }
         : T;
+
+/**
+ * Log levels for smart enum mappings
+ */
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
+/**
+ * Configuration for smart enum mappings initialization
+ */
+export type SmartEnumMappingsConfig = {
+  enumRegistry: Record<string, AnyEnumLike>;
+  logLevel?: LogLevel;
+  logger?: import('./utilities/logger.js').Logger;
+};

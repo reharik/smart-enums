@@ -35,6 +35,8 @@ export {
   getGlobalEnumRegistry,
   getLearnedMapping,
 } from './utilities/database/index.js';
+// Logger functions are internal-only, not exposed publicly
+export type { Logger } from './utilities/logger.js';
 export type {
   Enumeration,
   DropdownOption,
@@ -44,4 +46,6 @@ export type {
   AnyEnumLike,
   DatabaseFormat,
   SmartApiHelperConfig,
+  LogLevel,
+  SmartEnumMappingsConfig,
 } from './types.js';

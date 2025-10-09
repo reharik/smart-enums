@@ -7,4 +7,8 @@ export {
   getGlobalEnumRegistry,
   mergeFieldMappings,
 } from './fieldMappingBuilder.js';
+export type {
+  LogLevel,
+  SmartEnumMappingsConfig,
+} from './fieldMappingBuilder.js';
 export type { SmartApiHelperConfig } from '../../types.js';

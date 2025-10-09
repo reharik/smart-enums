@@ -1,3 +1,5 @@
+import { debug, warn } from '../logger.js';
+
 import {
   getLearnedMapping,
   getGlobalEnumRegistry,
@@ -46,12 +48,19 @@ export function reviveFromDatabase<T>(
     fieldEnumMapping?: Record<string, string[]>;
   },
 ): T {
+  debug('Starting database revival', {
+    hasOptions: !!options,
+    manualMappings: options?.fieldEnumMapping
+      ? Object.keys(options.fieldEnumMapping)
+      : [],
+  });
+
   // Get global configuration
   const globalEnumRegistry = getGlobalEnumRegistry();
   const learnedMapping = getLearnedMapping();
 
   if (!globalEnumRegistry) {
-    // If no global configuration, return as-is
+    warn('No global enum registry found, returning payload as-is');
     return payload as T;
   }
 
@@ -62,9 +71,14 @@ export function reviveFromDatabase<T>(
   );
 
   if (!fieldEnumMapping || Object.keys(fieldEnumMapping).length === 0) {
-    // If no field mapping provided, return as-is
+    warn('No field mappings available, returning payload as-is');
     return payload as T;
   }
+
+  debug('Using field mappings for revival', {
+    fieldCount: Object.keys(fieldEnumMapping).length,
+    fields: Object.keys(fieldEnumMapping),
+  });
 
   const seen = new WeakMap<object, unknown>();
 
@@ -98,14 +112,37 @@ export function reviveFromDatabase<T>(
         // Handle both array format (from auto-learning) and single string format (manual)
         const typesToTry = Array.isArray(enumTypes) ? enumTypes : [enumTypes];
 
+        debug('Attempting enum revival', {
+          property: propertyName,
+          value: v,
+          enumTypes: typesToTry,
+        });
+
         for (const enumType of typesToTry) {
           if (globalEnumRegistry[enumType]) {
             const enumItem = globalEnumRegistry[enumType].tryFromValue(v);
             if (enumItem) {
+              debug('Successfully revived enum', {
+                property: propertyName,
+                value: v,
+                enumType,
+                enumItem: 'revived',
+              });
               return enumItem;
             }
+          } else {
+            debug('Enum type not found in registry', {
+              enumType,
+              availableTypes: Object.keys(globalEnumRegistry),
+            });
           }
         }
+
+        debug('Failed to revive enum', {
+          property: propertyName,
+          value: v,
+          attemptedTypes: typesToTry,
+        });
       }
     }
 

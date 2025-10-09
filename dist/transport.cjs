@@ -317,22 +317,64 @@ function reviveSmartEnums(input, registry) {
   return walk(input);
 }
 
+// src/utilities/logger.ts
+var consoleLogger = {
+  debug(message, ...args) {
+    console.debug(`[smart-enums:debug] ${message}`, ...args);
+  },
+  info(message, ...args) {
+    console.info(`[smart-enums:info] ${message}`, ...args);
+  },
+  warn(message, ...args) {
+    console.warn(`[smart-enums:warn] ${message}`, ...args);
+  },
+  error(message, ...args) {
+    console.error(`[smart-enums:error] ${message}`, ...args);
+  }
+};
+var globalLogger = consoleLogger;
+function debug(message, ...args) {
+  globalLogger.debug(message, ...args);
+}
+function info(message, ...args) {
+  globalLogger.info(message, ...args);
+}
+function warn(message, ...args) {
+  globalLogger.warn(message, ...args);
+}
+
 // src/utilities/database/fieldMappingBuilder.ts
 var isPlainObject2 = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
 var globalEnumRegistry;
 var globalFieldMapping = {};
 function learnFromData(data) {
-  if (!globalEnumRegistry) return;
+  if (!globalEnumRegistry) {
+    warn("learnFromData called but no global enum registry initialized");
+    return;
+  }
   const seen = /* @__PURE__ */ new WeakSet();
+  let learnedCount = 0;
   const walk = (v, propertyName) => {
     if (isSmartEnumItem(v) && propertyName) {
       const enumTypeName = v.__smart_enum_type;
-      if (!enumTypeName) return;
+      if (!enumTypeName) {
+        warn("Smart enum item missing __smart_enum_type", {
+          propertyName,
+          item: v
+        });
+        return;
+      }
       if (!globalFieldMapping[propertyName] || !globalFieldMapping[propertyName].includes(enumTypeName)) {
         globalFieldMapping[propertyName] = [
           ...globalFieldMapping[propertyName] || [],
           enumTypeName
         ];
+        learnedCount++;
+        debug("Learned field mapping", {
+          property: propertyName,
+          enumType: enumTypeName,
+          allMappings: globalFieldMapping[propertyName]
+        });
       }
       return;
     }
@@ -353,6 +395,12 @@ function learnFromData(data) {
     }
   };
   walk(data);
+  if (learnedCount > 0) {
+    info("Field mapping learning completed", {
+      learnedCount,
+      totalMappings: Object.keys(globalFieldMapping).length
+    });
+  }
 }
 function getGlobalEnumRegistry() {
   return globalEnumRegistry;

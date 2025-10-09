@@ -676,6 +676,125 @@ The hybrid approach merges manual and learned mappings with deduplication:
 - Manual mappings are persisted to the global singleton for future use
 - This ensures backward compatibility while providing immediate functionality
 
+## Logging
+
+The library includes a flexible logging system that allows you to integrate with your preferred logging solution. By default, it uses console logging.
+
+### Basic Usage
+
+```typescript
+import { enumeration, initializeSmartEnumMappings } from 'smart-enums';
+
+// Console logging is enabled by default with 'error' level (minimal output)
+initializeSmartEnumMappings({
+  enumRegistry: { UserStatus, Priority },
+});
+
+// Enable debug logging for development
+initializeSmartEnumMappings({
+  enumRegistry: { UserStatus, Priority },
+  logLevel: 'debug',
+});
+// [smart-enums:info] Initialized smart enum mappings { enumCount: 2, enumTypes: ['UserStatus', 'Priority'], logLevel: 'debug' }
+// [smart-enums:debug] Learned field mapping { property: 'status', enumType: 'UserStatus', allMappings: ['UserStatus'] }
+```
+
+### Log Level Configuration
+
+```typescript
+import { initializeSmartEnumMappings, type LogLevel } from 'smart-enums';
+
+// Available log levels (default: 'error')
+const logLevels: LogLevel[] = ['debug', 'info', 'warn', 'error'];
+
+// Production: minimal logging (errors only)
+initializeSmartEnumMappings({
+  enumRegistry: { UserStatus, Priority },
+  logLevel: 'error', // default
+});
+
+// Development: verbose logging
+initializeSmartEnumMappings({
+  enumRegistry: { UserStatus, Priority },
+  logLevel: 'debug',
+});
+
+// Custom logger with log level filtering
+initializeSmartEnumMappings({
+  enumRegistry: { UserStatus, Priority },
+  logLevel: 'info',
+  logger: {
+    debug: (msg, ...args) => console.debug(`[my-app] ${msg}`, ...args),
+    info: (msg, ...args) => console.info(`[my-app] ${msg}`, ...args),
+    warn: (msg, ...args) => console.warn(`[my-app] ${msg}`, ...args),
+    error: (msg, ...args) => console.error(`[my-app] ${msg}`, ...args),
+  },
+});
+```
+
+### Custom Logger Integration
+
+```typescript
+import { initializeSmartEnumMappings, type Logger } from 'smart-enums';
+import winston from 'winston';
+
+// Create your logger
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.json(),
+  transports: [new winston.transports.Console()],
+});
+
+// Use custom logger with smart-enums
+initializeSmartEnumMappings({
+  enumRegistry: { UserStatus, Priority },
+  logLevel: 'debug',
+  logger: {
+    debug: (msg, ...args) => logger.debug(`[smart-enums] ${msg}`, ...args),
+    info: (msg, ...args) => logger.info(`[smart-enums] ${msg}`, ...args),
+    warn: (msg, ...args) => logger.warn(`[smart-enums] ${msg}`, ...args),
+    error: (msg, ...args) => logger.error(`[smart-enums] ${msg}`, ...args),
+  },
+});
+```
+
+### Log Levels
+
+- **`debug`**: Detailed information for debugging (field mappings, enum revival attempts)
+- **`info`**: General information about operations (initialization, learning completion)
+- **`warn`**: Warning messages (missing configurations, failed operations)
+- **`error`**: Error conditions (missing enum types, invalid data)
+
+### Disabling Logging
+
+To disable logging in production, you can set a no-op logger:
+
+```typescript
+import { initializeSmartEnumMappings } from 'smart-enums';
+
+// Disable logging for production
+initializeSmartEnumMappings({
+  enumRegistry: { UserStatus, Priority },
+  logLevel: 'error', // minimal logging
+  logger: {
+    debug: () => {},
+    info: () => {},
+    warn: () => {},
+    error: () => {},
+  },
+});
+```
+
+### Logging Events
+
+The library logs the following events:
+
+- **Initialization**: When `initializeSmartEnumMappings` is called
+- **Learning**: When field mappings are learned from data
+- **Manual Mappings**: When manual field mappings are merged
+- **Revival**: When enums are revived from database strings
+- **Warnings**: When configurations are missing or operations fail
+
 ### Prisma Integration
 
 ```typescript

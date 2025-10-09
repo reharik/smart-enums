@@ -1,5 +1,5 @@
-import { c as DatabaseFormat, A as AnyEnumLike } from './core-D2kChDMb.cjs';
-export { B as BaseEnum, D as DropdownOption, a as EnumItem, b as EnumItemType, E as Enumeration, S as SmartApiHelperConfig, e as enumeration, i as isSmartEnumItem } from './core-D2kChDMb.cjs';
+import { c as DatabaseFormat, A as AnyEnumLike, L as Logger } from './core-D7M24Vyd.cjs';
+export { B as BaseEnum, D as DropdownOption, a as EnumItem, b as EnumItemType, E as Enumeration, d as LogLevel, S as SmartApiHelperConfig, f as SmartEnumMappingsConfig, e as enumeration, i as isSmartEnumItem } from './core-D7M24Vyd.cjs';
 
 /**
  * Converts enum items to their string values for database storage.
@@ -53,11 +53,21 @@ declare function reviveFromDatabase<T>(payload: unknown, options?: {
 }): T;
 
 /**
+ * Log levels for smart enum mappings
+ */
+type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+/**
+ * Configuration for smart enum mappings initialization
+ */
+type SmartEnumMappingsConfig = {
+    enumRegistry: Record<string, AnyEnumLike>;
+    logLevel?: LogLevel;
+    logger?: Logger;
+};
+/**
  * Initializes the global smart enum mapping system
  */
-declare function initializeSmartEnumMappings(config: {
-    enumRegistry: Record<string, AnyEnumLike>;
-}): void;
+declare function initializeSmartEnumMappings(config: SmartEnumMappingsConfig): void;
 /**
  * Gets the learned mapping from the global field mapping system
  */
@@ -73,4 +83,4 @@ declare function getGlobalEnumRegistry(): Record<string, AnyEnumLike> | undefine
  */
 declare function mergeFieldMappings(learnedMapping: Record<string, string[]>, manualMapping?: Record<string, string[]>): Record<string, string[]>;
 
-export { AnyEnumLike, DatabaseFormat, getGlobalEnumRegistry, getLearnedMapping, initializeSmartEnumMappings, mergeFieldMappings, prepareForDatabase, reviveFromDatabase };
+export { AnyEnumLike, DatabaseFormat, Logger, getGlobalEnumRegistry, getLearnedMapping, initializeSmartEnumMappings, mergeFieldMappings, prepareForDatabase, reviveFromDatabase };

@@ -1,4 +1,17 @@
 /**
+ * Logger interface for smart-enums library
+ *
+ * This interface allows users to inject their own logging implementation
+ * or use the default console logger.
+ */
+type Logger = {
+    debug(message: string, ...args: unknown[]): void;
+    info(message: string, ...args: unknown[]): void;
+    warn(message: string, ...args: unknown[]): void;
+    error(message: string, ...args: unknown[]): void;
+};
+
+/**
  * Base structure for enum items. All enum items will have these properties.
  */
 type BaseEnum = {
@@ -202,6 +215,18 @@ type DatabaseFormat<T> = T extends {
 } ? string : T extends ReadonlyArray<infer U> ? ReadonlyArray<DatabaseFormat<U>> : T extends Array<infer U> ? DatabaseFormat<U>[] : T extends object ? {
     [K in keyof T]: DatabaseFormat<T[K]>;
 } : T;
+/**
+ * Log levels for smart enum mappings
+ */
+type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+/**
+ * Configuration for smart enum mappings initialization
+ */
+type SmartEnumMappingsConfig = {
+    enumRegistry: Record<string, AnyEnumLike>;
+    logLevel?: LogLevel;
+    logger?: Logger;
+};
 
 /**
  * Runtime type guard to detect Smart Enum items created by this library.
@@ -223,4 +248,4 @@ declare function enumeration<TObj extends ObjectEnumInput, TEnumItemExtension = 
     [K in keyof TObj]: EnumItem<TObj, TEnumItemExtension>;
 }, TEnumItemExtension> & TExtraExtensionMethods;
 
-export { type AnyEnumLike as A, type BaseEnum as B, type DropdownOption as D, type Enumeration as E, type SmartApiHelperConfig as S, type EnumItem as a, type EnumItemType as b, type DatabaseFormat as c, type SerializedSmartEnums as d, enumeration as e, isSmartEnumItem as i };
+export { type AnyEnumLike as A, type BaseEnum as B, type DropdownOption as D, type Enumeration as E, type Logger as L, type SmartApiHelperConfig as S, type EnumItem as a, type EnumItemType as b, type DatabaseFormat as c, type LogLevel as d, enumeration as e, type SmartEnumMappingsConfig as f, type SerializedSmartEnums as g, isSmartEnumItem as i };

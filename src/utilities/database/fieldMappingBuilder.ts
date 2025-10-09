@@ -1,5 +1,13 @@
 import { isSmartEnumItem } from '../../enumeration.js';
 import type { AnyEnumLike } from '../../types.js';
+import {
+  debug,
+  info,
+  warn,
+  setLogger,
+  getLogger,
+  type Logger,
+} from '../logger.js';
 
 type PlainObject = Record<string, unknown>;
 
@@ -15,29 +23,103 @@ let globalEnumRegistry: Record<string, AnyEnumLike> | undefined;
 let globalFieldMapping: Record<string, string[]> = {}; // property -> array of enum types
 
 /**
+ * Log levels for smart enum mappings
+ */
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
+/**
+ * Configuration for smart enum mappings initialization
+ */
+export type SmartEnumMappingsConfig = {
+  enumRegistry: Record<string, AnyEnumLike>;
+  logLevel?: LogLevel;
+  logger?: Logger;
+};
+
+/**
+ * Creates a logger that filters by log level
+ */
+function createLevelFilteredLogger(logger: Logger, level: LogLevel): Logger {
+  const levels: Record<LogLevel, number> = {
+    debug: 0,
+    info: 1,
+    warn: 2,
+    error: 3,
+  };
+
+  const currentLevel = levels[level];
+
+  return {
+    debug: (message: string, ...args: unknown[]) => {
+      if (currentLevel <= levels.debug) {
+        logger.debug(message, ...args);
+      }
+    },
+    info: (message: string, ...args: unknown[]) => {
+      if (currentLevel <= levels.info) {
+        logger.info(message, ...args);
+      }
+    },
+    warn: (message: string, ...args: unknown[]) => {
+      if (currentLevel <= levels.warn) {
+        logger.warn(message, ...args);
+      }
+    },
+    error: (message: string, ...args: unknown[]) => {
+      if (currentLevel <= levels.error) {
+        logger.error(message, ...args);
+      }
+    },
+  };
+}
+
+/**
  * Initializes the global smart enum mapping system
  */
-export function initializeSmartEnumMappings(config: {
-  enumRegistry: Record<string, AnyEnumLike>;
-}): void {
+export function initializeSmartEnumMappings(
+  config: SmartEnumMappingsConfig,
+): void {
   globalEnumRegistry = config.enumRegistry;
   globalFieldMapping = {};
+
+  // Set up logging
+  const logLevel = config.logLevel ?? 'error';
+  const logger = config.logger ?? getLogger();
+  const filteredLogger = createLevelFilteredLogger(logger, logLevel);
+
+  setLogger(filteredLogger);
+
+  info('Initialized smart enum mappings', {
+    enumCount: Object.keys(config.enumRegistry).length,
+    enumTypes: Object.keys(config.enumRegistry),
+    logLevel,
+  });
 }
 
 /**
  * Learns from data using the global field mapping system
  */
 export function learnFromData(data: unknown): void {
-  if (!globalEnumRegistry) return;
+  if (!globalEnumRegistry) {
+    warn('learnFromData called but no global enum registry initialized');
+    return;
+  }
 
   const seen = new WeakSet<object>();
+  let learnedCount = 0;
 
   const walk = (v: unknown, propertyName?: string): void => {
     if (isSmartEnumItem(v) && propertyName) {
       // Record this property name as containing this enum type
       const enumTypeName = v.__smart_enum_type;
 
-      if (!enumTypeName) return;
+      if (!enumTypeName) {
+        warn('Smart enum item missing __smart_enum_type', {
+          propertyName,
+          item: v,
+        });
+        return;
+      }
 
       // Add to the array of enum types for this property
       if (
@@ -48,6 +130,13 @@ export function learnFromData(data: unknown): void {
           ...(globalFieldMapping[propertyName] || []),
           enumTypeName,
         ];
+
+        learnedCount++;
+        debug('Learned field mapping', {
+          property: propertyName,
+          enumType: enumTypeName,
+          allMappings: globalFieldMapping[propertyName],
+        });
       }
       return;
     }
@@ -71,6 +160,13 @@ export function learnFromData(data: unknown): void {
   };
 
   walk(data);
+
+  if (learnedCount > 0) {
+    info('Field mapping learning completed', {
+      learnedCount,
+      totalMappings: Object.keys(globalFieldMapping).length,
+    });
+  }
 }
 
 /**
@@ -99,8 +195,16 @@ export function mergeFieldMappings(
   manualMapping?: Record<string, string[]>,
 ): Record<string, string[]> {
   if (!manualMapping) {
+    debug('No manual mappings provided, returning learned mappings', {
+      learnedCount: Object.keys(learnedMapping).length,
+    });
     return learnedMapping;
   }
+
+  debug('Merging manual and learned mappings', {
+    manualFields: Object.keys(manualMapping),
+    learnedFields: Object.keys(learnedMapping),
+  });
 
   // Add manual mappings to global state so they persist
   for (const [field, manualEnumTypes] of Object.entries(manualMapping)) {
@@ -118,7 +222,19 @@ export function mergeFieldMappings(
 
     // Update global state
     globalFieldMapping[field] = combinedEnumTypes;
+
+    debug('Updated field mapping', {
+      field,
+      manualTypes: manualEnumTypes,
+      existingTypes: existingEnumTypes,
+      combinedTypes: combinedEnumTypes,
+    });
   }
+
+  info('Field mapping merge completed', {
+    totalFields: Object.keys(globalFieldMapping).length,
+    manualFieldsAdded: Object.keys(manualMapping).length,
+  });
 
   // Return the merged result (which now includes the updated global state)
   return { ...globalFieldMapping };

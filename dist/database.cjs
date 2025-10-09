@@ -242,26 +242,114 @@ function enumeration(enumType, {
   };
 }
 
+// src/utilities/logger.ts
+var consoleLogger = {
+  debug(message, ...args) {
+    console.debug(`[smart-enums:debug] ${message}`, ...args);
+  },
+  info(message, ...args) {
+    console.info(`[smart-enums:info] ${message}`, ...args);
+  },
+  warn(message, ...args) {
+    console.warn(`[smart-enums:warn] ${message}`, ...args);
+  },
+  error(message, ...args) {
+    console.error(`[smart-enums:error] ${message}`, ...args);
+  }
+};
+var globalLogger = consoleLogger;
+function setLogger(logger) {
+  globalLogger = logger;
+}
+function getLogger() {
+  return globalLogger;
+}
+function debug(message, ...args) {
+  globalLogger.debug(message, ...args);
+}
+function info(message, ...args) {
+  globalLogger.info(message, ...args);
+}
+function warn(message, ...args) {
+  globalLogger.warn(message, ...args);
+}
+
 // src/utilities/database/fieldMappingBuilder.ts
 var isPlainObject = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
 var globalEnumRegistry;
 var globalFieldMapping = {};
+function createLevelFilteredLogger(logger, level) {
+  const levels = {
+    debug: 0,
+    info: 1,
+    warn: 2,
+    error: 3
+  };
+  const currentLevel = levels[level];
+  return {
+    debug: (message, ...args) => {
+      if (currentLevel <= levels.debug) {
+        logger.debug(message, ...args);
+      }
+    },
+    info: (message, ...args) => {
+      if (currentLevel <= levels.info) {
+        logger.info(message, ...args);
+      }
+    },
+    warn: (message, ...args) => {
+      if (currentLevel <= levels.warn) {
+        logger.warn(message, ...args);
+      }
+    },
+    error: (message, ...args) => {
+      if (currentLevel <= levels.error) {
+        logger.error(message, ...args);
+      }
+    }
+  };
+}
 function initializeSmartEnumMappings(config) {
   globalEnumRegistry = config.enumRegistry;
   globalFieldMapping = {};
+  const logLevel = config.logLevel ?? "error";
+  const logger = config.logger ?? getLogger();
+  const filteredLogger = createLevelFilteredLogger(logger, logLevel);
+  setLogger(filteredLogger);
+  info("Initialized smart enum mappings", {
+    enumCount: Object.keys(config.enumRegistry).length,
+    enumTypes: Object.keys(config.enumRegistry),
+    logLevel
+  });
 }
 function learnFromData(data) {
-  if (!globalEnumRegistry) return;
+  if (!globalEnumRegistry) {
+    warn("learnFromData called but no global enum registry initialized");
+    return;
+  }
   const seen = /* @__PURE__ */ new WeakSet();
+  let learnedCount = 0;
   const walk = (v, propertyName) => {
     if (isSmartEnumItem(v) && propertyName) {
       const enumTypeName = v.__smart_enum_type;
-      if (!enumTypeName) return;
+      if (!enumTypeName) {
+        warn("Smart enum item missing __smart_enum_type", {
+          propertyName,
+          item: v
+        });
+        return;
+      }
       if (!globalFieldMapping[propertyName] || !globalFieldMapping[propertyName].includes(enumTypeName)) {
         globalFieldMapping[propertyName] = [
           ...globalFieldMapping[propertyName] || [],
           enumTypeName
         ];
+        learnedCount++;
+        debug("Learned field mapping", {
+          property: propertyName,
+          enumType: enumTypeName,
+          allMappings: globalFieldMapping[propertyName]
+        });
       }
       return;
     }
@@ -282,6 +370,12 @@ function learnFromData(data) {
     }
   };
   walk(data);
+  if (learnedCount > 0) {
+    info("Field mapping learning completed", {
+      learnedCount,
+      totalMappings: Object.keys(globalFieldMapping).length
+    });
+  }
 }
 function getLearnedMapping() {
   return { ...globalFieldMapping };
@@ -291,8 +385,15 @@ function getGlobalEnumRegistry() {
 }
 function mergeFieldMappings(learnedMapping, manualMapping) {
   if (!manualMapping) {
+    debug("No manual mappings provided, returning learned mappings", {
+      learnedCount: Object.keys(learnedMapping).length
+    });
     return learnedMapping;
   }
+  debug("Merging manual and learned mappings", {
+    manualFields: Object.keys(manualMapping),
+    learnedFields: Object.keys(learnedMapping)
+  });
   for (const [field, manualEnumTypes] of Object.entries(manualMapping)) {
     const existingEnumTypes = globalFieldMapping[field] || [];
     const combinedEnumTypes = [...manualEnumTypes];
@@ -302,7 +403,17 @@ function mergeFieldMappings(learnedMapping, manualMapping) {
       }
     }
     globalFieldMapping[field] = combinedEnumTypes;
+    debug("Updated field mapping", {
+      field,
+      manualTypes: manualEnumTypes,
+      existingTypes: existingEnumTypes,
+      combinedTypes: combinedEnumTypes
+    });
   }
+  info("Field mapping merge completed", {
+    totalFields: Object.keys(globalFieldMapping).length,
+    manualFieldsAdded: Object.keys(manualMapping).length
+  });
   return { ...globalFieldMapping };
 }
 
@@ -342,9 +453,14 @@ function prepareForDatabase(payload) {
 // src/utilities/database/reviveFromDatabase.ts
 var isPlainObject3 = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
 function reviveFromDatabase(payload, options) {
+  debug("Starting database revival", {
+    hasOptions: !!options,
+    manualMappings: options?.fieldEnumMapping ? Object.keys(options.fieldEnumMapping) : []
+  });
   const globalEnumRegistry2 = getGlobalEnumRegistry();
   const learnedMapping = getLearnedMapping();
   if (!globalEnumRegistry2) {
+    warn("No global enum registry found, returning payload as-is");
     return payload;
   }
   const fieldEnumMapping = mergeFieldMappings(
@@ -352,8 +468,13 @@ function reviveFromDatabase(payload, options) {
     options?.fieldEnumMapping
   );
   if (!fieldEnumMapping || Object.keys(fieldEnumMapping).length === 0) {
+    warn("No field mappings available, returning payload as-is");
     return payload;
   }
+  debug("Using field mappings for revival", {
+    fieldCount: Object.keys(fieldEnumMapping).length,
+    fields: Object.keys(fieldEnumMapping)
+  });
   const seen = /* @__PURE__ */ new WeakMap();
   const walk = (v, propertyName) => {
     if (typeof v === "object" && v !== null && seen.has(v)) {
@@ -379,14 +500,35 @@ function reviveFromDatabase(payload, options) {
       const enumTypes = fieldEnumMapping[propertyName];
       if (enumTypes) {
         const typesToTry = Array.isArray(enumTypes) ? enumTypes : [enumTypes];
+        debug("Attempting enum revival", {
+          property: propertyName,
+          value: v,
+          enumTypes: typesToTry
+        });
         for (const enumType of typesToTry) {
           if (globalEnumRegistry2[enumType]) {
             const enumItem = globalEnumRegistry2[enumType].tryFromValue(v);
             if (enumItem) {
+              debug("Successfully revived enum", {
+                property: propertyName,
+                value: v,
+                enumType,
+                enumItem: "revived"
+              });
               return enumItem;
             }
+          } else {
+            debug("Enum type not found in registry", {
+              enumType,
+              availableTypes: Object.keys(globalEnumRegistry2)
+            });
           }
         }
+        debug("Failed to revive enum", {
+          property: propertyName,
+          value: v,
+          attemptedTypes: typesToTry
+        });
       }
     }
     return v;

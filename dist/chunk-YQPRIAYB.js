@@ -1,12 +1,14 @@
 import {
+  debug,
   getGlobalEnumRegistry,
   getLearnedMapping,
   learnFromData,
-  mergeFieldMappings
-} from "./chunk-PDRBKYTH.js";
+  mergeFieldMappings,
+  warn
+} from "./chunk-JSIRBRDZ.js";
 import {
   isSmartEnumItem
-} from "./chunk-EA5ZVF26.js";
+} from "./chunk-437EMIYS.js";
 
 // src/utilities/database/prepareForDatabase.ts
 var isPlainObject = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
@@ -44,9 +46,14 @@ function prepareForDatabase(payload) {
 // src/utilities/database/reviveFromDatabase.ts
 var isPlainObject2 = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
 function reviveFromDatabase(payload, options) {
+  debug("Starting database revival", {
+    hasOptions: !!options,
+    manualMappings: options?.fieldEnumMapping ? Object.keys(options.fieldEnumMapping) : []
+  });
   const globalEnumRegistry = getGlobalEnumRegistry();
   const learnedMapping = getLearnedMapping();
   if (!globalEnumRegistry) {
+    warn("No global enum registry found, returning payload as-is");
     return payload;
   }
   const fieldEnumMapping = mergeFieldMappings(
@@ -54,8 +61,13 @@ function reviveFromDatabase(payload, options) {
     options?.fieldEnumMapping
   );
   if (!fieldEnumMapping || Object.keys(fieldEnumMapping).length === 0) {
+    warn("No field mappings available, returning payload as-is");
     return payload;
   }
+  debug("Using field mappings for revival", {
+    fieldCount: Object.keys(fieldEnumMapping).length,
+    fields: Object.keys(fieldEnumMapping)
+  });
   const seen = /* @__PURE__ */ new WeakMap();
   const walk = (v, propertyName) => {
     if (typeof v === "object" && v !== null && seen.has(v)) {
@@ -81,14 +93,35 @@ function reviveFromDatabase(payload, options) {
       const enumTypes = fieldEnumMapping[propertyName];
       if (enumTypes) {
         const typesToTry = Array.isArray(enumTypes) ? enumTypes : [enumTypes];
+        debug("Attempting enum revival", {
+          property: propertyName,
+          value: v,
+          enumTypes: typesToTry
+        });
         for (const enumType of typesToTry) {
           if (globalEnumRegistry[enumType]) {
             const enumItem = globalEnumRegistry[enumType].tryFromValue(v);
             if (enumItem) {
+              debug("Successfully revived enum", {
+                property: propertyName,
+                value: v,
+                enumType,
+                enumItem: "revived"
+              });
               return enumItem;
             }
+          } else {
+            debug("Enum type not found in registry", {
+              enumType,
+              availableTypes: Object.keys(globalEnumRegistry)
+            });
           }
         }
+        debug("Failed to revive enum", {
+          property: propertyName,
+          value: v,
+          attemptedTypes: typesToTry
+        });
       }
     }
     return v;
@@ -100,4 +133,4 @@ export {
   prepareForDatabase,
   reviveFromDatabase
 };
-//# sourceMappingURL=chunk-NXA3EKHZ.js.map
+//# sourceMappingURL=chunk-YQPRIAYB.js.map
