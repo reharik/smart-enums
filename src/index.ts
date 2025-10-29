@@ -19,7 +19,7 @@
  * ```
  */
 
-export { enumeration, isSmartEnumItem } from './enumeration.js';
+export { enumeration, isSmartEnumItem, isSmartEnum } from './enumeration.js';
 export {
   serializeSmartEnums,
   reviveSmartEnums,

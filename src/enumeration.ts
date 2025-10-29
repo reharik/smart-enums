@@ -12,6 +12,7 @@ import {
   ArrayToObjectType,
   SMART_ENUM_ITEM,
   SMART_ENUM_ID,
+  SMART_ENUM,
   SmartEnumItemSerialized,
 } from './types.js';
 
@@ -29,6 +30,21 @@ export const isSmartEnumItem = (
   return (
     !!x && typeof x === 'object' && Reflect.get(x, SMART_ENUM_ITEM) === true
   );
+};
+
+/**
+ * Runtime type guard to detect a full Smart Enum object created by this library.
+ * Returns true if the object has the SMART_ENUM property.
+ *
+ * @example
+ * ```typescript
+ * import { MyEnum } from './blah';
+ * isSmartEnum(MyEnum) === true; // true
+ * isSmartEnum(MyEnum.one) === false; // false (this is an item, not the enum)
+ * ```
+ */
+export const isSmartEnum = (x: unknown): boolean => {
+  return !!x && typeof x === 'object' && Reflect.get(x, SMART_ENUM) === true;
 };
 
 /**
@@ -208,8 +224,16 @@ export function enumeration<
 
   // Step 5: Combine enum items with extension methods
   // This creates the final enum object with both data and methods
-  return {
+  const enumObject = {
     ...rawEnumItems, // All enum items as properties
     ...addExtensionMethods(Object.values(rawEnumItems), extraExtensionMethods), // All methods
   };
+
+  // Attach a non-enumerable property to identify this as a smart enum
+  Object.defineProperty(enumObject, SMART_ENUM, {
+    value: true,
+    enumerable: false,
+  });
+
+  return enumObject;
 }

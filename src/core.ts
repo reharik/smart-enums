@@ -6,11 +6,11 @@
  *
  * @example
  * ```typescript
- * import { enumeration, isSmartEnumItem } from 'smart-enums/core';
+ * import { enumeration, isSmartEnumItem, isSmartEnum } from 'smart-enums/core';
  * ```
  */
 
-export { enumeration, isSmartEnumItem } from './enumeration.js';
+export { enumeration, isSmartEnumItem, isSmartEnum } from './enumeration.js';
 export type {
   Enumeration,
   DropdownOption,

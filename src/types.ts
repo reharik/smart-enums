@@ -13,6 +13,7 @@ export const notEmpty = <X>(
 // Public symbols used at runtime for detection/identity (not used in type keys)
 export const SMART_ENUM_ITEM = Symbol('smart-enum-item');
 export const SMART_ENUM_ID = Symbol('smart-enum-id');
+export const SMART_ENUM = Symbol('smart-enum');
 
 /**
  * Base structure for enum items. All enum items will have these properties.
