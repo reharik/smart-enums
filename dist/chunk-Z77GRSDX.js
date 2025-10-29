@@ -2,11 +2,11 @@ import {
   debug,
   getGlobalEnumRegistry,
   learnFromData
-} from "./chunk-YPFFFOHQ.js";
+} from "./chunk-CGFFDXTU.js";
 import {
   isSerializedSmartEnumItem,
   isSmartEnumItem
-} from "./chunk-437EMIYS.js";
+} from "./chunk-WMRV4NWU.js";
 
 // src/utilities/transformation.ts
 var isPlainObject = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
@@ -107,4 +107,4 @@ export {
   reviveAfterTransport,
   serializeForTransport
 };
-//# sourceMappingURL=chunk-ITU73ZBP.js.map
+//# sourceMappingURL=chunk-Z77GRSDX.js.map

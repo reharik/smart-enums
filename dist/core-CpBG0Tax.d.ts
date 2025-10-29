@@ -237,6 +237,18 @@ declare const isSmartEnumItem: (x: unknown) => x is {
     index?: number;
     __smart_enum_type?: string;
 };
+/**
+ * Runtime type guard to detect a full Smart Enum object created by this library.
+ * Returns true if the object has the SMART_ENUM property.
+ *
+ * @example
+ * ```typescript
+ * import { MyEnum } from './blah';
+ * isSmartEnum(MyEnum) === true; // true
+ * isSmartEnum(MyEnum.one) === false; // false (this is an item, not the enum)
+ * ```
+ */
+declare const isSmartEnum: (x: unknown) => boolean;
 declare function enumeration<TArr extends readonly string[], TEnumItemExtension = Record<string, never>, TExtraExtensionMethods = Record<string, never>>(enumType: string, props: EnumerationProps<TArr, TEnumItemExtension, TExtraExtensionMethods>): {
     [K in keyof ArrayToObjectType<TArr>]: EnumItem<ArrayToObjectType<TArr>, TEnumItemExtension>;
 } & ExtensionMethods<{
@@ -248,4 +260,4 @@ declare function enumeration<TObj extends ObjectEnumInput, TEnumItemExtension = 
     [K in keyof TObj]: EnumItem<TObj, TEnumItemExtension>;
 }, TEnumItemExtension> & TExtraExtensionMethods;
 
-export { type AnyEnumLike as A, type BaseEnum as B, type DropdownOption as D, type Enumeration as E, type Logger as L, type SmartApiHelperConfig as S, type EnumItem as a, type EnumItemType as b, type DatabaseFormat as c, type LogLevel as d, enumeration as e, type SmartEnumMappingsConfig as f, type SerializedSmartEnums as g, isSmartEnumItem as i };
+export { type AnyEnumLike as A, type BaseEnum as B, type DropdownOption as D, type Enumeration as E, type Logger as L, type SmartApiHelperConfig as S, isSmartEnum as a, type EnumItem as b, type EnumItemType as c, type DatabaseFormat as d, enumeration as e, type LogLevel as f, type SmartEnumMappingsConfig as g, type SerializedSmartEnums as h, isSmartEnumItem as i };

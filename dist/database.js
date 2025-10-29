@@ -1,22 +1,24 @@
 import {
   prepareForDatabase,
   reviveFromDatabase
-} from "./chunk-IWSV5HLX.js";
+} from "./chunk-TYWMVQ7Y.js";
 import {
   getGlobalEnumRegistry,
   getLearnedMapping,
   initializeSmartEnumMappings,
   mergeFieldMappings
-} from "./chunk-YPFFFOHQ.js";
+} from "./chunk-CGFFDXTU.js";
 import {
   enumeration,
+  isSmartEnum,
   isSmartEnumItem
-} from "./chunk-437EMIYS.js";
+} from "./chunk-WMRV4NWU.js";
 export {
   enumeration,
   getGlobalEnumRegistry,
   getLearnedMapping,
   initializeSmartEnumMappings,
+  isSmartEnum,
   isSmartEnumItem,
   mergeFieldMappings,
   prepareForDatabase,

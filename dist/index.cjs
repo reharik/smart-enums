@@ -24,6 +24,7 @@ __export(index_exports, {
   getGlobalEnumRegistry: () => getGlobalEnumRegistry,
   getLearnedMapping: () => getLearnedMapping,
   initializeSmartEnumMappings: () => initializeSmartEnumMappings,
+  isSmartEnum: () => isSmartEnum,
   isSmartEnumItem: () => isSmartEnumItem,
   prepareForDatabase: () => prepareForDatabase,
   reviveAfterTransport: () => reviveAfterTransport,
@@ -43,6 +44,7 @@ var notEmpty = (value) => {
 };
 var SMART_ENUM_ITEM = Symbol("smart-enum-item");
 var SMART_ENUM_ID = Symbol("smart-enum-id");
+var SMART_ENUM = Symbol("smart-enum");
 
 // src/extensionMethods.ts
 var addExtensionMethods = (enumItems, extraExtensionMethods) => {
@@ -182,6 +184,9 @@ var buildExtensionMethods = (rawEnum) => {
 var isSmartEnumItem = (x) => {
   return !!x && typeof x === "object" && Reflect.get(x, SMART_ENUM_ITEM) === true;
 };
+var isSmartEnum = (x) => {
+  return !!x && typeof x === "object" && Reflect.get(x, SMART_ENUM) === true;
+};
 var isSerializedSmartEnumItem = (x) => {
   return !!x && typeof x === "object" && Reflect.has(x, "__smart_enum_type") && Reflect.has(x, "value");
 };
@@ -240,12 +245,17 @@ function enumeration(enumType, {
       index++;
     }
   }
-  return {
+  const enumObject = {
     ...rawEnumItems,
     // All enum items as properties
     ...addExtensionMethods(Object.values(rawEnumItems), extraExtensionMethods)
     // All methods
   };
+  Object.defineProperty(enumObject, SMART_ENUM, {
+    value: true,
+    enumerable: false
+  });
+  return enumObject;
 }
 
 // src/utilities/logger.ts
@@ -640,6 +650,7 @@ function reviveFromDatabase(payload, options) {
   getGlobalEnumRegistry,
   getLearnedMapping,
   initializeSmartEnumMappings,
+  isSmartEnum,
   isSmartEnumItem,
   prepareForDatabase,
   reviveAfterTransport,
