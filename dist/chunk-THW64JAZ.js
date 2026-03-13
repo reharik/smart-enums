@@ -39,49 +39,53 @@ function normalizeInput(input) {
 var finalizeEnumItem = (item, enumType, enumInstanceId) => {
   Object.defineProperty(item, SMART_ENUM_ITEM, {
     value: true,
-    enumerable: true
+    enumerable: false
   });
   Object.defineProperty(item, SMART_ENUM_ID, {
     value: enumInstanceId,
-    enumerable: true
+    enumerable: false
   });
   Object.defineProperty(item, "__smart_enum_brand", {
     value: true,
-    enumerable: true
+    enumerable: false
   });
   Object.defineProperty(item, "__smart_enum_type", {
     value: enumType,
-    enumerable: true
+    enumerable: false
   });
   Object.defineProperty(item, "toJSON", {
     value: () => ({ __smart_enum_type: enumType, value: item.value }),
-    enumerable: true
+    enumerable: false
   });
   return item;
 };
+var formatProperties = (k, formatters) => formatters.reduce(
+  (acc, formatter) => {
+    acc[formatter.key] = formatter.format(k);
+    return acc;
+  },
+  {
+    value: constantCase(k),
+    display: capitalCase(k)
+  }
+);
 function buildEnumFromObject(enumType, input, propertyAutoFormatters) {
   const formattersWithDefaults = [
     { key: "value", format: constantCase },
     { key: "display", format: capitalCase },
-    ...propertyAutoFormatters || []
+    ...propertyAutoFormatters ?? []
   ];
-  const formatProperties = (k, formatters) => formatters.reduce(
-    (acc, formatter) => {
-      acc[formatter.key] = formatter.format(k);
-      return acc;
-    },
-    { value: constantCase(k), display: capitalCase(k) }
-  );
   const rawEnumItems = {};
   const enumInstanceId = Symbol("smart-enum-instance");
   let index = 0;
   for (const key in input) {
     if (Object.prototype.hasOwnProperty.call(input, key)) {
-      const value = input[key];
+      const typedKey = key;
+      const value = input[typedKey];
       const enumItemBase = {
         index,
-        key,
-        ...formatProperties(key, formattersWithDefaults),
+        key: typedKey,
+        ...formatProperties(typedKey, formattersWithDefaults),
         ...value
       };
       const enumItem = finalizeEnumItem(
@@ -90,7 +94,7 @@ function buildEnumFromObject(enumType, input, propertyAutoFormatters) {
         enumInstanceId
       );
       Object.freeze(enumItem);
-      rawEnumItems[key] = enumItem;
+      rawEnumItems[typedKey] = enumItem;
       index++;
     }
   }
@@ -99,7 +103,6 @@ function buildEnumFromObject(enumType, input, propertyAutoFormatters) {
   );
   const enumObject = {
     ...rawEnumItems,
-    // All enum items as properties
     ...extensionMethods
   };
   Object.defineProperty(enumObject, SMART_ENUM, {
@@ -135,4 +138,4 @@ export {
   isSmartEnum,
   isSerializedSmartEnumItem
 };
-//# sourceMappingURL=chunk-267OIZTE.js.map
+//# sourceMappingURL=chunk-THW64JAZ.js.map

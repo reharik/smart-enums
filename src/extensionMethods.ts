@@ -1,5 +1,4 @@
 import type { CoreEnumMethods, StandardEnumItem } from './types.js';
-
 export const addExtensionMethods = <TItem extends StandardEnumItem>(
   enumItems: readonly TItem[],
 ): CoreEnumMethods<TItem> => {
@@ -19,11 +18,12 @@ export const addExtensionMethods = <TItem extends StandardEnumItem>(
   };
 
   return {
-    fromValue: value => requireBy('value', value, 'value'),
-    tryFromValue: value => (value ? findBy('value', value) : undefined),
+    fromValue: value => requireBy('value', value as TItem['value'], 'value'),
+    tryFromValue: value =>
+      value ? findBy('value', value as TItem['value']) : undefined,
 
-    fromKey: key => requireBy('key', key, 'key'),
-    tryFromKey: key => (key ? findBy('key', key) : undefined),
+    fromKey: key => requireBy('key', key as TItem['key'], 'key'),
+    tryFromKey: key => (key ? findBy('key', key as TItem['key']) : undefined),
 
     items: () => [...enumItems],
     values: () => enumItems.map(item => item.value),

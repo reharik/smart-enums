@@ -1,20 +1,112 @@
 import { capitalCase, constantCase } from 'case-anything';
 
 import { addExtensionMethods } from './extensionMethods.js';
-import {
-  ObjectEnumInput,
-  NormalizedInputType,
-  FinalizedEnumFields,
-  SMART_ENUM_ITEM,
-  SMART_ENUM_ID,
-  PropertyAutoFormatter,
-  EnumFromNormalizedObject,
-  EnumItemFromNormalizedObject,
-  FinalizableEnumItem,
-  SMART_ENUM,
-  EnumerationProps,
-  CoreEnumMethods,
-} from './types.js';
+import { SMART_ENUM, SMART_ENUM_ID, SMART_ENUM_ITEM } from './types.js';
+
+type BuiltInOverrideKeys =
+  | 'key'
+  | 'value'
+  | 'display'
+  | 'deprecated'
+  | 'index'
+  | '__smart_enum_brand'
+  | '__smart_enum_type';
+
+export type StandardEnumItem = {
+  readonly __smart_enum_brand: true;
+  readonly __smart_enum_type: string;
+  readonly key: string;
+  readonly value: string;
+  readonly display: string;
+  readonly index: number;
+  readonly deprecated?: boolean;
+};
+
+export type EnumInputItem = Partial<{
+  key: string;
+  value: string;
+  display: string;
+  deprecated: boolean;
+}> &
+  object;
+
+export type ObjectEnumInput = Record<string, EnumInputItem>;
+
+type EmptyEnumInputItem = Record<never, never>;
+
+type ArrayToObjectType<T extends readonly string[]> = {
+  [K in T[number]]: EmptyEnumInputItem;
+};
+
+type NormalizedInputType<TInput> = TInput extends readonly string[]
+  ? ArrayToObjectType<TInput>
+  : TInput extends ObjectEnumInput
+    ? TInput
+    : never;
+
+type UnionKeys<T> = T extends T ? keyof T : never;
+
+type MergeUnionToObject<T> = {
+  [K in UnionKeys<T>]: T extends Record<K, infer V> ? V : undefined;
+};
+
+type ExtraShapeUnion<TObj extends ObjectEnumInput> = {
+  [K in keyof TObj]: Omit<TObj[K], BuiltInOverrideKeys>;
+}[keyof TObj];
+
+export type InferredExtraFields<TObj extends ObjectEnumInput> =
+  MergeUnionToObject<ExtraShapeUnion<TObj>>;
+
+export type EnumItemFromNormalizedObject<
+  TObj extends ObjectEnumInput,
+  K extends keyof TObj = keyof TObj,
+> = Omit<StandardEnumItem, 'key'> &
+  InferredExtraFields<TObj> & {
+    readonly key: Extract<K, string>;
+  };
+
+export type CoreEnumMethods<TItem extends StandardEnumItem> = {
+  fromValue(value: string): TItem;
+  tryFromValue(value?: string | null): TItem | undefined;
+  fromKey(key: string): TItem;
+  tryFromKey(key?: string | null): TItem | undefined;
+  items(): readonly TItem[];
+  values(): readonly string[];
+  keys(): readonly string[];
+};
+
+export type EnumFromNormalizedObject<TObj extends ObjectEnumInput> = {
+  [K in keyof TObj]: EnumItemFromNormalizedObject<TObj, K>;
+} & CoreEnumMethods<EnumItemFromNormalizedObject<TObj>>;
+
+export type EnumerationProps<TInput> = {
+  input: TInput;
+  propertyAutoFormatters?: PropertyAutoFormatter[];
+};
+
+export type EnumItem<TEnum> = {
+  [K in keyof TEnum]: TEnum[K] extends { __smart_enum_brand: true }
+    ? TEnum[K]
+    : never;
+}[keyof TEnum];
+
+export type PropertyAutoFormatter = {
+  key: string;
+  format: (k: string) => string;
+};
+
+type FinalizedEnumFields = Pick<
+  StandardEnumItem,
+  '__smart_enum_brand' | '__smart_enum_type'
+>;
+
+type FinalizableEnumItem = {
+  key: string;
+  value: string;
+  display: string;
+  index: number;
+  deprecated?: boolean;
+};
 
 function normalizeInput<TInput extends readonly string[] | ObjectEnumInput>(
   input: TInput,
@@ -35,137 +127,110 @@ const finalizeEnumItem = <T extends { value: string }>(
 ): T & FinalizedEnumFields => {
   Object.defineProperty(item, SMART_ENUM_ITEM, {
     value: true,
-    enumerable: true,
+    enumerable: false,
   });
 
   Object.defineProperty(item, SMART_ENUM_ID, {
     value: enumInstanceId,
-    enumerable: true,
+    enumerable: false,
   });
 
   Object.defineProperty(item, '__smart_enum_brand', {
     value: true,
-    enumerable: true,
+    enumerable: false,
   });
 
   Object.defineProperty(item, '__smart_enum_type', {
     value: enumType,
-    enumerable: true,
+    enumerable: false,
   });
 
   Object.defineProperty(item, 'toJSON', {
     value: () => ({ __smart_enum_type: enumType, value: item.value }),
-    enumerable: true,
+    enumerable: false,
   });
 
   return item as T & FinalizedEnumFields;
 };
+
+const formatProperties = (
+  k: string,
+  formatters: PropertyAutoFormatter[],
+): { value: string; display: string } & Record<string, string> =>
+  formatters.reduce(
+    (acc, formatter) => {
+      acc[formatter.key] = formatter.format(k);
+      return acc;
+    },
+    {
+      value: constantCase(k),
+      display: capitalCase(k),
+    } as { value: string; display: string } & Record<string, string>,
+  );
 
 function buildEnumFromObject<TObj extends ObjectEnumInput>(
   enumType: string,
   input: TObj,
   propertyAutoFormatters?: PropertyAutoFormatter[],
 ): EnumFromNormalizedObject<TObj> {
-  // Step 1: Set up property formatters with defaults
-  // By default: value = CONSTANT_CASE, display = Capital Case
-  const formattersWithDefaults = [
+  const formattersWithDefaults: PropertyAutoFormatter[] = [
     { key: 'value', format: constantCase },
     { key: 'display', format: capitalCase },
-    ...(propertyAutoFormatters || []),
+    ...(propertyAutoFormatters ?? []),
   ];
 
-  // Helper to apply all formatters to a key
-  const formatProperties = (
-    k: string,
-    formatters: PropertyAutoFormatter[],
-  ): { value: string; display: string } & Record<string, string> =>
-    formatters.reduce(
-      (acc, formatter) => {
-        acc[formatter.key] = formatter.format(k);
-        return acc;
-      },
-      { value: constantCase(k), display: capitalCase(k) } as {
-        value: string;
-        display: string;
-      } & Record<string, string>,
-    );
-
-  // Step 2: Build the enum items object
   type TItem = EnumItemFromNormalizedObject<TObj>;
 
-  const rawEnumItems = {} as { [K in keyof TObj]: TItem };
+  const rawEnumItems = {} as {
+    [K in keyof TObj]: EnumItemFromNormalizedObject<TObj, K>;
+  };
 
-  // Step 3: Populate each enum item with formatted properties and user overrides
-  // Create a per-enum instance identifier for optional identity checks
   const enumInstanceId = Symbol('smart-enum-instance');
   let index = 0;
-  for (const key in input) {
-    // eslint requires hasOwnProperty check
-    if (Object.prototype.hasOwnProperty.call(input, key)) {
-      const value = input[key];
 
-      // Create enum item:
-      // 1. Set index and key
-      // 2. Apply auto-formatters (value, display, custom)
-      // 3. Override with any user-provided values
+  for (const key in input) {
+    if (Object.prototype.hasOwnProperty.call(input, key)) {
+      const typedKey = key;
+      const value = input[typedKey];
+
       const enumItemBase = {
         index,
-        key,
-        ...formatProperties(key, formattersWithDefaults),
+        key: typedKey,
+        ...formatProperties(typedKey, formattersWithDefaults),
         ...value,
-      } as FinalizableEnumItem & TObj[Extract<keyof TObj, string>];
+      } as FinalizableEnumItem & TObj[typeof typedKey];
 
       const enumItem = finalizeEnumItem(
         enumItemBase,
         enumType,
         enumInstanceId,
       ) as TItem;
+
       Object.freeze(enumItem);
-      rawEnumItems[key] = enumItem;
+      rawEnumItems[typedKey] = enumItem;
       index++;
     }
   }
 
-  // Step 4: Combine enum items with extension methods
-  // This creates the final enum object with both data and methods
-  const extensionMethods: CoreEnumMethods<TItem> = addExtensionMethods(
-    Object.values(rawEnumItems),
+  const extensionMethods = addExtensionMethods<TItem>(
+    Object.values(rawEnumItems) as TItem[],
   );
-  const enumObject: EnumFromNormalizedObject<TObj> = {
-    ...rawEnumItems, // All enum items as properties
-    ...extensionMethods,
-  };
 
-  // Attach a non-enumerable property to identify this as a smart enum
+  const enumObject = {
+    ...rawEnumItems,
+    ...extensionMethods,
+  } as EnumFromNormalizedObject<TObj>;
+
   Object.defineProperty(enumObject, SMART_ENUM, {
     value: true,
     enumerable: false,
   });
+
   Object.freeze(enumObject);
+
   return enumObject;
 }
 
-/**
- * Creates a Smart Enum from an array of keys or an object of key/item definitions.
- * Each item gets `key`, `value`, `display`, `index`, and optional custom fields.
- *
- * @param enumType - Unique name for this enum (used for serialization/revival)
- * @param props - `{ input }` array or object; optional `propertyAutoFormatters`
- * @returns Frozen enum object with items and methods (fromValue, toOptions, etc.)
- *
- * @example
- * ```typescript
- * // From array
- * const Status = enumeration('Status', { input: ['pending', 'active'] as const });
- * type Status = Enumeration<typeof Status>;
- * Status.active.value; // 'ACTIVE'
- *
- * // From object
- * const Priority = enumeration('Priority', {
- *   input: { low: {}, high: { value: 'HIGH', display: 'High Priority' } },
- * });
- * ```
- */
 export function enumeration<const TArr extends readonly string[]>(
   enumType: string,
   props: EnumerationProps<TArr>,

@@ -156,11 +156,16 @@ export type NormalizedInputType<TInput> = TInput extends readonly string[]
     ? TInput
     : never;
 
-export type EnumItemFromNormalizedObject<TObj extends ObjectEnumInput> =
-  StandardEnumItem & InferredExtraFields<TObj>;
+export type EnumItemFromNormalizedObject<
+  TObj extends ObjectEnumInput,
+  K extends keyof TObj = keyof TObj,
+> = Omit<StandardEnumItem, 'key'> &
+  InferredExtraFields<TObj> & {
+    readonly key: Extract<K, string>;
+  };
 
 export type EnumFromNormalizedObject<TObj extends ObjectEnumInput> = {
-  [K in keyof TObj]: EnumItemFromNormalizedObject<TObj>;
+  [K in keyof TObj]: EnumItemFromNormalizedObject<TObj, K>;
 } & CoreEnumMethods<EnumItemFromNormalizedObject<TObj>>;
 
 export type UnionKeys<T> = T extends T ? keyof T : never;

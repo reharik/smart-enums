@@ -1,3 +1,59 @@
+type BuiltInOverrideKeys = 'key' | 'value' | 'display' | 'deprecated' | 'index' | '__smart_enum_brand' | '__smart_enum_type';
+type StandardEnumItem = {
+    readonly __smart_enum_brand: true;
+    readonly __smart_enum_type: string;
+    readonly key: string;
+    readonly value: string;
+    readonly display: string;
+    readonly index: number;
+    readonly deprecated?: boolean;
+};
+type EnumInputItem = Partial<{
+    key: string;
+    value: string;
+    display: string;
+    deprecated: boolean;
+}> & object;
+type ObjectEnumInput = Record<string, EnumInputItem>;
+type EmptyEnumInputItem = Record<never, never>;
+type ArrayToObjectType<T extends readonly string[]> = {
+    [K in T[number]]: EmptyEnumInputItem;
+};
+type NormalizedInputType<TInput> = TInput extends readonly string[] ? ArrayToObjectType<TInput> : TInput extends ObjectEnumInput ? TInput : never;
+type UnionKeys<T> = T extends T ? keyof T : never;
+type MergeUnionToObject<T> = {
+    [K in UnionKeys<T>]: T extends Record<K, infer V> ? V : undefined;
+};
+type ExtraShapeUnion<TObj extends ObjectEnumInput> = {
+    [K in keyof TObj]: Omit<TObj[K], BuiltInOverrideKeys>;
+}[keyof TObj];
+type InferredExtraFields<TObj extends ObjectEnumInput> = MergeUnionToObject<ExtraShapeUnion<TObj>>;
+type EnumItemFromNormalizedObject<TObj extends ObjectEnumInput, K extends keyof TObj = keyof TObj> = Omit<StandardEnumItem, 'key'> & InferredExtraFields<TObj> & {
+    readonly key: Extract<K, string>;
+};
+type CoreEnumMethods<TItem extends StandardEnumItem> = {
+    fromValue(value: string): TItem;
+    tryFromValue(value?: string | null): TItem | undefined;
+    fromKey(key: string): TItem;
+    tryFromKey(key?: string | null): TItem | undefined;
+    items(): readonly TItem[];
+    values(): readonly string[];
+    keys(): readonly string[];
+};
+type EnumFromNormalizedObject<TObj extends ObjectEnumInput> = {
+    [K in keyof TObj]: EnumItemFromNormalizedObject<TObj, K>;
+} & CoreEnumMethods<EnumItemFromNormalizedObject<TObj>>;
+type EnumerationProps<TInput> = {
+    input: TInput;
+    propertyAutoFormatters?: PropertyAutoFormatter[];
+};
+type PropertyAutoFormatter = {
+    key: string;
+    format: (k: string) => string;
+};
+declare function enumeration<const TArr extends readonly string[]>(enumType: string, props: EnumerationProps<TArr>): EnumFromNormalizedObject<NormalizedInputType<TArr>>;
+declare function enumeration<const TObj extends ObjectEnumInput>(enumType: string, props: EnumerationProps<TObj>): EnumFromNormalizedObject<NormalizedInputType<TObj>>;
+
 /**
  * Logger interface for smart-enums library
  *
@@ -64,88 +120,11 @@ type SmartEnumMappingsConfig = {
     logLevel?: LogLevel;
     logger?: Logger;
 };
-type BuiltInOverrideKeys = 'key' | 'value' | 'display' | 'deprecated' | 'index' | '__smart_enum_brand' | '__smart_enum_type';
-type StandardEnumItem = {
-    readonly __smart_enum_brand: true;
-    readonly __smart_enum_type: string;
-    readonly key: string;
-    readonly value: string;
-    readonly display: string;
-    readonly index: number;
-    readonly deprecated?: boolean;
-};
-type EnumInputItem = Partial<{
-    key: string;
-    value: string;
-    display: string;
-    deprecated: boolean;
-}> & Record<string, unknown>;
-type ObjectEnumInput = Record<string, EnumInputItem>;
-type EmptyEnumInputItem = Record<never, never>;
-type ArrayToObjectType<T extends readonly string[]> = {
-    [K in T[number]]: EmptyEnumInputItem;
-};
-type NormalizedInputType<TInput> = TInput extends readonly string[] ? ArrayToObjectType<TInput> : TInput extends ObjectEnumInput ? TInput : never;
-type EnumItemFromNormalizedObject<TObj extends ObjectEnumInput> = StandardEnumItem & InferredExtraFields<TObj>;
-type EnumFromNormalizedObject<TObj extends ObjectEnumInput> = {
-    [K in keyof TObj]: EnumItemFromNormalizedObject<TObj>;
-} & CoreEnumMethods<EnumItemFromNormalizedObject<TObj>>;
-type UnionKeys<T> = T extends T ? keyof T : never;
-type MergeUnionToObject<T> = {
-    [K in UnionKeys<T>]: T extends Record<K, infer V> ? V : undefined;
-};
-type ExtraShapeUnion<TObj extends ObjectEnumInput> = {
-    [K in keyof TObj]: Omit<TObj[K], BuiltInOverrideKeys>;
-}[keyof TObj];
-type InferredExtraFields<TObj extends ObjectEnumInput> = MergeUnionToObject<ExtraShapeUnion<TObj>>;
-type PropertyAutoFormatter = {
-    /** The property name to generate */
-    key: string;
-    /** Function to transform the key into the property value */
-    format: (k: string) => string;
-};
-type CoreEnumMethods<TItem extends StandardEnumItem> = {
-    fromValue(value: string): TItem;
-    tryFromValue(value?: string | null): TItem | undefined;
-    fromKey(key: string): TItem;
-    tryFromKey(key?: string | null): TItem | undefined;
-    items(): readonly TItem[];
-    values(): readonly string[];
-    keys(): readonly string[];
-};
-type EnumerationProps<TInput> = {
-    input: TInput;
-    propertyAutoFormatters?: PropertyAutoFormatter[];
-};
 type Enumeration<TEnum> = {
     [K in keyof TEnum]: TEnum[K] extends {
         __smart_enum_brand: true;
     } ? TEnum[K] : never;
 }[keyof TEnum];
-
-/**
- * Creates a Smart Enum from an array of keys or an object of key/item definitions.
- * Each item gets `key`, `value`, `display`, `index`, and optional custom fields.
- *
- * @param enumType - Unique name for this enum (used for serialization/revival)
- * @param props - `{ input }` array or object; optional `propertyAutoFormatters`
- * @returns Frozen enum object with items and methods (fromValue, toOptions, etc.)
- *
- * @example
- * ```typescript
- * // From array
- * const Status = enumeration('Status', { input: ['pending', 'active'] as const });
- * type Status = Enumeration<typeof Status>;
- * Status.active.value; // 'ACTIVE'
- *
- * // From object
- * const Priority = enumeration('Priority', {
- *   input: { low: {}, high: { value: 'HIGH', display: 'High Priority' } },
- * });
- * ```
- */
-declare function enumeration<const TArr extends readonly string[]>(enumType: string, props: EnumerationProps<TArr>): EnumFromNormalizedObject<NormalizedInputType<TArr>>;
-declare function enumeration<const TObj extends ObjectEnumInput>(enumType: string, props: EnumerationProps<TObj>): EnumFromNormalizedObject<NormalizedInputType<TObj>>;
 
 /**
  * Runtime type guard to detect Smart Enum items created by this library.
