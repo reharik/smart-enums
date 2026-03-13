@@ -1,4 +1,4 @@
-import { isSmartEnumItem } from '../../enumeration.js';
+import { isSmartEnumItem } from '../typeGuards.js';
 import type { DatabaseFormat } from '../../types.js';
 
 import { learnFromData } from './fieldMappingBuilder.js';

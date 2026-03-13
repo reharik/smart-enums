@@ -1,7 +1,7 @@
 import { cobolCase } from 'case-anything';
 
-import { Enumeration, EnumItem } from '../types.js';
-import { enumeration } from '../enumeration.js';
+import { Enumeration } from '../types.js';
+import { enumeration } from '../index.js';
 
 describe('ENUM FROM OBJECT', () => {
   const input = {
@@ -15,7 +15,7 @@ describe('ENUM FROM OBJECT', () => {
       const TestEnum = enumeration('TestEnum', {
         input,
       });
-      expect(TestEnum.toKeys()).toEqual(['one', 'two', 'three']);
+      expect(TestEnum.keys()).toEqual(['one', 'two', 'three']);
     });
   });
   it('should create the enum items with the correct properties and values', () => {
@@ -29,158 +29,16 @@ describe('ENUM FROM OBJECT', () => {
     expect(TestEnum.one.index).toBe(0);
     expect(TestEnum.two.index).toBe(1);
   });
-  describe('when creating an enum with an extended enumItem type', () => {
-    // TODO this is actually a problem, perhaps insurmountable, but here's
-    // a test in case someone does figure it out
-    it('should not put those extra properties on the enum unless you add values later', () => {
-      const color = {
-        red: { value: 'RED' },
-        blue: { value: 'BLUE' },
-        green: { value: 'GREEN' },
-      };
-      type ColorEnum = Enumeration<typeof ColorEnum>;
-      const ColorEnum = enumeration('TestEnum', {
-        input: color,
-      });
 
-      type TestEnum = Enumeration<typeof TestEnum>;
-      const TestEnum = enumeration<
-        typeof input,
-        {
-          favoriteColor: ColorEnum;
-        }
-      >('TestEnum', {
-        input,
-      });
-
-      expect(TestEnum.one).not.toHaveProperty('favoriteColor');
-      expect(TestEnum.two).not.toHaveProperty('favoriteColor');
-    });
-    it('should allow you to set those extra properties on the enum', () => {
-      const color = {
-        red: { value: 'RED' },
-        blue: { value: 'BLUE' },
-        green: { value: 'GREEN' },
-      };
-      type ColorEnum = Enumeration<typeof ColorEnum>;
-      const ColorEnum = enumeration('TestEnum', {
-        input: color,
-      });
-
-      type TestEnum = Enumeration<typeof TestEnum>;
-      const TestEnum = enumeration<
-        typeof input,
-        {
-          favoriteColor: ColorEnum;
-        }
-      >('TestEnum', {
-        input,
-      });
-
-      TestEnum.one.favoriteColor = ColorEnum.red;
-      TestEnum.two.favoriteColor = ColorEnum.green;
-      TestEnum.three.favoriteColor = ColorEnum.blue;
-      expect(TestEnum.one.favoriteColor).toBe(ColorEnum.red);
-      expect(TestEnum.two.favoriteColor).toBe(ColorEnum.green);
-      expect(TestEnum.three.favoriteColor).toBe(ColorEnum.blue);
-    });
-  });
-  describe('when creating an enum with extra extension methods', () => {
-    it('should add the extension method to the enum', () => {
-      type TestEnum = Enumeration<typeof TestEnum>;
-      type Extra = { concatKeys: () => string };
-      const extra = (items: EnumItem<typeof input>[]) => ({
-        concatKeys: () =>
-          items.reduce((acc, x) => {
-            acc += x.key;
-            return acc;
-          }, ''),
-      });
-
-      const TestEnum = enumeration<typeof input, EnumItem<typeof input>, Extra>(
-        'TestEnum',
-        {
-          input,
-          extraExtensionMethods: extra,
-        },
-      );
-      expect(TestEnum.concatKeys).not.toBeNull();
-    });
-    it('should add the extension method which should perform against enum items in current enum', () => {
-      type TestEnum = Enumeration<typeof TestEnum>;
-      type Extra = { concatKeys: () => string };
-      const extra = (items: EnumItem<typeof input>[]) => {
-        return {
-          concatKeys: () =>
-            items.reduce((acc, x) => {
-              acc += x.key;
-              return acc;
-            }, ''),
-        };
-      };
-
-      const TestEnum = enumeration<typeof input, EnumItem<typeof input>, Extra>(
-        'TestEnum',
-        {
-          input,
-          extraExtensionMethods: extra,
-        },
-      );
-      expect(TestEnum.concatKeys()).toBe('onetwothree');
-    });
-  });
-  describe('when creating an enum with extra extension methods that act against custom props', () => {
-    it('should add the extension method which should perform against enum items in current enum', () => {
-      const color = {
-        red: { value: 'RED' },
-        blue: { value: 'BLUE' },
-        green: { value: 'GREEN' },
-      };
-      type ColorEnum = Enumeration<typeof ColorEnum>;
-      const ColorEnum = enumeration('TestEnum', {
-        input: color,
-      });
-
-      type Extra = { concatKeys: () => string };
-      const extra = (items: EnumItem<typeof input, EnumItemExtension>[]) => ({
-        concatKeys: () =>
-          items.reduce((acc, x) => {
-            acc += x.favoriteColor.key;
-            return acc;
-          }, ''),
-      });
-
-      type EnumItemExtension = {
-        favoriteColor: ColorEnum;
-      };
-
-      type TestEnum = Enumeration<typeof TestEnum>;
-      const TestEnum = enumeration<typeof input, EnumItemExtension, Extra>(
-        'TestEnum',
-        {
-          input,
-          extraExtensionMethods: extra,
-        },
-      );
-
-      TestEnum.one.favoriteColor = ColorEnum.red;
-      TestEnum.two.favoriteColor = ColorEnum.green;
-      TestEnum.three.favoriteColor = ColorEnum.blue;
-
-      expect(TestEnum.concatKeys()).toBe('redgreenblue');
-    });
-  });
   describe('when extending enum items with extra properties', () => {
     it('should allow accessing custom fields defined in the input', () => {
-      type ItemExt = { slug: string; title?: string };
-
       const inputWithExt = {
         one: { slug: '/one' },
         two: { slug: '/two', title: 'Two' },
         three: { slug: '/three' },
       } as const;
 
-      const TestEnum = enumeration<typeof inputWithExt, ItemExt>('TestEnum', {
+      const TestEnum = enumeration<typeof inputWithExt>('TestEnum', {
         input: inputWithExt,
       });
 
@@ -190,70 +48,48 @@ describe('ENUM FROM OBJECT', () => {
       expect(TestEnum.three.title).toBeUndefined();
     });
 
-    it('should include custom fields in toCustomFieldValues', () => {
-      type ItemExt = { slug: string; title?: string };
-
-      const inputWithExt = {
-        one: { slug: '/one' },
-        two: { slug: '/two' },
-        three: { slug: '/three' },
-      } as const;
-
-      const TestEnum = enumeration<typeof inputWithExt, ItemExt>('TestEnum', {
-        input: inputWithExt,
-      });
-
-      expect(TestEnum.toCustomFieldValues<string>('slug')).toEqual([
-        '/one',
-        '/two',
-        '/three',
-      ]);
-    });
-  });
-  describe('when passing function for displayFormatter', () => {
-    it('should return proper result for display', () => {
-      const inputForDisplay = {
-        favoriteColor: { value: 'FAVORITE_COLOR' },
-        lastKnownAddress: { value: 'LAST_KNOWN_ADDRESS' },
-      };
-      const propertyAutoFormatters = [
-        {
-          key: 'display',
-          format: (k: string) => {
-            return cobolCase(k);
+    describe('when passing function for displayFormatter', () => {
+      it('should return proper result for display', () => {
+        const inputForDisplay = {
+          favoriteColor: { value: 'FAVORITE_COLOR' },
+          lastKnownAddress: { value: 'LAST_KNOWN_ADDRESS' },
+        };
+        const propertyAutoFormatters = [
+          {
+            key: 'display',
+            format: (k: string) => {
+              return cobolCase(k);
+            },
           },
-        },
-      ];
+        ];
 
-      type TestEnum = Enumeration<typeof TestEnum>;
-      const TestEnum = enumeration('TestEnum', {
-        input: inputForDisplay,
-        propertyAutoFormatters,
+        type TestEnum = Enumeration<typeof TestEnum>;
+        const TestEnum = enumeration('TestEnum', {
+          input: inputForDisplay,
+          propertyAutoFormatters,
+        });
+        expect(TestEnum.favoriteColor.display).toEqual('FAVORITE-COLOR');
       });
-      expect(TestEnum.toDisplays()).toEqual([
-        'FAVORITE-COLOR',
-        'LAST-KNOWN-ADDRESS',
-      ]);
     });
-  });
-  // describe('when using an enum as a param for a func ', () => {
-  //   it('should only accept parm from specified enum. i.e. not from any other enums', () => {
-  //     const color = {
-  //       red: { value: 'RED' },
-  //       blue: { value: 'BLUE' },
-  //       green: { value: 'GREEN' },
-  //     };
-  //     type ColorEnum = (typeof ColorEnum)[keyof typeof color];
-  //     const ColorEnum = enumeration('TestEnum', {
-  //       input: color,
-  //     });
-  //     type TestEnum = (typeof TestEnum)[keyof typeof input];
-  //     const TestEnum = enumeration('TestEnum', {
-  //       input,
-  //     });
+    // describe('when using an enum as a param for a func ', () => {
+    //   it('should only accept parm from specified enum. i.e. not from any other enums', () => {
+    //     const color = {
+    //       red: { value: 'RED' },
+    //       blue: { value: 'BLUE' },
+    //       green: { value: 'GREEN' },
+    //     };
+    //     type ColorEnum = (typeof ColorEnum)[keyof typeof color];
+    //     const ColorEnum = enumeration('TestEnum', {
+    //       input: color,
+    //     });
+    //     type TestEnum = (typeof TestEnum)[keyof typeof input];
+    //     const TestEnum = enumeration('TestEnum', {
+    //       input,
+    //     });
 
-  //     const func = (x: ColorEnum) => {};
-  //     func(TestEnum.one);
-  //   });
-  // });
+    //     const func = (x: ColorEnum) => {};
+    //     func(TestEnum.one);
+    //   });
+    // });
+  });
 });

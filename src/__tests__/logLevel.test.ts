@@ -1,4 +1,4 @@
-import { enumeration } from '../enumeration.js';
+import { enumeration } from '../index.js';
 import {
   initializeSmartEnumMappings,
   prepareForDatabase,

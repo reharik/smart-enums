@@ -207,8 +207,8 @@ describe('TRANSFORMATION', () => {
     it('should demonstrate the correct way to handle revived enums', () => {
       // Create an object with enum types
       const dto = {
-        status: Status.active, // Has enumType, will revive to EnumItem
-        color: Color.red, // Has enumType, will revive to EnumItem
+        status: Status.active, // Has enumType, will revive to Enumeration
+        color: Color.red, // Has enumType, will revive to Enumeration
       };
 
       const wire = serializeSmartEnums(dto);
@@ -218,9 +218,9 @@ describe('TRANSFORMATION', () => {
       });
 
       // Correct usage: treat the revived values according to their actual types
-      expect(revived.status).toBe(Status.active); // EnumItem
+      expect(revived.status).toBe(Status.active); // Enumeration
       expect(revived.status.key).toBe('active'); // Can access enum properties
-      expect(revived.color).toBe(Color.red); // EnumItem
+      expect(revived.color).toBe(Color.red); // Enumeration
       expect(typeof revived.color).toBe('object'); // Confirmed to be object
 
       // If you need to convert the string back to an enum, you'd need to do it manually:

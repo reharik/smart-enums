@@ -11,7 +11,8 @@
  */
 
 // Re-export core functionality
-export { enumeration, isSmartEnumItem, isSmartEnum } from './enumeration.js';
+export { enumeration } from './enumerations.js';
+export { isSmartEnumItem, isSmartEnum } from './utilities/typeGuards.js';
 export {
   prepareForDatabase,
   reviveFromDatabase,
@@ -26,10 +27,6 @@ export type { Logger } from './utilities/logger.js';
 // Re-export core types plus database-specific types
 export type {
   Enumeration,
-  DropdownOption,
-  EnumItem,
-  BaseEnum,
-  EnumItemType,
   AnyEnumLike,
   DatabaseFormat,
   SmartApiHelperConfig,

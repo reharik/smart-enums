@@ -19,7 +19,8 @@
  * ```
  */
 
-export { enumeration, isSmartEnumItem, isSmartEnum } from './enumeration.js';
+export { isSmartEnumItem, isSmartEnum } from './utilities/typeGuards.js';
+export { enumeration } from './enumerations.js';
 export {
   serializeSmartEnums,
   reviveSmartEnums,
@@ -39,13 +40,12 @@ export {
 export type { Logger } from './utilities/logger.js';
 export type {
   Enumeration,
-  DropdownOption,
-  EnumItem,
-  BaseEnum,
-  EnumItemType,
   AnyEnumLike,
   DatabaseFormat,
   SmartApiHelperConfig,
   LogLevel,
   SmartEnumMappingsConfig,
+  SerializedSmartEnums,
+  RevivedSmartEnums,
+  SmartEnumItemSerialized,
 } from './types.js';

@@ -1,4 +1,4 @@
-import { enumeration } from '../enumeration.js';
+import { enumeration } from '../index.js';
 
 describe('ENUM TO JSON', () => {
   describe('when enumTypeId is provided', () => {

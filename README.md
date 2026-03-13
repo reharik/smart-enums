@@ -251,7 +251,7 @@ const input = {
 
 interface ExtraExtensionMethods {
   getMixedColor: (c1: any, c2: any) => string;
-  getPrimaryColors: () => EnumItem<typeof input, ColorExtension>[];
+  getPrimaryColors: () => Enumeration<typeof input, ColorExtension>[];
 }
 const extraExtensionMethods = items => ({
   getMixedColor: (c1, c2) => {
@@ -921,6 +921,15 @@ function processStatus(statusValue: string) {
 }
 ```
 
+## JSDoc and IDE Support
+
+All public APIs are documented with JSDoc. In supported editors (VS Code, WebStorm, etc.) you get:
+
+- **Hover tooltips** with descriptions and parameter/return types
+- **`@example` blocks** on key functions (e.g. `enumeration`, `serializeSmartEnums`, `reviveSmartEnums`, `isSmartEnumItem`, `isSmartEnum`, `prepareForDatabase`, `reviveFromDatabase`, transport and database helpers) so you can copy-paste or follow patterns without leaving the editor
+
+Import from the entry point you use (`smart-enums`, `smart-enums/core`, `smart-enums/transport`, or `smart-enums/database`) and hover over symbols to see the inline docs and examples.
+
 ## API Reference
 
 ### `enumeration(enumType, props)`
@@ -938,21 +947,21 @@ Main factory function for creating Smart Enums.
 
 ### Extension Methods
 
-| Method                                          | Description                                    | Returns                 |
-| ----------------------------------------------- | ---------------------------------------------- | ----------------------- |
-| `fromValue(value)`                              | Get item by value (throws if not found)        | `EnumItem`              |
-| `tryFromValue(value)`                           | Get item by value (safe)                       | `EnumItem \| undefined` |
-| `fromKey(key)`                                  | Get item by key (throws if not found)          | `EnumItem`              |
-| `tryFromKey(key)`                               | Get item by key (safe)                         | `EnumItem \| undefined` |
-| `fromDisplay(display)`                          | Get item by display text (throws if not found) | `EnumItem`              |
-| `tryFromDisplay(display)`                       | Get item by display text (safe)                | `EnumItem \| undefined` |
-| `tryFromCustomField(field, value, filter?)`     | Get item by custom field                       | `EnumItem \| undefined` |
-| `toOptions(filter?, options?)`                  | Convert to dropdown options                    | `DropdownOption[]`      |
-| `toValues(filter?, options?)`                   | Get all values                                 | `string[]`              |
-| `toKeys(filter?, options?)`                     | Get all keys                                   | `string[]`              |
-| `toDisplays(filter?, options?)`                 | Get all display texts                          | `string[]`              |
-| `toEnumItems(filter?, options?)`                | Get all items as array                         | `EnumItem[]`            |
-| `toCustomFieldValues(field, filter?, options?)` | Get values from custom field                   | `T[]`                   |
+| Method                                          | Description                                    | Returns                    |
+| ----------------------------------------------- | ---------------------------------------------- | -------------------------- |
+| `fromValue(value)`                              | Get item by value (throws if not found)        | `Enumeration`              |
+| `tryFromValue(value)`                           | Get item by value (safe)                       | `Enumeration \| undefined` |
+| `fromKey(key)`                                  | Get item by key (throws if not found)          | `Enumeration`              |
+| `tryFromKey(key)`                               | Get item by key (safe)                         | `Enumeration \| undefined` |
+| `fromDisplay(display)`                          | Get item by display text (throws if not found) | `Enumeration`              |
+| `tryFromDisplay(display)`                       | Get item by display text (safe)                | `Enumeration \| undefined` |
+| `tryFromCustomField(field, value, filter?)`     | Get item by custom field                       | `Enumeration \| undefined` |
+| `toOptions(filter?, options?)`                  | Convert to dropdown options                    | `DropdownOption[]`         |
+| `toValues(filter?, options?)`                   | Get all values                                 | `string[]`                 |
+| `toKeys(filter?, options?)`                     | Get all keys                                   | `string[]`                 |
+| `toDisplays(filter?, options?)`                 | Get all display texts                          | `string[]`                 |
+| `toEnumItems(filter?, options?)`                | Get all items as array                         | `Enumeration[]`            |
+| `toCustomFieldValues(field, filter?, options?)` | Get values from custom field                   | `T[]`                      |
 
 ### Filter Options
 

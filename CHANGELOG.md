@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added `isSmartEnum()` function to check if an object is a full smart enum (as opposed to a single enum item)
 - Added `SMART_ENUM` symbol property to enum objects for runtime detection
+- JSDoc `@example` blocks on public API: type guards (`isSmartEnumItem`, `isSmartEnum`, `isSerializedSmartEnumItem`), `enumeration`, `serializeSmartEnums`, `reviveSmartEnums`, transport helpers (`serializeForTransport`, `reviveAfterTransport`), database helpers (`prepareForDatabase`, `reviveFromDatabase`, `initializeSmartEnumMappings`, `getLearnedMapping`, `getGlobalEnumRegistry`, `mergeFieldMappings`) for better IDE hover docs and discoverability
 
 ### Changed
 

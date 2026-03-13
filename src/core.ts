@@ -10,12 +10,6 @@
  * ```
  */
 
-export { enumeration, isSmartEnumItem, isSmartEnum } from './enumeration.js';
-export type {
-  Enumeration,
-  DropdownOption,
-  EnumItem,
-  BaseEnum,
-  EnumItemType,
-  AnyEnumLike,
-} from './types.js';
+export { enumeration } from './enumerations.js';
+export { isSmartEnumItem, isSmartEnum } from './utilities/typeGuards.js';
+export type { Enumeration, AnyEnumLike } from './types.js';

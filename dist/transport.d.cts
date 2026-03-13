@@ -1,9 +1,39 @@
-import { h as SerializedSmartEnums, A as AnyEnumLike } from './core-CpBG0Tax.cjs';
-export { B as BaseEnum, D as DropdownOption, b as EnumItem, c as EnumItemType, E as Enumeration, e as enumeration, a as isSmartEnum, i as isSmartEnumItem } from './core-CpBG0Tax.cjs';
+import { d as SerializedSmartEnums, A as AnyEnumLike } from './core-lYNfNFuA.cjs';
+export { E as Enumeration, R as RevivedSmartEnums, f as SmartEnumItemSerialized, e as enumeration, a as isSmartEnum, i as isSmartEnumItem } from './core-lYNfNFuA.cjs';
 
 type PlainObject = Record<string, unknown>;
+/**
+ * Recursively replaces Smart Enum items with self-describing objects
+ * `{ __smart_enum_type, value }` for JSON transport or storage.
+ *
+ * @param input - Object or array that may contain enum items
+ * @returns Same structure with enum items replaced by serialized shape
+ *
+ * @example
+ * ```typescript
+ * const dto = { id: '1', status: Status.active, color: Color.red };
+ * const wire = serializeSmartEnums(dto);
+ * // wire: { id: '1', status: { __smart_enum_type: 'Status', value: 'ACTIVE' }, color: { __smart_enum_type: 'Color', value: 'RED' } }
+ * ```
+ */
 declare function serializeSmartEnums<T>(input: T): SerializedSmartEnums<T>;
 declare function serializeSmartEnums<S extends Readonly<PlainObject> | readonly unknown[]>(input: unknown): S;
+/**
+ * Recursively revives serialized enum objects back to Smart Enum items
+ * using a registry of enum types. Expects payload to contain
+ * `{ __smart_enum_type, value }` where the type exists in the registry.
+ *
+ * @param input - Serialized payload (e.g. from JSON)
+ * @param registry - Map of enum type name to enum object (e.g. `{ Status, Color }`)
+ * @returns Payload with serialized enums revived to enum items
+ *
+ * @example
+ * ```typescript
+ * const wire = { status: { __smart_enum_type: 'Status', value: 'ACTIVE' } };
+ * const revived = reviveSmartEnums(wire, { Status, Color });
+ * // revived.status === Status.active
+ * ```
+ */
 declare function reviveSmartEnums<R>(input: unknown, registry: Record<string, AnyEnumLike>): R;
 
 /**
@@ -44,4 +74,4 @@ declare function reviveAfterTransport<T>(payload: unknown): T;
  */
 declare function serializeForTransport<T>(payload: T): SerializedSmartEnums<T>;
 
-export { AnyEnumLike, reviveAfterTransport, reviveSmartEnums, serializeForTransport, serializeSmartEnums };
+export { AnyEnumLike, SerializedSmartEnums, reviveAfterTransport, reviveSmartEnums, serializeForTransport, serializeSmartEnums };

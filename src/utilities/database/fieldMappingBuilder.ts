@@ -1,4 +1,4 @@
-import { isSmartEnumItem } from '../../enumeration.js';
+import { isSmartEnumItem } from '../typeGuards.js';
 import type { AnyEnumLike } from '../../types.js';
 import {
   debug,
@@ -74,7 +74,21 @@ function createLevelFilteredLogger(logger: Logger, level: LogLevel): Logger {
 }
 
 /**
- * Initializes the global smart enum mapping system
+ * Initializes the global smart enum mapping system. Call once at app startup
+ * so that prepareForDatabase, reviveFromDatabase, and transport helpers can
+ * learn and use field-to-enum mappings.
+ *
+ * @param config - enumRegistry (required), optional logLevel and logger
+ *
+ * @example
+ * ```typescript
+ * const UserStatus = enumeration('UserStatus', { input: ['active', 'inactive'] as const });
+ * const Priority = enumeration('Priority', { input: ['low', 'high'] as const });
+ * initializeSmartEnumMappings({
+ *   enumRegistry: { UserStatus, Priority },
+ *   logLevel: 'debug',
+ * });
+ * ```
  */
 export function initializeSmartEnumMappings(
   config: SmartEnumMappingsConfig,
@@ -170,14 +184,33 @@ export function learnFromData(data: unknown): void {
 }
 
 /**
- * Gets the learned mapping from the global field mapping system
+ * Returns the current learned field-to-enum-type mapping. Used after
+ * prepareForDatabase or serializeForTransport have processed data.
+ *
+ * @returns Copy of the mapping, e.g. `{ status: ['UserStatus'], priority: ['Priority'] }`
+ *
+ * @example
+ * ```typescript
+ * initializeSmartEnumMappings({ enumRegistry: { UserStatus, Priority } });
+ * prepareForDatabase({ user: { status: UserStatus.active } });
+ * const mapping = getLearnedMapping(); // { status: ['UserStatus'] }
+ * ```
  */
 export function getLearnedMapping(): Record<string, string[]> {
   return { ...globalFieldMapping };
 }
 
 /**
- * Gets the global enum registry
+ * Returns the global enum registry set by initializeSmartEnumMappings, or undefined
+ * if not initialized. Used internally by reviveFromDatabase and reviveAfterTransport.
+ *
+ * @returns Registry object (e.g. `{ UserStatus, Priority }`) or undefined
+ *
+ * @example
+ * ```typescript
+ * initializeSmartEnumMappings({ enumRegistry: { UserStatus, Priority } });
+ * const registry = getGlobalEnumRegistry(); // { UserStatus, Priority }
+ * ```
  */
 export function getGlobalEnumRegistry():
   | Record<string, AnyEnumLike>
@@ -187,8 +220,19 @@ export function getGlobalEnumRegistry():
 
 /**
  * Merges learned mappings with manual mappings and persists manual mappings to global state.
- * Manual mappings take precedence, but learned enum types are added if not already present.
- * Manual mappings are added to the global singleton so they persist across calls.
+ * Manual mappings take precedence; learned enum types are added if not already present.
+ * Manual mappings are stored in the global singleton for future reviveFromDatabase calls.
+ *
+ * @param learnedMapping - Current learned mapping (e.g. from getLearnedMapping())
+ * @param manualMapping - Optional manual field → enum type names (used as fallback before learning)
+ * @returns Merged mapping (manual + learned, deduplicated)
+ *
+ * @example
+ * ```typescript
+ * const learned = getLearnedMapping(); // { status: ['UserStatus'] }
+ * const merged = mergeFieldMappings(learned, { priority: ['Priority'] });
+ * // merged has status and priority; manual 'priority' is now persisted for revival
+ * ```
  */
 export function mergeFieldMappings(
   learnedMapping: Record<string, string[]>,

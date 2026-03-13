@@ -1,0 +1,192 @@
+/**
+ * Logger interface for smart-enums library
+ *
+ * This interface allows users to inject their own logging implementation
+ * or use the default console logger.
+ */
+type Logger = {
+    debug(message: string, ...args: unknown[]): void;
+    info(message: string, ...args: unknown[]): void;
+    warn(message: string, ...args: unknown[]): void;
+    error(message: string, ...args: unknown[]): void;
+};
+
+/**
+ * Compile-time transformer: replaces Smart Enum items with string values,
+ * recursively over arrays and objects. Structural detection checks for
+ * presence of `key` and `value`.
+ */
+type SerializedSmartEnums<T> = T extends {
+    value: string;
+    key: unknown;
+} ? string : T extends ReadonlyArray<infer U> ? ReadonlyArray<SerializedSmartEnums<U>> : T extends Array<infer U> ? SerializedSmartEnums<U>[] : T extends object ? {
+    [K in keyof T]: SerializedSmartEnums<T[K]>;
+} : T;
+/**
+ * Revived shape: for keys present in mapping M, the string becomes the
+ * corresponding enum item type (derived from the provided enum object);
+ * other fields recurse.
+ */
+type EnumItemFromEnum<TEnum> = TEnum extends Record<string, infer V> ? V extends {
+    __smart_enum_brand: true;
+} ? V : never : never;
+type AnyEnumLike = {
+    tryFromValue: (value?: string | null) => unknown;
+    tryFromKey: (key?: string | null) => unknown;
+} & Record<string, unknown>;
+type RevivedSmartEnums<T, M extends Record<string, AnyEnumLike>> = T extends ReadonlyArray<infer U> ? RevivedSmartEnums<U, M>[] : T extends Array<infer U> ? RevivedSmartEnums<U, M>[] : T extends object ? {
+    [K in keyof T]: K extends Extract<keyof M, string> ? EnumItemFromEnum<M[K]> : RevivedSmartEnums<T[K], M>;
+} : T;
+type SmartEnumItemSerialized = {
+    __smart_enum_type: string;
+    value: string;
+};
+/**
+ * Configuration for API helpers with auto-learning capabilities
+ */
+type SmartApiHelperConfig = {
+    /** Registry of enum types for revival */
+    enumRegistry: Record<string, AnyEnumLike>;
+    /** Optional mapping of field paths to enum types for database revival */
+    fieldEnumMapping?: Record<string, string | string[]>;
+};
+/**
+ * Compile-time transformer: replaces Smart Enum items with string values,
+ * recursively over arrays and objects. Used for database storage.
+ */
+type DatabaseFormat<T> = T extends {
+    value: string;
+    key: unknown;
+} ? string : T extends ReadonlyArray<infer U> ? ReadonlyArray<DatabaseFormat<U>> : T extends Array<infer U> ? DatabaseFormat<U>[] : T extends object ? {
+    [K in keyof T]: DatabaseFormat<T[K]>;
+} : T;
+/**
+ * Log levels for smart enum mappings
+ */
+type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+/**
+ * Configuration for smart enum mappings initialization
+ */
+type SmartEnumMappingsConfig = {
+    enumRegistry: Record<string, AnyEnumLike>;
+    logLevel?: LogLevel;
+    logger?: Logger;
+};
+type BuiltInOverrideKeys = 'key' | 'value' | 'display' | 'deprecated' | 'index' | '__smart_enum_brand' | '__smart_enum_type';
+type StandardEnumItem = {
+    readonly __smart_enum_brand: true;
+    readonly __smart_enum_type: string;
+    readonly key: string;
+    readonly value: string;
+    readonly display: string;
+    readonly index: number;
+    readonly deprecated?: boolean;
+};
+type EnumInputItem = Partial<{
+    key: string;
+    value: string;
+    display: string;
+    deprecated: boolean;
+}> & Record<string, unknown>;
+type ObjectEnumInput = Record<string, EnumInputItem>;
+type EmptyEnumInputItem = Record<never, never>;
+type ArrayToObjectType<T extends readonly string[]> = {
+    [K in T[number]]: EmptyEnumInputItem;
+};
+type NormalizedInputType<TInput> = TInput extends readonly string[] ? ArrayToObjectType<TInput> : TInput extends ObjectEnumInput ? TInput : never;
+type EnumItemFromNormalizedObject<TObj extends ObjectEnumInput> = StandardEnumItem & InferredExtraFields<TObj>;
+type EnumFromNormalizedObject<TObj extends ObjectEnumInput> = {
+    [K in keyof TObj]: EnumItemFromNormalizedObject<TObj>;
+} & CoreEnumMethods<EnumItemFromNormalizedObject<TObj>>;
+type UnionKeys<T> = T extends T ? keyof T : never;
+type MergeUnionToObject<T> = {
+    [K in UnionKeys<T>]: T extends Record<K, infer V> ? V : undefined;
+};
+type ExtraShapeUnion<TObj extends ObjectEnumInput> = {
+    [K in keyof TObj]: Omit<TObj[K], BuiltInOverrideKeys>;
+}[keyof TObj];
+type InferredExtraFields<TObj extends ObjectEnumInput> = MergeUnionToObject<ExtraShapeUnion<TObj>>;
+type PropertyAutoFormatter = {
+    /** The property name to generate */
+    key: string;
+    /** Function to transform the key into the property value */
+    format: (k: string) => string;
+};
+type CoreEnumMethods<TItem extends StandardEnumItem> = {
+    fromValue(value: string): TItem;
+    tryFromValue(value?: string | null): TItem | undefined;
+    fromKey(key: string): TItem;
+    tryFromKey(key?: string | null): TItem | undefined;
+    items(): readonly TItem[];
+    values(): readonly string[];
+    keys(): readonly string[];
+};
+type EnumerationProps<TInput> = {
+    input: TInput;
+    propertyAutoFormatters?: PropertyAutoFormatter[];
+};
+type Enumeration<TEnum> = {
+    [K in keyof TEnum]: TEnum[K] extends {
+        __smart_enum_brand: true;
+    } ? TEnum[K] : never;
+}[keyof TEnum];
+
+/**
+ * Creates a Smart Enum from an array of keys or an object of key/item definitions.
+ * Each item gets `key`, `value`, `display`, `index`, and optional custom fields.
+ *
+ * @param enumType - Unique name for this enum (used for serialization/revival)
+ * @param props - `{ input }` array or object; optional `propertyAutoFormatters`
+ * @returns Frozen enum object with items and methods (fromValue, toOptions, etc.)
+ *
+ * @example
+ * ```typescript
+ * // From array
+ * const Status = enumeration('Status', { input: ['pending', 'active'] as const });
+ * type Status = Enumeration<typeof Status>;
+ * Status.active.value; // 'ACTIVE'
+ *
+ * // From object
+ * const Priority = enumeration('Priority', {
+ *   input: { low: {}, high: { value: 'HIGH', display: 'High Priority' } },
+ * });
+ * ```
+ */
+declare function enumeration<const TArr extends readonly string[]>(enumType: string, props: EnumerationProps<TArr>): EnumFromNormalizedObject<NormalizedInputType<TArr>>;
+declare function enumeration<const TObj extends ObjectEnumInput>(enumType: string, props: EnumerationProps<TObj>): EnumFromNormalizedObject<NormalizedInputType<TObj>>;
+
+/**
+ * Runtime type guard to detect Smart Enum items created by this library.
+ * Returns true if the value has the SMART_ENUM_ITEM symbol.
+ *
+ * @example
+ * ```typescript
+ * import { Status } from './status';
+ * const item = Status.active;
+ * isSmartEnumItem(item); // true
+ * isSmartEnumItem({ key: 'active', value: 'ACTIVE' }); // false (plain object)
+ * if (isSmartEnumItem(x)) {
+ *   console.log(x.value, x.__smart_enum_type); // narrowed to enum item
+ * }
+ * ```
+ */
+declare const isSmartEnumItem: (x: unknown) => x is {
+    key: string;
+    value: string;
+    index?: number;
+    __smart_enum_type?: string;
+};
+/**
+ * Runtime type guard to detect a full Smart Enum object created by this library.
+ * Returns true if the object has the SMART_ENUM property.
+ *
+ * @example
+ * ```typescript
+ * import { MyEnum } from './blah';
+ * isSmartEnum(MyEnum) === true; // true
+ * isSmartEnum(MyEnum.one) === false; // false (this is an item, not the enum)
+ * ```
+ */
+declare const isSmartEnum: (x: unknown) => boolean;
+
+export { type AnyEnumLike as A, type DatabaseFormat as D, type Enumeration as E, type Logger as L, type RevivedSmartEnums as R, type SmartApiHelperConfig as S, isSmartEnum as a, type LogLevel as b, type SmartEnumMappingsConfig as c, type SerializedSmartEnums as d, enumeration as e, type SmartEnumItemSerialized as f, isSmartEnumItem as i };

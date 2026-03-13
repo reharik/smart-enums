@@ -1,33 +1,5 @@
-"use strict";
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-
-// src/core.ts
-var core_exports = {};
-__export(core_exports, {
-  enumeration: () => enumeration,
-  isSmartEnum: () => isSmartEnum,
-  isSmartEnumItem: () => isSmartEnumItem
-});
-module.exports = __toCommonJS(core_exports);
-
 // src/enumerations.ts
-var import_case_anything = require("case-anything");
+import { capitalCase, constantCase } from "case-anything";
 
 // src/extensionMethods.ts
 var addExtensionMethods = (enumItems) => {
@@ -89,8 +61,8 @@ var finalizeEnumItem = (item, enumType, enumInstanceId) => {
 };
 function buildEnumFromObject(enumType, input, propertyAutoFormatters) {
   const formattersWithDefaults = [
-    { key: "value", format: import_case_anything.constantCase },
-    { key: "display", format: import_case_anything.capitalCase },
+    { key: "value", format: constantCase },
+    { key: "display", format: capitalCase },
     ...propertyAutoFormatters || []
   ];
   const formatProperties = (k, formatters) => formatters.reduce(
@@ -98,7 +70,7 @@ function buildEnumFromObject(enumType, input, propertyAutoFormatters) {
       acc[formatter.key] = formatter.format(k);
       return acc;
     },
-    { value: (0, import_case_anything.constantCase)(k), display: (0, import_case_anything.capitalCase)(k) }
+    { value: constantCase(k), display: capitalCase(k) }
   );
   const rawEnumItems = {};
   const enumInstanceId = Symbol("smart-enum-instance");
@@ -153,10 +125,14 @@ var isSmartEnumItem = (x) => {
 var isSmartEnum = (x) => {
   return !!x && typeof x === "object" && Reflect.get(x, SMART_ENUM) === true;
 };
-// Annotate the CommonJS export names for ESM import in node:
-0 && (module.exports = {
+var isSerializedSmartEnumItem = (x) => {
+  return !!x && typeof x === "object" && Reflect.has(x, "__smart_enum_type") && Reflect.has(x, "value");
+};
+
+export {
   enumeration,
+  isSmartEnumItem,
   isSmartEnum,
-  isSmartEnumItem
-});
-//# sourceMappingURL=core.cjs.map
+  isSerializedSmartEnumItem
+};
+//# sourceMappingURL=chunk-7BAIONYJ.js.map

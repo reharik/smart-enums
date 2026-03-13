@@ -16,73 +16,6 @@ export const SMART_ENUM_ID = Symbol('smart-enum-id');
 export const SMART_ENUM = Symbol('smart-enum');
 
 /**
- * Base structure for enum items. All enum items will have these properties.
- */
-export type BaseEnum = {
-  /** The constant-case value (e.g., "USER_ADMIN") */
-  value?: string;
-  /** The human-readable display name (e.g., "User Admin") */
-  display?: string;
-  /** The index/order of this item in the enum */
-  index?: number;
-  /** Whether this enum value is deprecated and should be hidden in most cases */
-  deprecated?: boolean;
-};
-
-/**
- * Configuration for creating an enumeration
- * @template TInput - Either a readonly string array or an object with BaseEnum values
- * @template TEnumItemExtension - Additional properties to add to each enum item
- * @template TExtraExtensionMethods - Additional methods to add to the enum object
- */
-export type EnumerationProps<
-  TInput extends EnumInput,
-  TEnumItemExtension = Record<string, never>,
-  TExtraExtensionMethods = Record<string, never>,
-> = {
-  /**
-   * The input data for the enum. Can be:
-   * - An array of strings: ['USER', 'ADMIN']
-   * - An object with overrides: { USER: { display: 'User Account' }, ADMIN: { deprecated: true } }
-   */
-  input: TInput;
-
-  /**
-   * Factory function to add custom methods to the enum object.
-   * Receives all enum items and should return an object with the custom methods.
-   * @example
-   * extraExtensionMethods: (items) => ({
-   *   getActiveItems: () => items.filter(i => !i.deprecated),
-   *   findByRole: (role: string) => items.find(i => i.role === role)
-   * })
-   */
-  extraExtensionMethods?: (
-    enumItems: EnumItem<NormalizedInputType<TInput>, TEnumItemExtension>[],
-  ) => TExtraExtensionMethods;
-
-  /**
-   * Auto-formatters for generating additional properties from the enum key.
-   * By default, 'value' uses constantCase and 'display' uses capitalCase.
-   * @example
-   * propertyAutoFormatters: [
-   *   { key: 'slug', format: (k) => k.toLowerCase() },
-   *   { key: 'code', format: (k) => k.substring(0, 3) }
-   * ]
-   */
-  propertyAutoFormatters?: PropertyAutoFormatter[];
-};
-
-/**
- * Defines how to auto-generate a property from the enum key
- */
-export type PropertyAutoFormatter = {
-  /** The property name to generate */
-  key: string;
-  /** Function to transform the key into the property value */
-  format: (k: string) => string;
-};
-
-/**
  * Options for filtering enum items in various methods
  */
 export type EnumFilterOptions = {
@@ -92,180 +25,7 @@ export type EnumFilterOptions = {
   showDeprecated?: boolean;
 };
 
-/**
- * Standard dropdown/select option format
- */
-export type DropdownOption = {
-  value: string;
-  label: string;
-  iconText?: string;
-};
-
-// Named input shapes for enumeration()
-export type ObjectEnumInput = {
-  readonly [k: string]: Readonly<Partial<BaseEnum> & Record<string, unknown>>;
-};
-export type EnumInput = readonly string[] | ObjectEnumInput;
-
-/**
- * All extension methods that are automatically added to enum objects.
- * These methods provide various ways to look up and filter enum items.
- */
-export type ExtensionMethods<E, TEnumItemExtension> = {
-  /** Get enum item by its value. Throws if not found. */
-  fromValue: (target: string) => ItemOf<E>;
-
-  /** Get enum item by its key. Throws if not found. */
-  fromKey: (target: string) => ItemOf<E>;
-
-  /** Get enum item by its display text. Throws if not found. */
-  fromDisplay: (target: string) => ItemOf<E>;
-
-  /** Get enum item by its value. Returns undefined if not found. */
-  tryFromValue: (target?: string | null) => ItemOf<E> | undefined;
-
-  /** Get enum item by its key. Returns undefined if not found. */
-  tryFromKey: (target?: string | null) => ItemOf<E> | undefined;
-
-  /**
-   * Get enum item by any custom field. Returns undefined if not found.
-   * @example
-   * MyEnum.tryFromCustomField('role', 'admin', item => !item.deprecated)
-   */
-  tryFromCustomField: (
-    field: keyof TEnumItemExtension,
-    target?: string | null,
-    filter?: (item: ItemOf<E>) => boolean,
-  ) => ItemOf<E> | undefined;
-
-  /** Get enum item by its display text. Returns undefined if not found. */
-  tryFromDisplay: (target?: string | null) => ItemOf<E> | undefined;
-
-  /**
-   * Extract values from a custom field across all enum items
-   * @example
-   * const roles = MyEnum.toCustomFieldValues<string>('role', item => item.active)
-   */
-  toCustomFieldValues: <X = string>(
-    field: keyof TEnumItemExtension,
-    filter?: (item: ItemOf<E>) => boolean,
-    filterOptions?: EnumFilterOptions,
-  ) => X[];
-
-  /** Convert enum items to dropdown options, sorted by index */
-  toOptions: (
-    filter?: (item: ItemOf<E>) => boolean,
-    filterOptions?: EnumFilterOptions,
-  ) => DropdownOption[];
-
-  /** Get all enum values as an array */
-  toValues: (
-    filter?: (item: ItemOf<E>) => boolean,
-    filterOptions?: EnumFilterOptions,
-  ) => string[];
-
-  /** Get all enum keys as an array */
-  toKeys: (
-    filter?: (item: ItemOf<E>) => boolean,
-    filterOptions?: EnumFilterOptions,
-  ) => string[];
-
-  /** Get all display values as an array */
-  toDisplays: (
-    filter?: (item: ItemOf<E>) => boolean,
-    filterOptions?: EnumFilterOptions,
-  ) => string[];
-
-  /** Get all enum items as an array (useful for iteration) */
-  toEnumItems: (
-    filter?: (item: ItemOf<E>) => boolean,
-    filterOptions?: EnumFilterOptions,
-  ) => ItemOf<E>[];
-
-  /**
-   * Convert to an object keyed by enum keys.
-   * Useful for creating subsets or filtered versions of the enum.
-   */
-  toExtendableObject: <ITEM_TYPE extends BaseEnum>(
-    filter?: (item: ItemOf<E>) => boolean,
-    filterOptions?: EnumFilterOptions,
-  ) => Record<string, ITEM_TYPE>;
-};
-
-/**
- * Converts a readonly string array type to an object type with BaseEnum values
- * @internal
- */
-export type ArrayToObjectType<T extends readonly string[]> = {
-  [K in T[number]]: BaseEnum;
-};
-
-/**
- * Normalizes the input type to always be an object format.
- * String arrays are converted to objects with empty BaseEnum values.
- * @internal
- */
-export type NormalizedInputType<T> = T extends readonly string[]
-  ? ArrayToObjectType<T>
-  : T extends { readonly [k: string]: Readonly<Record<string, unknown>> }
-    ? T
-    : never;
-
-/**
- * The structure of each item in an enumeration.
- * Combines BaseEnum properties with any custom extensions.
- */
-export type EnumItem<
-  T = unknown,
-  TEnumItemExtension = Record<string, never>,
-> = ({
-  /** The original key from the input (e.g., 'USER_ADMIN') */
-  key: string;
-  value: string;
-  display?: string;
-  index?: number;
-  deprecated?: boolean;
-  /** Type-level brand for filtering item members */
-  readonly __smart_enum_brand: true;
-  /** Non-enumerable enum type identifier (only present when enumType is provided) */
-  readonly __smart_enum_type?: string;
-} & TEnumItemExtension) &
-  (T extends unknown ? object : never);
-
-/**
- * Union of all enum item variants for a given enum input type.
- */
-export type EnumItemUnion<T, TEnumItemExtension = Record<string, never>> = {
-  [K in keyof NormalizedInputType<T>]: EnumItem<T, TEnumItemExtension>;
-}[keyof NormalizedInputType<T>];
-
-/** Public helper alias for consumers */
-export type ItemOf<E> = E[keyof E];
-
-/**
- * Helper to get the enum item type from an enum object returned by enumeration().
- * Usage:
- *   const MyEnum = enumeration({ input });
- *   type MyEnumItem = EnumItemType<typeof MyEnum>;
- */
-export type EnumItemType<TEnum extends Record<string, unknown>> =
-  TEnum extends Record<string, infer V>
-    ? V extends { __smart_enum_brand: true }
-      ? V
-      : never
-    : never;
-
-/**
- * Helper type for extracting the enum type from an enumeration object
- */
-// Back-compat alias: the item type of an enumeration object
-// Note: The second generic is ignored to avoid conflicts with item typing.
-export type Enumeration<ENUM_OF extends Record<string, unknown>> =
-  ENUM_OF extends Record<string, infer V>
-    ? V extends { __smart_enum_brand: true }
-      ? V
-      : never
-    : never;
+// export type EnumInput = readonly string[] | ObjectEnumInput;
 
 /**
  * Compile-time transformer: replaces Smart Enum items with string values,
@@ -354,4 +114,129 @@ export type SmartEnumMappingsConfig = {
   enumRegistry: Record<string, AnyEnumLike>;
   logLevel?: LogLevel;
   logger?: import('./utilities/logger.js').Logger;
+};
+
+type BuiltInOverrideKeys =
+  | 'key'
+  | 'value'
+  | 'display'
+  | 'deprecated'
+  | 'index'
+  | '__smart_enum_brand'
+  | '__smart_enum_type';
+
+export type StandardEnumItem = {
+  readonly __smart_enum_brand: true;
+  readonly __smart_enum_type: string;
+  readonly key: string;
+  readonly value: string;
+  readonly display: string;
+  readonly index: number;
+  readonly deprecated?: boolean;
+};
+export type EnumInputItem = Partial<{
+  key: string;
+  value: string;
+  display: string;
+  deprecated: boolean;
+}> &
+  Record<string, unknown>;
+
+export type ObjectEnumInput = Record<string, EnumInputItem>;
+
+export type EmptyEnumInputItem = Record<never, never>;
+
+export type ArrayToObjectType<T extends readonly string[]> = {
+  [K in T[number]]: EmptyEnumInputItem;
+};
+
+export type NormalizedInputType<TInput> = TInput extends readonly string[]
+  ? ArrayToObjectType<TInput>
+  : TInput extends ObjectEnumInput
+    ? TInput
+    : never;
+
+export type EnumItemFromNormalizedObject<TObj extends ObjectEnumInput> =
+  StandardEnumItem & InferredExtraFields<TObj>;
+
+export type EnumFromNormalizedObject<TObj extends ObjectEnumInput> = {
+  [K in keyof TObj]: EnumItemFromNormalizedObject<TObj>;
+} & CoreEnumMethods<EnumItemFromNormalizedObject<TObj>>;
+
+export type UnionKeys<T> = T extends T ? keyof T : never;
+
+/*
+To widen the type of the OptionalObject from literals to their actual types,
+e.g.
+shape?: "round" | "square" | "long";
+slices?: true;
+layers?: 2;
+--turns into:--
+shape: string | undefined;
+slices: boolean| undefined;
+layers: number| undefined;
+
+we can use the following code:
+type Widen<T> = T extends string
+  ? string
+  : T extends number
+    ? number
+    : T extends boolean
+      ? boolean
+      : T;
+
+type MergeUnionToObject<T> = {
+  [K in UnionKeys<T>]: T extends Record<K, infer V> ? Widen<V> : undefined;
+};
+*/
+
+type MergeUnionToObject<T> = {
+  [K in UnionKeys<T>]: T extends Record<K, infer V> ? V : undefined;
+};
+
+type ExtraShapeUnion<TObj extends ObjectEnumInput> = {
+  [K in keyof TObj]: Omit<TObj[K], BuiltInOverrideKeys>;
+}[keyof TObj];
+
+export type InferredExtraFields<TObj extends ObjectEnumInput> =
+  MergeUnionToObject<ExtraShapeUnion<TObj>>;
+
+export type PropertyAutoFormatter = {
+  /** The property name to generate */
+  key: string;
+  /** Function to transform the key into the property value */
+  format: (k: string) => string;
+};
+
+export type CoreEnumMethods<TItem extends StandardEnumItem> = {
+  fromValue(value: string): TItem;
+  tryFromValue(value?: string | null): TItem | undefined;
+  fromKey(key: string): TItem;
+  tryFromKey(key?: string | null): TItem | undefined;
+  items(): readonly TItem[];
+  values(): readonly string[];
+  keys(): readonly string[];
+};
+
+export type EnumerationProps<TInput> = {
+  input: TInput;
+  propertyAutoFormatters?: PropertyAutoFormatter[];
+};
+
+export type Enumeration<TEnum> = {
+  [K in keyof TEnum]: TEnum[K] extends { __smart_enum_brand: true }
+    ? TEnum[K]
+    : never;
+}[keyof TEnum];
+
+export type FinalizedEnumFields = Pick<
+  StandardEnumItem,
+  '__smart_enum_brand' | '__smart_enum_type'
+>;
+export type FinalizableEnumItem = {
+  key: string;
+  value: string;
+  display: string;
+  index: number;
+  deprecated?: boolean;
 };

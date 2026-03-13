@@ -1,8 +1,9 @@
 // serializeSmartEnums.ts
-import { isSerializedSmartEnumItem, isSmartEnumItem } from '../enumeration.js';
+export { isSmartEnumItem, isSmartEnum } from './typeGuards.js';
 import type { SerializedSmartEnums, AnyEnumLike } from '../types.js';
 
 import { debug } from './logger.js';
+import { isSerializedSmartEnumItem, isSmartEnumItem } from './typeGuards.js';
 
 type PlainObject = Record<string, unknown>;
 
@@ -11,8 +12,20 @@ const isPlainObject = (x: unknown): x is PlainObject =>
   x !== null &&
   Object.getPrototypeOf(x) === Object.prototype;
 
-// use isSmartEnumItem from enumeration.ts
-
+/**
+ * Recursively replaces Smart Enum items with self-describing objects
+ * `{ __smart_enum_type, value }` for JSON transport or storage.
+ *
+ * @param input - Object or array that may contain enum items
+ * @returns Same structure with enum items replaced by serialized shape
+ *
+ * @example
+ * ```typescript
+ * const dto = { id: '1', status: Status.active, color: Color.red };
+ * const wire = serializeSmartEnums(dto);
+ * // wire: { id: '1', status: { __smart_enum_type: 'Status', value: 'ACTIVE' }, color: { __smart_enum_type: 'Color', value: 'RED' } }
+ * ```
+ */
 // Overloads:
 // 1) Inferred
 export function serializeSmartEnums<T>(input: T): SerializedSmartEnums<T>;
@@ -57,7 +70,22 @@ export function serializeSmartEnums(input: unknown): unknown {
   return walk(input);
 }
 
-// Simplified revive function using enum type registry
+/**
+ * Recursively revives serialized enum objects back to Smart Enum items
+ * using a registry of enum types. Expects payload to contain
+ * `{ __smart_enum_type, value }` where the type exists in the registry.
+ *
+ * @param input - Serialized payload (e.g. from JSON)
+ * @param registry - Map of enum type name to enum object (e.g. `{ Status, Color }`)
+ * @returns Payload with serialized enums revived to enum items
+ *
+ * @example
+ * ```typescript
+ * const wire = { status: { __smart_enum_type: 'Status', value: 'ACTIVE' } };
+ * const revived = reviveSmartEnums(wire, { Status, Color });
+ * // revived.status === Status.active
+ * ```
+ */
 export function reviveSmartEnums<R>(
   input: unknown,
   registry: Record<string, AnyEnumLike>,

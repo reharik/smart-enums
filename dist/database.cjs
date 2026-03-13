@@ -32,225 +32,133 @@ __export(database_exports, {
 });
 module.exports = __toCommonJS(database_exports);
 
-// src/enumeration.ts
+// src/enumerations.ts
 var import_case_anything = require("case-anything");
 
-// src/types.ts
-var notEmpty = (value) => {
-  return value != null;
+// src/extensionMethods.ts
+var addExtensionMethods = (enumItems) => {
+  const findBy = (field, target) => enumItems.find((item) => item[field] === target);
+  const requireBy = (field, target, label) => {
+    const item = findBy(field, target);
+    if (!item) {
+      throw new Error(`No enum ${label} found for '${String(target)}'`);
+    }
+    return item;
+  };
+  return {
+    fromValue: (value) => requireBy("value", value, "value"),
+    tryFromValue: (value) => value ? findBy("value", value) : void 0,
+    fromKey: (key) => requireBy("key", key, "key"),
+    tryFromKey: (key) => key ? findBy("key", key) : void 0,
+    items: () => [...enumItems],
+    values: () => enumItems.map((item) => item.value),
+    keys: () => enumItems.map((item) => item.key)
+  };
 };
+
+// src/types.ts
 var SMART_ENUM_ITEM = Symbol("smart-enum-item");
 var SMART_ENUM_ID = Symbol("smart-enum-id");
 var SMART_ENUM = Symbol("smart-enum");
 
-// src/extensionMethods.ts
-var addExtensionMethods = (enumItems, extraExtensionMethods) => {
-  const extensionMethods = buildExtensionMethods(
-    enumItems
-  );
-  let extra = {};
-  if (extraExtensionMethods) {
-    extra = extraExtensionMethods(enumItems);
+// src/enumerations.ts
+function normalizeInput(input) {
+  if (Array.isArray(input)) {
+    return Object.fromEntries(
+      input.map((k) => [k, {}])
+    );
   }
-  return { ...extensionMethods, ...extra };
+  return input;
+}
+var finalizeEnumItem = (item, enumType, enumInstanceId) => {
+  Object.defineProperty(item, SMART_ENUM_ITEM, {
+    value: true,
+    enumerable: true
+  });
+  Object.defineProperty(item, SMART_ENUM_ID, {
+    value: enumInstanceId,
+    enumerable: true
+  });
+  Object.defineProperty(item, "__smart_enum_brand", {
+    value: true,
+    enumerable: true
+  });
+  Object.defineProperty(item, "__smart_enum_type", {
+    value: enumType,
+    enumerable: true
+  });
+  Object.defineProperty(item, "toJSON", {
+    value: () => ({ __smart_enum_type: enumType, value: item.value }),
+    enumerable: true
+  });
+  return item;
 };
-var buildExtensionMethods = (rawEnum) => {
-  return {
-    // Lookup methods - these find enum items by different properties
-    fromValue: (target) => {
-      const item = Object.values(rawEnum).find(
-        (value) => value.value === target
+function buildEnumFromObject(enumType, input, propertyAutoFormatters) {
+  const formattersWithDefaults = [
+    { key: "value", format: import_case_anything.constantCase },
+    { key: "display", format: import_case_anything.capitalCase },
+    ...propertyAutoFormatters || []
+  ];
+  const formatProperties = (k, formatters) => formatters.reduce(
+    (acc, formatter) => {
+      acc[formatter.key] = formatter.format(k);
+      return acc;
+    },
+    { value: (0, import_case_anything.constantCase)(k), display: (0, import_case_anything.capitalCase)(k) }
+  );
+  const rawEnumItems = {};
+  const enumInstanceId = Symbol("smart-enum-instance");
+  let index = 0;
+  for (const key in input) {
+    if (Object.prototype.hasOwnProperty.call(input, key)) {
+      const value = input[key];
+      const enumItemBase = {
+        index,
+        key,
+        ...formatProperties(key, formattersWithDefaults),
+        ...value
+      };
+      const enumItem = finalizeEnumItem(
+        enumItemBase,
+        enumType,
+        enumInstanceId
       );
-      if (!item) {
-        throw new Error(`No enum value found for '${target}'`);
-      }
-      return item;
-    },
-    tryFromValue: (target) => {
-      if (!target) {
-        return;
-      }
-      return Object.values(rawEnum).find(
-        (value) => value.value === target
-      );
-    },
-    fromKey: (target) => {
-      const item = Object.values(rawEnum).find(
-        (value) => value.key === target
-      );
-      if (!item) {
-        throw new Error(`No enum key found for '${target}'`);
-      }
-      return item;
-    },
-    tryFromKey: (target) => {
-      if (!target) {
-        return;
-      }
-      return Object.values(rawEnum).find(
-        (value) => value.key === target
-      );
-    },
-    /**
-     * Flexible lookup by any custom field.
-     * Useful when enum items have additional properties beyond the standard ones.
-     */
-    tryFromCustomField: (field, target, filter) => {
-      if (!target) {
-        return;
-      }
-      return Object.values(rawEnum).filter(filter || (() => true)).find(
-        (value) => value[field] === target
-      );
-    },
-    fromDisplay: (target) => {
-      const item = Object.values(rawEnum).find(
-        (value) => value.display === target
-      );
-      if (!item) {
-        throw new Error(`No enum display found for '${target}'`);
-      }
-      return item;
-    },
-    tryFromDisplay: (target) => {
-      if (!target) {
-        return;
-      }
-      return Object.values(rawEnum).find(
-        (value) => value.display === target
-      );
-    },
-    // Transformation methods - these convert enum items to different formats
-    /**
-     * Extract values from a specific custom field across all items.
-     * Respects filter options for empty and deprecated items.
-     */
-    toCustomFieldValues: (field, filter, filterOptions) => {
-      return Object.values(rawEnum).filter(
-        (x) => (filter ? filter(x) : true) && (filterOptions?.showEmpty ? true : notEmpty(x[field])) && (filterOptions?.showDeprecated ? true : !x.deprecated)
-      ).map((x) => x[field]);
-    },
-    /**
-     * Convert to dropdown options, automatically sorted by index.
-     * Includes optional iconText if present in the enum item.
-     */
-    toOptions: (filter, filterOptions) => {
-      return [
-        ...rawEnum || []
-      ].sort(
-        (a, b) => a?.index && b?.index ? (a?.index || 0) - (b?.index || 0) : 0
-      ).filter(
-        (x) => (filter ? filter(x) : true) && (filterOptions?.showEmpty ? true : notEmpty(x)) && (filterOptions?.showDeprecated ? true : !x.deprecated)
-      ).map((item) => ({
-        label: item.display || item.key,
-        value: item.value,
-        ...item.iconText ? { iconText: item.iconText } : {}
-      }));
-    },
-    // Array extraction methods - these get arrays of specific properties
-    toValues: (filter, filterOptions) => Object.values(rawEnum).filter(
-      (x) => (filter ? filter(x) : true) && (filterOptions?.showEmpty ? true : notEmpty(x)) && (filterOptions?.showDeprecated ? true : !x.deprecated)
-    ).map((item) => item.value),
-    toKeys: (filter, filterOptions) => Object.values(rawEnum).filter(
-      (x) => (filter ? filter(x) : true) && (filterOptions?.showEmpty ? true : notEmpty(x)) && (filterOptions?.showDeprecated ? true : !x.deprecated)
-    ).map((item) => item.key),
-    toDisplays: (filter, filterOptions) => Object.values(rawEnum).filter(
-      (x) => (filter ? filter(x) : true) && (filterOptions?.showEmpty ? true : notEmpty(x)) && (filterOptions?.showDeprecated ? true : !x.deprecated)
-    ).map(
-      (item) => item.display
-    ),
-    toEnumItems: (filter, filterOptions) => Object.values(rawEnum).filter(
-      (x) => (filter ? filter(x) : true) && (filterOptions?.showEmpty ? true : notEmpty(x)) && (filterOptions?.showDeprecated ? true : !x.deprecated)
-    ),
-    /**
-     * Creates a new object with filtered enum items.
-     * Useful for creating subset enums or when you need an object format.
-     */
-    toExtendableObject: (filter, filterOptions) => {
-      return Object.values(rawEnum).filter(
-        (x) => (filter ? filter(x) : true) && (filterOptions?.showEmpty ? true : notEmpty(x)) && (filterOptions?.showDeprecated ? true : !x.deprecated)
-      ).reduce((acc, item) => {
-        acc[item.key] = item;
-        return acc;
-      }, {});
+      Object.freeze(enumItem);
+      rawEnumItems[key] = enumItem;
+      index++;
     }
+  }
+  const extensionMethods = addExtensionMethods(
+    Object.values(rawEnumItems)
+  );
+  const enumObject = {
+    ...rawEnumItems,
+    // All enum items as properties
+    ...extensionMethods
   };
-};
+  Object.defineProperty(enumObject, SMART_ENUM, {
+    value: true,
+    enumerable: false
+  });
+  Object.freeze(enumObject);
+  return enumObject;
+}
+function enumeration(enumType, props) {
+  const normalized = normalizeInput(props.input);
+  return buildEnumFromObject(
+    enumType,
+    normalized,
+    props.propertyAutoFormatters
+  );
+}
 
-// src/enumeration.ts
+// src/utilities/typeGuards.ts
 var isSmartEnumItem = (x) => {
   return !!x && typeof x === "object" && Reflect.get(x, SMART_ENUM_ITEM) === true;
 };
 var isSmartEnum = (x) => {
   return !!x && typeof x === "object" && Reflect.get(x, SMART_ENUM) === true;
 };
-function enumeration(enumType, {
-  input,
-  extraExtensionMethods,
-  propertyAutoFormatters
-}) {
-  const normalizedInput = Array.isArray(input) ? input.reduce(
-    (acc, k) => ({ ...acc, [k]: {} }),
-    {}
-  ) : input;
-  const formattersWithDefaults = [
-    { key: "value", format: import_case_anything.constantCase },
-    { key: "display", format: import_case_anything.capitalCase },
-    ...propertyAutoFormatters || []
-  ];
-  const formatProperties = (k, formatters) => formatters.reduce((acc, formatter) => {
-    acc[formatter.key] = formatter.format(k);
-    return acc;
-  }, {});
-  const rawEnumItems = {};
-  const enumInstanceId = Symbol("smart-enum-instance");
-  let index = 0;
-  for (const key in normalizedInput) {
-    if (Object.prototype.hasOwnProperty.call(normalizedInput, key)) {
-      const value = normalizedInput[key];
-      const enumItem = {
-        index,
-        key,
-        ...formatProperties(key, formattersWithDefaults),
-        // Auto-generated props
-        ...value
-        // User overrides
-      };
-      Object.defineProperty(enumItem, SMART_ENUM_ITEM, {
-        value: true,
-        enumerable: false
-      });
-      Object.defineProperty(enumItem, SMART_ENUM_ID, {
-        value: enumInstanceId,
-        enumerable: false
-      });
-      Object.defineProperty(enumItem, "__smart_enum_brand", {
-        value: true,
-        enumerable: false
-      });
-      Object.defineProperty(enumItem, "__smart_enum_type", {
-        value: enumType,
-        enumerable: false
-      });
-      Object.defineProperty(enumItem, "toJSON", {
-        value: () => ({ __smart_enum_type: enumType, value: enumItem.value })
-      });
-      rawEnumItems[key] = enumItem;
-      index++;
-    }
-  }
-  const enumObject = {
-    ...rawEnumItems,
-    // All enum items as properties
-    ...addExtensionMethods(Object.values(rawEnumItems), extraExtensionMethods)
-    // All methods
-  };
-  Object.defineProperty(enumObject, SMART_ENUM, {
-    value: true,
-    enumerable: false
-  });
-  return enumObject;
-}
 
 // src/utilities/logger.ts
 var consoleLogger = {

@@ -11,7 +11,8 @@
  */
 
 // Re-export core functionality
-export { enumeration, isSmartEnumItem, isSmartEnum } from './enumeration.js';
+export { enumeration } from './enumerations.js';
+export { isSmartEnumItem, isSmartEnum } from './utilities/typeGuards.js';
 export {
   serializeSmartEnums,
   reviveSmartEnums,
@@ -24,9 +25,8 @@ export {
 // Re-export core types plus transport-specific types
 export type {
   Enumeration,
-  DropdownOption,
-  EnumItem,
-  BaseEnum,
-  EnumItemType,
   AnyEnumLike,
+  SerializedSmartEnums,
+  RevivedSmartEnums,
+  SmartEnumItemSerialized,
 } from './types.js';
