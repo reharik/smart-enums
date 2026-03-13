@@ -22,20 +22,12 @@ type SerializedSmartEnums<T> = T extends {
 } ? string : T extends ReadonlyArray<infer U> ? ReadonlyArray<SerializedSmartEnums<U>> : T extends Array<infer U> ? SerializedSmartEnums<U>[] : T extends object ? {
     [K in keyof T]: SerializedSmartEnums<T[K]>;
 } : T;
-/**
- * Revived shape: for keys present in mapping M, the string becomes the
- * corresponding enum item type (derived from the provided enum object);
- * other fields recurse.
- */
-type EnumItemFromEnum<TEnum> = TEnum extends Record<string, infer V> ? V extends {
-    __smart_enum_brand: true;
-} ? V : never : never;
 type AnyEnumLike = {
     tryFromValue: (value?: string | null) => unknown;
     tryFromKey: (key?: string | null) => unknown;
 } & Record<string, unknown>;
 type RevivedSmartEnums<T, M extends Record<string, AnyEnumLike>> = T extends ReadonlyArray<infer U> ? RevivedSmartEnums<U, M>[] : T extends Array<infer U> ? RevivedSmartEnums<U, M>[] : T extends object ? {
-    [K in keyof T]: K extends Extract<keyof M, string> ? EnumItemFromEnum<M[K]> : RevivedSmartEnums<T[K], M>;
+    [K in keyof T]: K extends Extract<keyof M, string> ? Enumeration<M[K]> : RevivedSmartEnums<T[K], M>;
 } : T;
 type SmartEnumItemSerialized = {
     __smart_enum_type: string;

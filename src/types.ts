@@ -68,7 +68,7 @@ export type RevivedSmartEnums<T, M extends Record<string, AnyEnumLike>> =
       : T extends object
         ? {
             [K in keyof T]: K extends Extract<keyof M, string>
-              ? EnumItemFromEnum<M[K]>
+              ? Enumeration<M[K]>
               : RevivedSmartEnums<T[K], M>;
           }
         : T;
