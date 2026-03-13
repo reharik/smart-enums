@@ -131,7 +131,7 @@ function buildEnumFromObject<TObj extends ObjectEnumInput>(
   const extensionMethods: CoreEnumMethods<TItem> = addExtensionMethods(
     Object.values(rawEnumItems),
   );
-  const enumObject = {
+  const enumObject: EnumFromNormalizedObject<TObj> = {
     ...rawEnumItems, // All enum items as properties
     ...extensionMethods,
   };
@@ -142,7 +142,7 @@ function buildEnumFromObject<TObj extends ObjectEnumInput>(
     enumerable: false,
   });
   Object.freeze(enumObject);
-  return enumObject as EnumFromNormalizedObject<TObj>;
+  return enumObject;
 }
 
 /**
