@@ -136,11 +136,9 @@ type SmartEnumMappingsConfig = {
     logLevel?: LogLevel;
     logger?: Logger;
 };
-type Enumeration<TEnum> = {
-    [K in keyof TEnum]: TEnum[K] extends {
-        __smart_enum_brand: true;
-    } ? TEnum[K] : never;
-}[keyof TEnum];
+type Enumeration<TEnum> = TEnum extends Record<string, infer V> ? V extends {
+    __smart_enum_brand: true;
+} ? V : never : never;
 
 /**
  * Runtime type guard to detect Smart Enum items created by this library.

@@ -233,11 +233,12 @@ export type EnumerationProps<TInput> = {
   propertyAutoFormatters?: PropertyAutoFormatter[];
 };
 
-export type Enumeration<TEnum> = {
-  [K in keyof TEnum]: TEnum[K] extends { __smart_enum_brand: true }
-    ? TEnum[K]
+export type Enumeration<TEnum> =
+  TEnum extends Record<string, infer V>
+    ? V extends { __smart_enum_brand: true }
+      ? V
+      : never
     : never;
-}[keyof TEnum];
 
 export type FinalizedEnumFields = Pick<
   StandardEnumItem,
