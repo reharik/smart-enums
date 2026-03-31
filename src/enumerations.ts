@@ -110,6 +110,11 @@ export type EnumItemFromNormalizedObject<
       : string;
   };
 
+export type EnumMemberUnionFromNormalizedObject<TObj extends ObjectEnumInput> =
+  {
+    [K in keyof TObj]: EnumItemFromNormalizedObject<TObj, K>;
+  }[keyof TObj];
+
 export type CoreEnumMethods<TItem extends StandardEnumItem> = {
   fromValue(value: string): TItem;
   tryFromValue(value?: string | null): TItem | undefined;
@@ -122,7 +127,7 @@ export type CoreEnumMethods<TItem extends StandardEnumItem> = {
 
 export type EnumFromNormalizedObject<TObj extends ObjectEnumInput> = {
   [K in keyof TObj]: EnumItemFromNormalizedObject<TObj, K>;
-} & CoreEnumMethods<EnumItemFromNormalizedObject<TObj>>;
+} & CoreEnumMethods<EnumMemberUnionFromNormalizedObject<TObj>>;
 
 export type EnumerationProps<TInput> = {
   input: TInput;

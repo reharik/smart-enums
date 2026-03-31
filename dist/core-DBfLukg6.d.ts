@@ -16,8 +16,18 @@ type EnumInputItem = Partial<{
 }> & object;
 type ObjectEnumInput = Record<string, EnumInputItem>;
 type EmptyEnumInputItem = Record<never, never>;
+type Separator = '-' | '_' | ' ' | '.';
+type IsUpperChar<C extends string> = C extends Uppercase<C> ? (C extends Lowercase<C> ? false : true) : false;
+type IsLowerChar<C extends string> = C extends Lowercase<C> ? (C extends Uppercase<C> ? false : true) : false;
+type PushUnderscore<S extends string> = S extends '' | `${string}_` ? S : `${S}_`;
+type TrimUnderscore<S extends string> = S extends `_${infer R}` ? TrimUnderscore<R> : S extends `${infer R}_` ? TrimUnderscore<R> : S;
+type CollapseUnderscores<S extends string> = S extends `${infer A}__${infer B}` ? CollapseUnderscores<`${A}_${B}`> : S;
+type ConstantCaseInternal<S extends string, Prev extends string = '', Out extends string = ''> = S extends `${infer C}${infer Rest}` ? C extends Separator ? ConstantCaseInternal<Rest, C, PushUnderscore<Out>> : IsUpperChar<C> extends true ? IsLowerChar<Prev> extends true ? ConstantCaseInternal<Rest, C, `${PushUnderscore<Out>}${Uppercase<C>}`> : ConstantCaseInternal<Rest, C, `${Out}${Uppercase<C>}`> : ConstantCaseInternal<Rest, C, `${Out}${Uppercase<C>}`> : CollapseUnderscores<TrimUnderscore<Out>>;
+type ConstantCase<S extends string> = string extends S ? string : ConstantCaseInternal<S>;
 type ArrayToObjectType<T extends readonly string[]> = {
-    [K in T[number]]: EmptyEnumInputItem;
+    [K in T[number]]: EmptyEnumInputItem & {
+        readonly value?: ConstantCase<K>;
+    };
 };
 type NormalizedInputType<TInput> = TInput extends readonly string[] ? ArrayToObjectType<TInput> : TInput extends ObjectEnumInput ? TInput : never;
 type UnionKeys<T> = T extends T ? keyof T : never;
@@ -28,9 +38,15 @@ type ExtraShapeUnion<TObj extends ObjectEnumInput> = {
     [K in keyof TObj]: Omit<TObj[K], BuiltInOverrideKeys>;
 }[keyof TObj];
 type InferredExtraFields<TObj extends ObjectEnumInput> = MergeUnionToObject<ExtraShapeUnion<TObj>>;
-type EnumItemFromNormalizedObject<TObj extends ObjectEnumInput, K extends keyof TObj = keyof TObj> = Omit<StandardEnumItem, 'key'> & InferredExtraFields<TObj> & {
+type EnumItemFromNormalizedObject<TObj extends ObjectEnumInput, K extends keyof TObj = keyof TObj> = Omit<StandardEnumItem, 'key' | 'value'> & InferredExtraFields<TObj> & {
     readonly key: Extract<K, string>;
+    readonly value: TObj[K] extends {
+        value?: infer V;
+    } ? Extract<V, string> extends never ? string : Extract<V, string> : string;
 };
+type EnumMemberUnionFromNormalizedObject<TObj extends ObjectEnumInput> = {
+    [K in keyof TObj]: EnumItemFromNormalizedObject<TObj, K>;
+}[keyof TObj];
 type CoreEnumMethods<TItem extends StandardEnumItem> = {
     fromValue(value: string): TItem;
     tryFromValue(value?: string | null): TItem | undefined;
@@ -42,7 +58,7 @@ type CoreEnumMethods<TItem extends StandardEnumItem> = {
 };
 type EnumFromNormalizedObject<TObj extends ObjectEnumInput> = {
     [K in keyof TObj]: EnumItemFromNormalizedObject<TObj, K>;
-} & CoreEnumMethods<EnumItemFromNormalizedObject<TObj>>;
+} & CoreEnumMethods<EnumMemberUnionFromNormalizedObject<TObj>>;
 type EnumerationProps<TInput> = {
     input: TInput;
     propertyAutoFormatters?: PropertyAutoFormatter[];

@@ -164,9 +164,14 @@ export type EnumItemFromNormalizedObject<
     readonly key: Extract<K, string>;
   };
 
+export type EnumMemberUnionFromNormalizedObject<TObj extends ObjectEnumInput> =
+  {
+    [K in keyof TObj]: EnumItemFromNormalizedObject<TObj, K>;
+  }[keyof TObj];
+
 export type EnumFromNormalizedObject<TObj extends ObjectEnumInput> = {
   [K in keyof TObj]: EnumItemFromNormalizedObject<TObj, K>;
-} & CoreEnumMethods<EnumItemFromNormalizedObject<TObj>>;
+} & CoreEnumMethods<EnumMemberUnionFromNormalizedObject<TObj>>;
 
 export type UnionKeys<T> = T extends T ? keyof T : never;
 
