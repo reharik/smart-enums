@@ -32,8 +32,8 @@ Colors.blue; // { key: "blue", value: "BLUE", display: "Blue", index: 1 }
 
 // Plus powerful utility methods:
 Colors.fromValue('RED'); // Returns Colors.red
-Colors.toOptions(); // Returns dropdown-ready options
-Colors.toValues(); // Returns ['RED', 'BLUE', 'GREEN']
+Colors.items(); // Returns all enum items
+Colors.values(); // Returns ['RED', 'BLUE', 'GREEN']
 ```
 
 ## Installation
@@ -177,43 +177,24 @@ const item = Colors.fromValue('RED');
 // Safe lookup (returns undefined if not found)
 const maybeItem = Colors.tryFromValue('PURPLE');
 
-// Lookup by display text
-const displayItem = Colors.fromDisplay('Red');
-
 // Lookup by key
 const keyItem = Colors.fromKey('red');
-
-// Lookup by custom field
-const customItem = Priority.tryFromCustomField('level', 3);
 ```
 
 ### Conversion Methods
 
 ```typescript
-// Get dropdown options (for select elements)
-const options = Priority.toOptions();
-// Returns: [
-//   { value: 'LOW', label: 'Low Priority' },
-//   { value: 'MED', label: 'Medium Priority' },
-//   ...
-// ]
-
 // Get all values
-const values = Colors.toValues(); // ['RED', 'BLUE', 'GREEN']
+const values = Colors.values(); // ['RED', 'BLUE', 'GREEN']
 
 // Get all keys
-const keys = Colors.toKeys(); // ['red', 'blue', 'green']
-
-// Get all display texts
-const displays = Colors.toDisplays(); // ['Red', 'Blue', 'Green']
+const keys = Colors.keys(); // ['red', 'blue', 'green']
 
 // Get all enum items as array
-const items = Colors.toEnumItems();
+const items = Colors.items();
 ```
 
-### Filtering
-
-Most methods support filtering:
+### Filtering Items
 
 ```typescript
 const UserStatus = enumeration('UserStatus', {
@@ -226,53 +207,34 @@ const UserStatus = enumeration('UserStatus', {
 });
 
 // Exclude deprecated items
-const activeOptions = UserStatus.toOptions(item => !item.deprecated);
+const activeItems = UserStatus.items().filter(item => !item.deprecated);
 
-// With filter options
-const allOptions = UserStatus.toOptions(undefined, { showDeprecated: true });
+// Include all items
+const allItems = UserStatus.items();
 ```
 
 ## Advanced Usage
 
-### Custom Extensions
-
-Add domain-specific properties and methods:
+### Custom Properties
 
 ```typescript
-interface ColorExtension {
-  hex: string;
-  rgb: [number, number, number];
-}
 const input = {
   red: { hex: '#FF0000', rgb: [255, 0, 0] },
   blue: { hex: '#0000FF', rgb: [0, 0, 255] },
   green: { hex: '#00FF00', rgb: [0, 255, 0] },
 };
 
-interface ExtraExtensionMethods {
-  getMixedColor: (c1: any, c2: any) => string;
-  getPrimaryColors: () => Enumeration<typeof input, ColorExtension>[];
-}
-const extraExtensionMethods = items => ({
-  getMixedColor: (c1, c2) => {
-    // Custom color mixing logic
-    return `Mixed: ${c1.key} + ${c2.key}`;
-  },
-  getPrimaryColors: () => items.filter(i => ['red', 'blue'].includes(i.key)),
-});
-
 const Colors = enumeration('Colors', {
   input,
-  extraExtensionMethods,
 });
 
 console.log(Colors.red.hex); // '#FF0000'
-console.log(Colors.getMixedColor(Colors.red, Colors.blue)); // 'Mixed: red + blue'
+console.log(Colors.blue.rgb); // [0, 0, 255]
 ```
 
 ### Custom Field Values
 
-Extract values from custom fields:
+Extract custom values from enum items:
 
 ```typescript
 type PageExtensions = { slug: string; title: string };
@@ -288,13 +250,11 @@ type Pages = Enumeration<typeof Pages>;
 const slug = Pages.about.slug; // '/about'
 
 // Get all slugs
-const slugs = Pages.toCustomFieldValues<string>('slug');
+const slugs = Pages.items().map(item => item.slug);
 // Returns: ['/', '/about', '/contact']
 
 // Filter out undefined values
-const titles = Pages.toCustomFieldValues<string>('title', undefined, {
-  showEmpty: false,
-});
+const titles = Pages.items().map(item => item.title).filter(Boolean);
 ```
 
 ### React/Frontend Usage
@@ -310,9 +270,9 @@ function ColorSelector() {
       value={selected.value}
       onChange={e => setSelected(Colors.fromValue(e.target.value))}
     >
-      {Colors.toOptions().map(option => (
-        <option key={option.value} value={option.value}>
-          {option.label}
+      {Colors.items().map(item => (
+        <option key={item.value} value={item.value}>
+          {item.display}
         </option>
       ))}
     </select>
@@ -386,9 +346,10 @@ For API communication, use the transport utilities to serialize enums for sendin
 ```typescript
 import { enumeration } from 'smart-enums/core';
 import {
+  initializeSmartEnumMappings,
   serializeForTransport,
   reviveAfterTransport,
-} from 'smart-enums/transport';
+} from 'smart-enums';
 
 // Create enums
 const UserStatus = enumeration('UserStatus', {
@@ -397,6 +358,11 @@ const UserStatus = enumeration('UserStatus', {
 
 const Priority = enumeration('Priority', {
   input: ['low', 'medium', 'high', 'urgent'] as const,
+});
+
+// Required once before calling reviveAfterTransport
+initializeSmartEnumMappings({
+  enumRegistry: { UserStatus, Priority },
 });
 
 // API endpoint - serialize for sending
@@ -440,11 +406,16 @@ const revivedData = reviveAfterTransport(wireData);
 ```typescript
 import express from 'express';
 import {
+  initializeSmartEnumMappings,
   serializeForTransport,
   reviveAfterTransport,
-} from 'smart-enums/transport';
+} from 'smart-enums';
 
 const app = express();
+
+initializeSmartEnumMappings({
+  enumRegistry: { UserStatus, Priority },
+});
 
 // Middleware to revive enums from incoming requests
 app.use(express.json());
@@ -483,8 +454,6 @@ app.post('/api/users', (req, res) => {
 ```typescript
 // API client with automatic enum handling
 class ApiClient {
-  private enumRegistry = { UserStatus, Priority, OrderStatus };
-
   async get<T>(url: string): Promise<T> {
     const response = await fetch(url);
     const data = await response.json();
@@ -941,34 +910,20 @@ Main factory function for creating Smart Enums.
 - `enumType` - String identifier for the enum type (required for serialization/revival)
 - `props.input` - Array of strings, object with BaseEnum values, or existing enum
 - `props.propertyAutoFormatters` - Optional custom formatters for auto-generated properties
-- `props.extraExtensionMethods` - Optional factory for adding custom methods
 
 **Returns:** An enum object with all items as properties plus extension methods
 
 ### Extension Methods
 
-| Method                                          | Description                                    | Returns                    |
-| ----------------------------------------------- | ---------------------------------------------- | -------------------------- |
-| `fromValue(value)`                              | Get item by value (throws if not found)        | `Enumeration`              |
-| `tryFromValue(value)`                           | Get item by value (safe)                       | `Enumeration \| undefined` |
-| `fromKey(key)`                                  | Get item by key (throws if not found)          | `Enumeration`              |
-| `tryFromKey(key)`                               | Get item by key (safe)                         | `Enumeration \| undefined` |
-| `fromDisplay(display)`                          | Get item by display text (throws if not found) | `Enumeration`              |
-| `tryFromDisplay(display)`                       | Get item by display text (safe)                | `Enumeration \| undefined` |
-| `tryFromCustomField(field, value, filter?)`     | Get item by custom field                       | `Enumeration \| undefined` |
-| `toOptions(filter?, options?)`                  | Convert to dropdown options                    | `DropdownOption[]`         |
-| `toValues(filter?, options?)`                   | Get all values                                 | `string[]`                 |
-| `toKeys(filter?, options?)`                     | Get all keys                                   | `string[]`                 |
-| `toDisplays(filter?, options?)`                 | Get all display texts                          | `string[]`                 |
-| `toEnumItems(filter?, options?)`                | Get all items as array                         | `Enumeration[]`            |
-| `toCustomFieldValues(field, filter?, options?)` | Get values from custom field                   | `T[]`                      |
-
-### Filter Options
-
-| Option           | Type      | Description                              |
-| ---------------- | --------- | ---------------------------------------- |
-| `showEmpty`      | `boolean` | Include items with null/undefined values |
-| `showDeprecated` | `boolean` | Include deprecated items                 |
+| Method                | Description                             | Returns                    |
+| --------------------- | --------------------------------------- | -------------------------- |
+| `fromValue(value)`    | Get item by value (throws if not found) | `Enumeration`              |
+| `tryFromValue(value)` | Get item by value (safe)                | `Enumeration \| undefined` |
+| `fromKey(key)`        | Get item by key (throws if not found)   | `Enumeration`              |
+| `tryFromKey(key)`     | Get item by key (safe)                  | `Enumeration \| undefined` |
+| `items()`             | Get all items as array                  | `Enumeration[]`            |
+| `values()`            | Get all values                          | `string[]`                 |
+| `keys()`              | Get all keys                            | `string[]`                 |
 
 ## Migration Guide
 
