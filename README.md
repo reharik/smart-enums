@@ -8,7 +8,7 @@ While I believe this library is super useful, I am currently refining it via dog
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for a detailed list of changes and version history.
+See [CHANGELOG.md](packages/core/CHANGELOG.md) for a detailed list of changes and version history.
 
 ## Why Smart Enums?
 
@@ -39,12 +39,14 @@ Colors.values(); // Returns ['RED', 'BLUE', 'GREEN']
 ## Installation
 
 ```bash
-npm install smart-enums
+npm install ts-smart-enum
 # or
-yarn add smart-enums
+yarn add ts-smart-enum
 # or
-pnpm add smart-enums
+pnpm add ts-smart-enum
 ```
+
+The npm package name is **`ts-smart-enum`** (it was previously published as `smart-enums`).
 
 ## Tree-Shaking Support
 
@@ -52,40 +54,40 @@ Smart Enums supports tree-shaking with multiple entry points for optimal bundle 
 
 ```typescript
 // Core functionality only (smallest bundle)
-import { enumeration, isSmartEnumItem } from 'smart-enums/core';
+import { enumeration, isSmartEnumItem } from 'ts-smart-enum/core';
 
 // Core + API transport utilities
 import {
   enumeration,
   serializeForTransport,
   reviveAfterTransport,
-} from 'smart-enums/transport';
+} from 'ts-smart-enum/transport';
 
 // Core + database utilities
 import {
   enumeration,
   prepareForDatabase,
   reviveRowFromDatabase,
-} from 'smart-enums/database';
+} from 'ts-smart-enum/database';
 
 // Full API (backward compatible)
 import {
   enumeration,
   serializeSmartEnums,
   prepareForDatabase,
-} from 'smart-enums';
+} from 'ts-smart-enum';
 ```
 
 **Bundle Size Comparison:**
 
-- `smart-enums/core`: ~149 bytes (minimal)
-- `smart-enums/transport`: ~406 bytes (core + serialization)
-- `smart-enums/database`: ~379 bytes (core + database utilities)
-- `smart-enums`: ~598 bytes (everything)
+- `ts-smart-enum/core`: ~149 bytes (minimal)
+- `ts-smart-enum/transport`: ~406 bytes (core + serialization)
+- `ts-smart-enum/database`: ~379 bytes (core + database utilities)
+- `ts-smart-enum`: ~598 bytes (everything)
 
 ### Knex (optional)
 
-For Knex, use [`@smart-enums/knex`](packages/knex/README.md): it adds `withEnumRevival` and `createSmartEnumPostProcessResponse` on top of the same explicit `FieldEnumMapping` + `reviveRowFromDatabase` flow as `smart-enums/database`. Revival is **not** inferred from the schema; you attach mapping per query via `queryContext`.
+For Knex, use [`@ts-smart-enum/knex`](packages/knex/README.md): it adds `withEnumRevival` and `createSmartEnumPostProcessResponse` on top of the same explicit `FieldEnumMapping` + `reviveRowFromDatabase` flow as `ts-smart-enum/database`. Revival is **not** inferred from the schema; you attach mapping per query via `queryContext`.
 
 ## Quick Start
 
@@ -94,7 +96,7 @@ For Knex, use [`@smart-enums/knex`](packages/knex/README.md): it adds `withEnumR
 The simplest way to create a Smart Enum:
 
 ```typescript
-import { enumeration, Enumeration } from 'smart-enums';
+import { enumeration, Enumeration } from 'ts-smart-enum';
 
 const input = ['pending', 'active', 'completed', 'archived'] as const;
 
@@ -111,7 +113,7 @@ console.log(Status.active.display); // "Active"
 For more control over the values:
 
 ```typescript
-import { enumeration, Enumeration } from 'smart-enums';
+import { enumeration, Enumeration } from 'ts-smart-enum';
 
 const input = {
   low: { value: 'LOW', display: 'Low Priority' },
@@ -198,25 +200,6 @@ const keys = Colors.keys(); // ['red', 'blue', 'green']
 const items = Colors.items();
 ```
 
-### Filtering Items
-
-```typescript
-const UserStatus = enumeration('UserStatus', {
-  input: {
-    active: { value: 'ACTIVE' },
-    inactive: { value: 'INACTIVE' },
-    banned: { value: 'BANNED', deprecated: true },
-    deleted: { value: 'DELETED', deprecated: true },
-  },
-});
-
-// Exclude deprecated items
-const activeItems = UserStatus.items().filter(item => !item.deprecated);
-
-// Include all items
-const allItems = UserStatus.items();
-```
-
 ## Advanced Usage
 
 ### Custom Properties
@@ -258,7 +241,9 @@ const slugs = Pages.items().map(item => item.slug);
 // Returns: ['/', '/about', '/contact']
 
 // Filter out undefined values
-const titles = Pages.items().map(item => item.title).filter(Boolean);
+const titles = Pages.items()
+  .map(item => item.title)
+  .filter(Boolean);
 ```
 
 ### React/Frontend Usage
@@ -294,7 +279,7 @@ import {
   reviveSmartEnums,
   enumeration,
   type Enumeration,
-} from 'smart-enums';
+} from 'ts-smart-enum';
 
 const statusInput = ['pending', 'active', 'completed'] as const;
 const Status = enumeration('Status', { input: statusInput });
@@ -348,12 +333,12 @@ For API communication, use the transport utilities to serialize enums for sendin
 ### Basic Transport Usage
 
 ```typescript
-import { enumeration } from 'smart-enums/core';
+import { enumeration } from 'ts-smart-enum/core';
 import {
   initializeSmartEnumMappings,
   serializeForTransport,
   reviveAfterTransport,
-} from 'smart-enums';
+} from 'ts-smart-enum';
 
 // Create enums
 const UserStatus = enumeration('UserStatus', {
@@ -413,7 +398,7 @@ import {
   initializeSmartEnumMappings,
   serializeForTransport,
   reviveAfterTransport,
-} from 'smart-enums';
+} from 'ts-smart-enum';
 
 const app = express();
 
@@ -522,8 +507,8 @@ function UserProfile({ userId }: { userId: string }) {
 Shallow-clones the row. For each entry in `fieldEnumMapping`, if the value is a string, `tryFromValue` is called; on success the string is replaced by the enum item. `strict: true` throws `EnumRevivalError` when a mapped string is invalid; otherwise the raw value is kept.
 
 ```typescript
-import { enumeration } from 'smart-enums/core';
-import { reviveRowFromDatabase } from 'smart-enums/database';
+import { enumeration } from 'ts-smart-enum/core';
+import { reviveRowFromDatabase } from 'ts-smart-enum/database';
 
 const UserStatus = enumeration('UserStatus', {
   input: ['pending', 'active'] as const,
@@ -541,7 +526,7 @@ const revived = reviveRowFromDatabase(row, {
 Deep-clones with `structuredClone`, then revives only the paths you list (e.g. `status`, `profile.priority`, `items[].kind`). No leaf-name guessing and no registry.
 
 ```typescript
-import { revivePayloadFromDatabase } from 'smart-enums/database';
+import { revivePayloadFromDatabase } from 'ts-smart-enum/database';
 
 const doc = await loadJsonColumn();
 const out = revivePayloadFromDatabase(doc, {
@@ -554,7 +539,7 @@ const out = revivePayloadFromDatabase(doc, {
 
 ### Transport vs database
 
-`initializeSmartEnumMappings` / `reviveAfterTransport` are for **wire payloads** that include `__smart_enum_type`. They are exported from `smart-enums/transport` (and the root package), not from the old database utilities.
+`initializeSmartEnumMappings` / `reviveAfterTransport` are for **wire payloads** that include `__smart_enum_type`. They are exported from `ts-smart-enum/transport` (and the root package), not from the old database utilities.
 
 ## Logging
 
@@ -563,7 +548,7 @@ The library includes a flexible logging system that allows you to integrate with
 ### Basic Usage
 
 ```typescript
-import { enumeration, initializeSmartEnumMappings } from 'smart-enums';
+import { enumeration, initializeSmartEnumMappings } from 'ts-smart-enum';
 
 // Console logging is enabled by default with 'error' level (minimal output)
 initializeSmartEnumMappings({
@@ -575,13 +560,13 @@ initializeSmartEnumMappings({
   enumRegistry: { UserStatus, Priority },
   logLevel: 'debug',
 });
-// [smart-enums:info] Initialized smart enum mappings { enumCount: 2, enumTypes: ['UserStatus', 'Priority'], logLevel: 'debug' }
+// [ts-smart-enum:info] Initialized smart enum mappings { enumCount: 2, enumTypes: ['UserStatus', 'Priority'], logLevel: 'debug' }
 ```
 
 ### Log Level Configuration
 
 ```typescript
-import { initializeSmartEnumMappings, type LogLevel } from 'smart-enums';
+import { initializeSmartEnumMappings, type LogLevel } from 'ts-smart-enum';
 
 // Available log levels (default: 'error')
 const logLevels: LogLevel[] = ['debug', 'info', 'warn', 'error'];
@@ -614,7 +599,7 @@ initializeSmartEnumMappings({
 ### Custom Logger Integration
 
 ```typescript
-import { initializeSmartEnumMappings, type Logger } from 'smart-enums';
+import { initializeSmartEnumMappings, type Logger } from 'ts-smart-enum';
 import winston from 'winston';
 
 // Create your logger
@@ -624,15 +609,15 @@ const logger = winston.createLogger({
   transports: [new winston.transports.Console()],
 });
 
-// Use custom logger with smart-enums
+// Use custom logger with ts-smart-enum
 initializeSmartEnumMappings({
   enumRegistry: { UserStatus, Priority },
   logLevel: 'debug',
   logger: {
-    debug: (msg, ...args) => logger.debug(`[smart-enums] ${msg}`, ...args),
-    info: (msg, ...args) => logger.info(`[smart-enums] ${msg}`, ...args),
-    warn: (msg, ...args) => logger.warn(`[smart-enums] ${msg}`, ...args),
-    error: (msg, ...args) => logger.error(`[smart-enums] ${msg}`, ...args),
+    debug: (msg, ...args) => logger.debug(`[ts-smart-enum] ${msg}`, ...args),
+    info: (msg, ...args) => logger.info(`[ts-smart-enum] ${msg}`, ...args),
+    warn: (msg, ...args) => logger.warn(`[ts-smart-enum] ${msg}`, ...args),
+    error: (msg, ...args) => logger.error(`[ts-smart-enum] ${msg}`, ...args),
   },
 });
 ```
@@ -649,7 +634,7 @@ initializeSmartEnumMappings({
 To disable logging in production, you can set a no-op logger:
 
 ```typescript
-import { initializeSmartEnumMappings } from 'smart-enums';
+import { initializeSmartEnumMappings } from 'ts-smart-enum';
 
 // Disable logging for production
 initializeSmartEnumMappings({
@@ -673,7 +658,10 @@ initializeSmartEnumMappings({
 
 ```typescript
 import { PrismaClient } from '@prisma/client';
-import { prepareForDatabase, reviveRowFromDatabase } from 'smart-enums/database';
+import {
+  prepareForDatabase,
+  reviveRowFromDatabase,
+} from 'ts-smart-enum/database';
 
 const prisma = new PrismaClient();
 
@@ -724,7 +712,10 @@ if (user) {
 
 ```typescript
 import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
-import { prepareForDatabase, reviveRowFromDatabase } from 'smart-enums/database';
+import {
+  prepareForDatabase,
+  reviveRowFromDatabase,
+} from 'ts-smart-enum/database';
 
 @Entity()
 export class User {
@@ -798,7 +789,7 @@ All public APIs are documented with JSDoc. In supported editors (VS Code, WebSto
 - **Hover tooltips** with descriptions and parameter/return types
 - **`@example` blocks** on key functions (e.g. `enumeration`, `serializeSmartEnums`, `reviveSmartEnums`, `isSmartEnumItem`, `isSmartEnum`, `prepareForDatabase`, `reviveRowFromDatabase`, transport and database helpers) so you can copy-paste or follow patterns without leaving the editor
 
-Import from the entry point you use (`smart-enums`, `smart-enums/core`, `smart-enums/transport`, or `smart-enums/database`) and hover over symbols to see the inline docs and examples.
+Import from the entry point you use (`ts-smart-enum`, `ts-smart-enum/core`, `ts-smart-enum/transport`, or `ts-smart-enum/database`) and hover over symbols to see the inline docs and examples.
 
 ## API Reference
 
@@ -879,4 +870,4 @@ MIT
 
 - 📧 Email: harik.raif@gmail.com
 - 🐛 Issues: [GitHub Issues](https://github.com/reharik/smart-enums/issues)
-- 📖 Docs: [Full Documentation](https://docs.reharik.com/smart-enums)
+- 📖 Docs: [Full Documentation](https://docs.reharik.com/ts-smart-enum)

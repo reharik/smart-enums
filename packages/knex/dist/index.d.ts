@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { FieldEnumMapping } from 'smart-enums';
+import { FieldEnumMapping } from 'ts-smart-enum';
 
 declare const createSmartEnumPostProcessResponse: () => Knex.Config["postProcessResponse"];
 

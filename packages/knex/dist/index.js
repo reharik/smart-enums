@@ -1,5 +1,5 @@
 // src/createSmartEnumPostProcessResponse.ts
-import { reviveRowFromDatabase } from "smart-enums";
+import { reviveRowFromDatabase } from "ts-smart-enum";
 var isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var mapRowWithEnumRevival = (row, fieldEnumMapping, strict) => {
   if (!isRecord(row)) {

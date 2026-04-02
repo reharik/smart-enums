@@ -6,16 +6,16 @@ import {
 // src/utilities/logger.ts
 var consoleLogger = {
   debug(message, ...args) {
-    console.debug(`[smart-enums:debug] ${message}`, ...args);
+    console.debug(`[ts-smart-enum:debug] ${message}`, ...args);
   },
   info(message, ...args) {
-    console.info(`[smart-enums:info] ${message}`, ...args);
+    console.info(`[ts-smart-enum:info] ${message}`, ...args);
   },
   warn(message, ...args) {
-    console.warn(`[smart-enums:warn] ${message}`, ...args);
+    console.warn(`[ts-smart-enum:warn] ${message}`, ...args);
   },
   error(message, ...args) {
-    console.error(`[smart-enums:error] ${message}`, ...args);
+    console.error(`[ts-smart-enum:error] ${message}`, ...args);
   }
 };
 var globalLogger = consoleLogger;
@@ -176,4 +176,4 @@ export {
   reviveAfterTransport,
   serializeForTransport
 };
-//# sourceMappingURL=chunk-2JCNSCNK.js.map
+//# sourceMappingURL=chunk-7HX2FHYM.js.map

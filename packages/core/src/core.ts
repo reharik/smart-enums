@@ -6,7 +6,7 @@
  *
  * @example
  * ```typescript
- * import { enumeration, isSmartEnumItem, isSmartEnum } from 'smart-enums/core';
+ * import { enumeration, isSmartEnumItem, isSmartEnum } from 'ts-smart-enum/core';
  * ```
  */
 

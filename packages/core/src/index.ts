@@ -4,18 +4,18 @@
  * This is the main entry point that exports all functionality.
  * For better tree-shaking, consider using specific entry points:
  *
- * - `smart-enums/core` - Just enumeration and basic types
- * - `smart-enums/transport` - Core + serialization/revival for APIs
- * - `smart-enums/database` - Core + database utilities
+ * - `ts-smart-enum/core` - Just enumeration and basic types
+ * - `ts-smart-enum/transport` - Core + serialization/revival for APIs
+ * - `ts-smart-enum/database` - Core + database utilities
  *
  * @example
  * ```typescript
  * // Full API (current usage)
- * import { enumeration, serializeSmartEnums } from 'smart-enums';
+ * import { enumeration, serializeSmartEnums } from 'ts-smart-enum';
  *
  * // Tree-shaking friendly (recommended)
- * import { enumeration } from 'smart-enums/core';
- * import { serializeSmartEnums } from 'smart-enums/transport';
+ * import { enumeration } from 'ts-smart-enum/core';
+ * import { serializeSmartEnums } from 'ts-smart-enum/transport';
  * ```
  */
 

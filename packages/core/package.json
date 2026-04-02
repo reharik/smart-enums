@@ -1,5 +1,5 @@
 {
-  "name": "smart-enums",
+  "name": "ts-smart-enum",
   "version": "0.0.26",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -41,7 +41,7 @@
     "dance": "npm run build && npm run test"
   },
   "jest-junit": {
-    "suiteName": "jest: smart-enums",
+    "suiteName": "jest: ts-smart-enum",
     "filePathPrefix": ""
   },
   "devDependencies": {
@@ -55,5 +55,17 @@
   },
   "dependencies": {
     "case-anything": "^3.1.2"
-  }
+  },
+  "description": "Type-safe smart enums for TypeScript with database and transport serialization support",
+  "keywords": [
+    "ts-smart-enum",
+    "enum",
+    "typescript enum",
+    "smart enum",
+    "typesafe enum",
+    "enum library",
+    "database enum",
+    "knex enum",
+    "postgres enum"
+  ]
 }

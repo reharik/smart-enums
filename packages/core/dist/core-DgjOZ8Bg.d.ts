@@ -72,7 +72,7 @@ declare function enumeration<const TArr extends readonly string[]>(enumType: str
 declare function enumeration<const TObj extends ObjectEnumInput>(enumType: string, props: EnumerationProps<TObj>): EnumFromNormalizedObject<NormalizedInputType<TObj>>;
 
 /**
- * Logger interface for smart-enums library
+ * Logger interface for ts-smart-enum library
  *
  * This interface allows users to inject their own logging implementation
  * or use the default console logger.

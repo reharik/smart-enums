@@ -26,13 +26,13 @@ __export(index_exports, {
 module.exports = __toCommonJS(index_exports);
 
 // src/createSmartEnumPostProcessResponse.ts
-var import_smart_enums = require("smart-enums");
+var import_ts_smart_enum = require("ts-smart-enum");
 var isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var mapRowWithEnumRevival = (row, fieldEnumMapping, strict) => {
   if (!isRecord(row)) {
     return row;
   }
-  return (0, import_smart_enums.reviveRowFromDatabase)(row, { fieldEnumMapping, strict });
+  return (0, import_ts_smart_enum.reviveRowFromDatabase)(row, { fieldEnumMapping, strict });
 };
 var postProcessSmartEnumResponse = (result, queryContext) => {
   const fieldEnumMapping = queryContext?.smartEnumFieldMapping;
@@ -46,7 +46,7 @@ var postProcessSmartEnumResponse = (result, queryContext) => {
     );
   }
   if (isRecord(result)) {
-    return (0, import_smart_enums.reviveRowFromDatabase)(result, { fieldEnumMapping, strict });
+    return (0, import_ts_smart_enum.reviveRowFromDatabase)(result, { fieldEnumMapping, strict });
   }
   return result;
 };
