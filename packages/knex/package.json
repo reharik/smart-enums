@@ -1,6 +1,6 @@
 {
   "name": "@reharik/smart-enum-knex",
-  "version": "0.0.26",
+  "version": "0.0.1",
   "description": "Thin Knex adapter for @reharik/smart-enum row revival via explicit query context",
   "type": "module",
   "main": "./dist/index.cjs",
