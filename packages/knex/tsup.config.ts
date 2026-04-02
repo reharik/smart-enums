@@ -8,5 +8,5 @@ export default defineConfig({
   clean: true,
   outDir: 'dist',
   target: 'es2022',
-  external: ['ts-smart-enum'],
+  external: ['@reharik/smart-enum'],
 });

@@ -1,7 +1,7 @@
 {
-  "name": "@ts-smart-enum/knex",
+  "name": "@reharik/smart-enum-knex",
   "version": "0.0.26",
-  "description": "Thin Knex adapter for ts-smart-enum row revival via explicit query context",
+  "description": "Thin Knex adapter for @reharik/smart-enum row revival via explicit query context",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -31,7 +31,7 @@
     "knex": ">=2.0.0"
   },
   "dependencies": {
-    "ts-smart-enum": "0.0.26"
+    "@reharik/smart-enum": "0.0.26"
   },
   "devDependencies": {
     "@swc/core": "^1.13.5",

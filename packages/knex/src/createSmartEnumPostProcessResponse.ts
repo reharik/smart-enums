@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
-import type { FieldEnumMapping } from 'ts-smart-enum';
-import { reviveRowFromDatabase } from 'ts-smart-enum';
+import type { FieldEnumMapping } from '@reharik/smart-enum';
+import { reviveRowFromDatabase } from '@reharik/smart-enum';
 
 import type { SmartEnumKnexQueryContext } from './types.js';
 

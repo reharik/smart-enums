@@ -1,4 +1,4 @@
-import type { FieldEnumMapping } from 'ts-smart-enum';
+import type { FieldEnumMapping } from '@reharik/smart-enum';
 
 /**
  * Query context fields read by {@link createSmartEnumPostProcessResponse}.

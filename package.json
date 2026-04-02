@@ -1,13 +1,13 @@
 {
-  "name": "ts-smart-enum-monorepo",
+  "name": "smart-enum-monorepo",
   "private": true,
   "type": "module",
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build -w ts-smart-enum && npm run build -w @ts-smart-enum/knex",
-    "test": "npm run test -w ts-smart-enum && npm run test -w @ts-smart-enum/knex",
+    "build": "npm run build -w @reharik/smart-enum && npm run build -w @reharik/smart-enum-knex",
+    "test": "npm run test -w @reharik/smart-enum && npm run test -w @reharik/smart-enum-knex",
     "lint": "eslint packages/core/src packages/knex/src",
     "dance": "npm run build && npm run test && npm run lint"
   },

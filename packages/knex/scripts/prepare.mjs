@@ -1,11 +1,11 @@
 /**
  * When this package is installed from a git monorepo, npm may run `prepare` on
- * workspaces in an order where `ts-smart-enum` has not finished building yet.
+ * workspaces in an order where `@reharik/smart-enum` has not finished building yet.
  * Building the sibling `packages/core` first ensures declaration files exist
  * before tsup emits DTS for this package.
  *
  * When installed from the npm registry, `../core` is absent; we only run the
- * local build (dependency `ts-smart-enum` already ships `dist/*.d.ts`).
+ * local build (dependency `@reharik/smart-enum` already ships `dist/*.d.ts`).
  */
 
 import { spawnSync } from 'node:child_process';

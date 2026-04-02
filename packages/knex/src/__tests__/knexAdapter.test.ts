@@ -3,7 +3,7 @@ import {
   EnumRevivalError,
   enumeration,
   type FieldEnumMapping,
-} from 'ts-smart-enum';
+} from '@reharik/smart-enum';
 
 import { createSmartEnumPostProcessResponse } from '../createSmartEnumPostProcessResponse.js';
 import { withEnumRevival } from '../withEnumRevival.js';

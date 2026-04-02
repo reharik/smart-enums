@@ -1,5 +1,5 @@
 {
-  "name": "ts-smart-enum",
+  "name": "@reharik/smart-enum",
   "version": "0.0.26",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -41,7 +41,7 @@
     "dance": "npm run build && npm run test"
   },
   "jest-junit": {
-    "suiteName": "jest: ts-smart-enum",
+    "suiteName": "jest: @reharik/smart-enum",
     "filePathPrefix": ""
   },
   "devDependencies": {
@@ -58,7 +58,7 @@
   },
   "description": "Type-safe smart enums for TypeScript with database and transport serialization support",
   "keywords": [
-    "ts-smart-enum",
+    "@reharik/smart-enum",
     "enum",
     "typescript enum",
     "smart enum",

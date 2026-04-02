@@ -29,6 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `isSmartEnum()` now uses a dedicated `SMART_ENUM` symbol property on enum objects for more accurate detection
 - **`ts-smart-enum/database`** no longer exports transport registry helpers (import from `ts-smart-enum/transport` or the root package)
 - **Breaking:** `reviveFromDatabase` and all learning / manual string-based enum mapping APIs are gone; use explicit `fieldEnumMapping` / `pathEnumMapping` with enum object references
+- The repo was converted to a workspace monorepo (`packages/core` and `packages/knex`) to keep the core and Knex adapter clearly separated.
+- Build artifacts (`dist/`) are no longer committed to git; install-time `prepare` builds generate the output required for consumption.
+- **`@ts-smart-enum/knex`** adds an explicit, metadata-driven Knex adapter (`withEnumRevival`, `createSmartEnumPostProcessResponse`) that revives rows via `reviveRowFromDatabase` using per-query `queryContext` (no schema inspection, inference, or registries).
 
 ## [0.0.21] - 2024-XX-XX
 
