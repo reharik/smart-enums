@@ -20,15 +20,16 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/index.ts
 var index_exports = {};
 __export(index_exports, {
+  EnumRevivalError: () => EnumRevivalError,
   enumeration: () => enumeration,
   getGlobalEnumRegistry: () => getGlobalEnumRegistry,
-  getLearnedMapping: () => getLearnedMapping,
   initializeSmartEnumMappings: () => initializeSmartEnumMappings,
   isSmartEnum: () => isSmartEnum,
   isSmartEnumItem: () => isSmartEnumItem,
   prepareForDatabase: () => prepareForDatabase,
   reviveAfterTransport: () => reviveAfterTransport,
-  reviveFromDatabase: () => reviveFromDatabase,
+  revivePayloadFromDatabase: () => revivePayloadFromDatabase,
+  reviveRowFromDatabase: () => reviveRowFromDatabase,
   reviveSmartEnums: () => reviveSmartEnums,
   serializeForTransport: () => serializeForTransport,
   serializeSmartEnums: () => serializeSmartEnums
@@ -103,6 +104,10 @@ var finalizeEnumItem = (item, enumType, enumInstanceId) => {
   });
   Object.defineProperty(item, "toJSON", {
     value: () => ({ __smart_enum_type: enumType, value: item.value }),
+    enumerable: false
+  });
+  Object.defineProperty(item, "toPostgres", {
+    value: () => item.value,
     enumerable: false
   });
   return item;
@@ -197,9 +202,6 @@ function debug(message, ...args) {
 function info(message, ...args) {
   globalLogger.info(message, ...args);
 }
-function warn(message, ...args) {
-  globalLogger.warn(message, ...args);
-}
 
 // src/utilities/transformation.ts
 var isPlainObject = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
@@ -279,11 +281,8 @@ function reviveSmartEnums(input, registry) {
   return walk(input);
 }
 
-// src/utilities/database/fieldMappingBuilder.ts
-var isPlainObject2 = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
-var globalEnumRegistry;
-var globalFieldMapping = {};
-function createLevelFilteredLogger(logger, level) {
+// src/utilities/transport/transportRegistry.ts
+var createLevelFilteredLogger = (logger, level) => {
   const levels = {
     debug: 0,
     info: 1,
@@ -313,134 +312,36 @@ function createLevelFilteredLogger(logger, level) {
       }
     }
   };
-}
-function initializeSmartEnumMappings(config) {
+};
+var globalEnumRegistry;
+var initializeSmartEnumMappings = (config) => {
   globalEnumRegistry = config.enumRegistry;
-  globalFieldMapping = {};
   const logLevel = config.logLevel ?? "error";
   const logger = config.logger ?? getLogger();
-  const filteredLogger = createLevelFilteredLogger(logger, logLevel);
-  setLogger(filteredLogger);
+  setLogger(createLevelFilteredLogger(logger, logLevel));
   info("Initialized smart enum mappings", {
     enumCount: Object.keys(config.enumRegistry).length,
     enumTypes: Object.keys(config.enumRegistry),
     logLevel
   });
-}
-function learnFromData(data) {
-  if (!globalEnumRegistry) {
-    warn("learnFromData called but no global enum registry initialized");
-    return;
-  }
-  const seen = /* @__PURE__ */ new WeakSet();
-  let learnedCount = 0;
-  const walk = (v, propertyName) => {
-    if (isSmartEnumItem(v) && propertyName) {
-      const enumTypeName = v.__smart_enum_type;
-      if (!enumTypeName) {
-        warn("Smart enum item missing __smart_enum_type", {
-          propertyName,
-          item: v
-        });
-        return;
-      }
-      if (!globalFieldMapping[propertyName] || !globalFieldMapping[propertyName].includes(enumTypeName)) {
-        globalFieldMapping[propertyName] = [
-          ...globalFieldMapping[propertyName] || [],
-          enumTypeName
-        ];
-        learnedCount++;
-        debug("Learned field mapping", {
-          property: propertyName,
-          enumType: enumTypeName,
-          allMappings: globalFieldMapping[propertyName]
-        });
-      }
-      return;
-    }
-    if (typeof v === "object" && v !== null) {
-      if (seen.has(v)) {
-        return;
-      }
-      seen.add(v);
-    }
-    if (Array.isArray(v)) {
-      for (const item of v) {
-        walk(item, propertyName);
-      }
-    } else if (isPlainObject2(v)) {
-      for (const [key, value] of Object.entries(v)) {
-        walk(value, key);
-      }
-    }
-  };
-  walk(data);
-  if (learnedCount > 0) {
-    info("Field mapping learning completed", {
-      learnedCount,
-      totalMappings: Object.keys(globalFieldMapping).length
-    });
-  }
-}
-function getLearnedMapping() {
-  return { ...globalFieldMapping };
-}
-function getGlobalEnumRegistry() {
-  return globalEnumRegistry;
-}
-function mergeFieldMappings(learnedMapping, manualMapping) {
-  if (!manualMapping) {
-    debug("No manual mappings provided, returning learned mappings", {
-      learnedCount: Object.keys(learnedMapping).length
-    });
-    return learnedMapping;
-  }
-  debug("Merging manual and learned mappings", {
-    manualFields: Object.keys(manualMapping),
-    learnedFields: Object.keys(learnedMapping)
-  });
-  for (const [field, manualEnumTypes] of Object.entries(manualMapping)) {
-    const existingEnumTypes = globalFieldMapping[field] || [];
-    const combinedEnumTypes = [...manualEnumTypes];
-    for (const existingEnumType of existingEnumTypes) {
-      if (!combinedEnumTypes.includes(existingEnumType)) {
-        combinedEnumTypes.push(existingEnumType);
-      }
-    }
-    globalFieldMapping[field] = combinedEnumTypes;
-    debug("Updated field mapping", {
-      field,
-      manualTypes: manualEnumTypes,
-      existingTypes: existingEnumTypes,
-      combinedTypes: combinedEnumTypes
-    });
-  }
-  info("Field mapping merge completed", {
-    totalFields: Object.keys(globalFieldMapping).length,
-    manualFieldsAdded: Object.keys(manualMapping).length
-  });
-  return { ...globalFieldMapping };
-}
+};
+var getGlobalEnumRegistry = () => globalEnumRegistry;
 
 // src/utilities/transport/reviveAfterTransport.ts
-function reviveAfterTransport(payload) {
-  const globalEnumRegistry2 = getGlobalEnumRegistry();
-  if (!globalEnumRegistry2) {
+var reviveAfterTransport = (payload) => {
+  const registry = getGlobalEnumRegistry();
+  if (!registry) {
     return payload;
   }
-  return reviveSmartEnums(payload, globalEnumRegistry2);
-}
+  return reviveSmartEnums(payload, registry);
+};
 
 // src/utilities/transport/serializeForTransport.ts
-function serializeForTransport(payload) {
-  learnFromData(payload);
-  return serializeSmartEnums(payload);
-}
+var serializeForTransport = (payload) => serializeSmartEnums(payload);
 
-// src/utilities/database/prepareForDatabase.ts
-var isPlainObject3 = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
-function prepareForDatabase(payload) {
-  learnFromData(payload);
+// src/db/prepareForDatabase.ts
+var isPlainObject2 = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
+var prepareForDatabase = (payload) => {
   const seen = /* @__PURE__ */ new WeakMap();
   const walk = (v) => {
     if (isSmartEnumItem(v)) {
@@ -457,7 +358,7 @@ function prepareForDatabase(payload) {
       }
       return arr;
     }
-    if (isPlainObject3(v)) {
+    if (isPlainObject2(v)) {
       const out = {};
       seen.set(v, out);
       for (const [k, val] of Object.entries(v)) {
@@ -468,104 +369,160 @@ function prepareForDatabase(payload) {
     return v;
   };
   return walk(payload);
-}
+};
 
-// src/utilities/database/reviveFromDatabase.ts
-var isPlainObject4 = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
-function reviveFromDatabase(payload, options) {
-  debug("Starting database revival", {
-    hasOptions: !!options,
-    manualMappings: options?.fieldEnumMapping ? Object.keys(options.fieldEnumMapping) : []
-  });
-  const globalEnumRegistry2 = getGlobalEnumRegistry();
-  const learnedMapping = getLearnedMapping();
-  if (!globalEnumRegistry2) {
-    warn("No global enum registry found, returning payload as-is");
-    return payload;
+// src/db/enumRevivalError.ts
+var EnumRevivalError = class extends Error {
+  constructor(message, path, value) {
+    super(message);
+    this.path = path;
+    this.value = value;
+    this.name = "EnumRevivalError";
   }
-  const fieldEnumMapping = mergeFieldMappings(
-    learnedMapping,
-    options?.fieldEnumMapping
-  );
-  if (!fieldEnumMapping || Object.keys(fieldEnumMapping).length === 0) {
-    warn("No field mappings available, returning payload as-is");
-    return payload;
+};
+
+// src/db/reviveRowFromDatabase.ts
+var reviveRowFromDatabase = (row, options) => {
+  const { fieldEnumMapping, strict = false } = options;
+  const out = { ...row };
+  for (const [field, smartEnum] of Object.entries(fieldEnumMapping)) {
+    if (!Object.hasOwn(out, field)) {
+      continue;
+    }
+    const raw = out[field];
+    if (typeof raw !== "string") {
+      continue;
+    }
+    const revived = smartEnum.tryFromValue(raw);
+    if (revived !== void 0) {
+      out[field] = revived;
+    } else if (strict) {
+      throw new EnumRevivalError(
+        `Cannot revive field ${JSON.stringify(field)}: unknown enum value ${JSON.stringify(raw)}`,
+        field,
+        raw
+      );
+    }
   }
-  debug("Using field mappings for revival", {
-    fieldCount: Object.keys(fieldEnumMapping).length,
-    fields: Object.keys(fieldEnumMapping)
-  });
-  const seen = /* @__PURE__ */ new WeakMap();
-  const walk = (v, propertyName) => {
-    if (typeof v === "object" && v !== null && seen.has(v)) {
-      return seen.get(v);
-    }
-    if (Array.isArray(v)) {
-      const arr = [];
-      seen.set(v, arr);
-      for (const item of v) {
-        arr.push(walk(item, propertyName));
+  return out;
+};
+
+// src/db/revivePayloadFromDatabase.ts
+var isObjectRecord = (x) => typeof x === "object" && x !== null && !Array.isArray(x);
+var parsePath = (pathStr) => {
+  const tokens = pathStr.split(".").filter(Boolean);
+  const segs = [];
+  for (const token of tokens) {
+    if (token.endsWith("[]")) {
+      const name = token.slice(0, -2);
+      if (name.length === 0) {
+        throw new Error(
+          `Invalid enum revival path "${pathStr}": empty key before []`
+        );
       }
-      return arr;
+      segs.push({ type: "prop", name }, { type: "arrayEach" });
+    } else {
+      segs.push({ type: "prop", name: token });
     }
-    if (isPlainObject4(v)) {
-      const out = {};
-      seen.set(v, out);
-      for (const [k, val] of Object.entries(v)) {
-        out[k] = walk(val, k);
+  }
+  const last = segs[segs.length - 1];
+  if (!last || last.type !== "prop") {
+    throw new Error(
+      `Invalid enum revival path "${pathStr}": must end with a property name (not [])`
+    );
+  }
+  return segs;
+};
+var reviveLeaf = (host, key, smartEnum, strict, pathLabel) => {
+  const raw = host[key];
+  if (typeof raw !== "string") {
+    return;
+  }
+  const revived = smartEnum.tryFromValue(raw);
+  if (revived !== void 0) {
+    host[key] = revived;
+  } else if (strict) {
+    throw new EnumRevivalError(
+      `Cannot revive path "${pathLabel}": unknown enum value ${JSON.stringify(raw)}`,
+      pathLabel,
+      raw
+    );
+  }
+};
+var walkPath = (value, segs, segIndex, smartEnum, strict, pathLabel) => {
+  const seg = segs[segIndex];
+  if (seg === void 0) {
+    return;
+  }
+  const isLast = segIndex === segs.length - 1;
+  if (isLast) {
+    if (seg.type !== "prop") {
+      return;
+    }
+    if (!isObjectRecord(value)) {
+      if (strict) {
+        throw new EnumRevivalError(
+          `Cannot revive path "${pathLabel}": expected object at parent of "${seg.name}"`,
+          pathLabel,
+          value
+        );
       }
-      return out;
+      return;
     }
-    if (typeof v === "string" && propertyName && fieldEnumMapping) {
-      const enumTypes = fieldEnumMapping[propertyName];
-      if (enumTypes) {
-        const typesToTry = Array.isArray(enumTypes) ? enumTypes : [enumTypes];
-        debug("Attempting enum revival", {
-          property: propertyName,
-          value: v,
-          enumTypes: typesToTry
-        });
-        for (const enumType of typesToTry) {
-          if (globalEnumRegistry2[enumType]) {
-            const enumItem = globalEnumRegistry2[enumType].tryFromValue(v);
-            if (enumItem) {
-              debug("Successfully revived enum", {
-                property: propertyName,
-                value: v,
-                enumType,
-                enumItem: "revived"
-              });
-              return enumItem;
-            }
-          } else {
-            debug("Enum type not found in registry", {
-              enumType,
-              availableTypes: Object.keys(globalEnumRegistry2)
-            });
-          }
-        }
-        debug("Failed to revive enum", {
-          property: propertyName,
-          value: v,
-          attemptedTypes: typesToTry
-        });
+    reviveLeaf(value, seg.name, smartEnum, strict, pathLabel);
+    return;
+  }
+  if (seg.type === "prop") {
+    if (!isObjectRecord(value)) {
+      if (strict) {
+        throw new EnumRevivalError(
+          `Cannot revive path "${pathLabel}": expected object at "${seg.name}"`,
+          pathLabel,
+          value
+        );
       }
+      return;
     }
-    return v;
-  };
-  return walk(payload);
-}
+    walkPath(value[seg.name], segs, segIndex + 1, smartEnum, strict, pathLabel);
+    return;
+  }
+  if (seg.type === "arrayEach") {
+    if (!Array.isArray(value)) {
+      if (strict) {
+        throw new EnumRevivalError(
+          `Cannot revive path "${pathLabel}": expected array before nested path`,
+          pathLabel,
+          value
+        );
+      }
+      return;
+    }
+    for (const el of value) {
+      walkPath(el, segs, segIndex + 1, smartEnum, strict, pathLabel);
+    }
+  }
+};
+var revivePayloadFromDatabase = (payload, options) => {
+  const { pathEnumMapping, strict = false } = options;
+  const root = structuredClone(payload);
+  for (const [pathStr, smartEnum] of Object.entries(pathEnumMapping)) {
+    const segs = parsePath(pathStr);
+    walkPath(root, segs, 0, smartEnum, strict, pathStr);
+  }
+  return root;
+};
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  EnumRevivalError,
   enumeration,
   getGlobalEnumRegistry,
-  getLearnedMapping,
   initializeSmartEnumMappings,
   isSmartEnum,
   isSmartEnumItem,
   prepareForDatabase,
   reviveAfterTransport,
-  reviveFromDatabase,
+  revivePayloadFromDatabase,
+  reviveRowFromDatabase,
   reviveSmartEnums,
   serializeForTransport,
   serializeSmartEnums

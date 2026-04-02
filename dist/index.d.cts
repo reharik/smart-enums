@@ -1,3 +1,3 @@
-export { A as AnyEnumLike, D as DatabaseFormat, E as Enumeration, b as LogLevel, L as Logger, R as RevivedSmartEnums, d as SerializedSmartEnums, S as SmartApiHelperConfig, f as SmartEnumItemSerialized, c as SmartEnumMappingsConfig, e as enumeration, a as isSmartEnum, i as isSmartEnumItem } from './core-BCJCTbh7.cjs';
-export { reviveAfterTransport, reviveSmartEnums, serializeForTransport, serializeSmartEnums } from './transport.cjs';
-export { getGlobalEnumRegistry, getLearnedMapping, initializeSmartEnumMappings, prepareForDatabase, reviveFromDatabase } from './database.cjs';
+export { A as AnyEnumLike, D as DatabaseFormat, E as Enumeration, F as FieldEnumMapping, b as LogLevel, L as Logger, P as PathEnumMapping, j as RevivePayloadOptions, h as ReviveRowOptions, R as RevivedSmartEnums, d as SerializedSmartEnums, S as SmartApiHelperConfig, f as SmartEnumItemSerialized, g as SmartEnumLike, c as SmartEnumMappingsConfig, e as enumeration, a as isSmartEnum, i as isSmartEnumItem } from './core-CiRjfQTt.cjs';
+export { getGlobalEnumRegistry, initializeSmartEnumMappings, reviveAfterTransport, reviveSmartEnums, serializeForTransport, serializeSmartEnums } from './transport.cjs';
+export { EnumRevivalError, prepareForDatabase, revivePayloadFromDatabase, reviveRowFromDatabase } from './database.cjs';

@@ -20,6 +20,7 @@ export type StandardEnumItem = {
   readonly display: string;
   readonly index: number;
   readonly deprecated?: boolean;
+  readonly toPostgres: () => string;
 };
 
 export type EnumInputItem = Partial<{
@@ -200,6 +201,11 @@ const finalizeEnumItem = <T extends { value: string }>(
     enumerable: false,
   });
 
+  Object.defineProperty(item, 'toPostgres', {
+    value: () => item.value,
+    enumerable: false,
+  });
+
   return item as T & FinalizedEnumFields;
 };
 
@@ -254,7 +260,7 @@ function buildEnumFromObject<TObj extends ObjectEnumInput>(
         enumItemBase,
         enumType,
         enumInstanceId,
-      ) as TItem;
+      ) as unknown as TItem;
 
       Object.freeze(enumItem);
       rawEnumItems[typedKey] = enumItem;

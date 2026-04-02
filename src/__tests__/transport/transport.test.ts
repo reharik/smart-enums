@@ -2,8 +2,8 @@ import { enumeration } from '../../index.js';
 import {
   reviveAfterTransport,
   serializeForTransport,
+  initializeSmartEnumMappings,
 } from '../../utilities/transport/index.js';
-import { initializeSmartEnumMappings } from '../../utilities/database/index.js';
 import type { SmartApiHelperConfig } from '../../types.js';
 
 describe('Transport Helpers', () => {

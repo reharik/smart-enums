@@ -65,7 +65,7 @@ import {
 import {
   enumeration,
   prepareForDatabase,
-  reviveFromDatabase,
+  reviveRowFromDatabase,
 } from 'smart-enums/database';
 
 // Full API (backward compatible)
@@ -505,149 +505,52 @@ function UserProfile({ userId }: { userId: string }) {
 }
 ```
 
-## Database Utilities
+## Database utilities
 
-For database operations, use the database utilities to convert enums to strings for storage and revive them when loading.
+**Outbound serialization is generic:** `prepareForDatabase` walks your payload and replaces smart enum items with their `.value` strings. You can also bind `someItem.toPostgres()` for PostgreSQL drivers that honor that hook (outbound only; it does not revive reads).
 
-### Basic Database Usage
+**Inbound deserialization is not automatic:** a plain string column does not say which enum type it belongs to, and the same property name (e.g. `status`) is not unique across your schema. The previous **learned / global-registry database revival model has been removed**.
+
+**Recommended approach:** at the repository or query boundary, pass **explicit metadata**: map column names (or full paths for nested JSON) to the **actual enum object** (anything with `tryFromValue`), not to type name strings.
+
+### `reviveRowFromDatabase` (flat rows)
+
+Shallow-clones the row. For each entry in `fieldEnumMapping`, if the value is a string, `tryFromValue` is called; on success the string is replaced by the enum item. `strict: true` throws `EnumRevivalError` when a mapped string is invalid; otherwise the raw value is kept.
 
 ```typescript
 import { enumeration } from 'smart-enums/core';
-import { prepareForDatabase, reviveFromDatabase } from 'smart-enums/database';
+import { reviveRowFromDatabase } from 'smart-enums/database';
 
-// Create enums
 const UserStatus = enumeration('UserStatus', {
-  input: ['pending', 'active', 'suspended'] as const,
+  input: ['pending', 'active'] as const,
 });
 
-const Priority = enumeration('Priority', {
-  input: ['low', 'medium', 'high', 'urgent'] as const,
+const row = { id: '1', status: 'ACTIVE' };
+const revived = reviveRowFromDatabase(row, {
+  fieldEnumMapping: { status: UserStatus },
+  strict: true,
 });
-
-// Save to database - convert enums to strings
-const apiData = {
-  user: {
-    id: '123',
-    status: UserStatus.active,
-    profile: {
-      priority: Priority.high,
-    },
-  },
-};
-
-const dbData = prepareForDatabase(apiData);
-// Result: {
-//   user: {
-//     id: '123',
-//     status: 'ACTIVE',        // String value
-//     profile: {
-//       priority: 'HIGH'      // String value
-//     }
-//   }
-// }
-
-// Save to database
-await db.users.insert(dbData);
-
-// Load from database - revive strings back to enums
-const dbRecord = await db.users.findById('123');
-const revivedData = reviveFromDatabase(dbRecord, {
-  fieldEnumMapping: {
-    status: ['UserStatus'], // Try UserStatus first
-    priority: ['Priority'], // Try Priority first
-  },
-});
-// Result: Original apiData with full enum items restored
 ```
 
-### Automatic Field Mapping Learning
+### `revivePayloadFromDatabase` (explicit paths only)
 
-The database utilities can automatically learn field-to-enum mappings, eliminating the need for manual configuration.
+Deep-clones with `structuredClone`, then revives only the paths you list (e.g. `status`, `profile.priority`, `items[].kind`). No leaf-name guessing and no registry.
 
 ```typescript
-import { enumeration } from 'smart-enums/core';
-import {
-  initializeSmartEnumMappings,
-  prepareForDatabase,
-  reviveFromDatabase,
-  getLearnedMapping,
-} from 'smart-enums/database';
+import { revivePayloadFromDatabase } from 'smart-enums/database';
 
-// 1. Initialize learning system
-const enumRegistry = {
-  UserStatus: enumeration('UserStatus', {
-    input: ['pending', 'active', 'suspended'] as const,
-  }),
-  Priority: enumeration('Priority', {
-    input: ['low', 'medium', 'high'] as const,
-  }),
-  OrderStatus: enumeration('OrderStatus', {
-    input: ['draft', 'processing', 'shipped'] as const,
-  }),
-};
-
-initializeSmartEnumMappings({ enumRegistry });
-
-// 2. Process data - learning happens automatically
-const userData = {
-  user: {
-    status: enumRegistry.UserStatus.active,
-    profile: {
-      priority: enumRegistry.Priority.high,
-    },
-  },
-};
-
-// This learns: { status: ['UserStatus'], priority: ['Priority'] }
-const dbData = prepareForDatabase(userData);
-
-// 3. Later, revive using learned mappings
-const revived = reviveFromDatabase(dbData);
-// No fieldEnumMapping needed - uses learned mappings!
-
-// 4. Process more data - continues learning
-const orderData = {
-  orders: [{ status: enumRegistry.OrderStatus.processing }],
-};
-
-// This learns: { status: ['UserStatus', 'OrderStatus'] }
-const orderDbData = prepareForDatabase(orderData);
-
-// 5. Inspect learned mappings
-const learnedMappings = getLearnedMapping();
-console.log(learnedMappings);
-// { status: ['UserStatus', 'OrderStatus'], priority: ['Priority'] }
-```
-
-### Hybrid Field Mapping (Manual + Learning)
-
-For cases where you need to read from the database before any learning has occurred, you can provide manual field mappings as a fallback:
-
-```typescript
-// Option 1: Pure learning (uses learned mappings only)
-const revived = reviveFromDatabase(dbData);
-
-// Option 2: Manual fallback when no learning has occurred yet
-const revived = reviveFromDatabase(dbData, {
-  fieldEnumMapping: {
-    status: ['UserStatus', 'OrderStatus'], // Try these enum types
-    priority: ['Priority'],
-    method: ['ContactMethod'],
+const doc = await loadJsonColumn();
+const out = revivePayloadFromDatabase(doc, {
+  pathEnumMapping: {
+    'user.status': UserStatus,
+    'lines[].kind': LineKind,
   },
 });
-
-// Option 3: Hybrid - manual mappings + learning
-// Manual mappings take precedence, but learned enum types are added if not already present
-// This is useful when you want to ensure certain mappings work immediately
-// while still benefiting from automatic learning over time
 ```
 
-The hybrid approach merges manual and learned mappings with deduplication:
+### Transport vs database
 
-- Manual enum types are tried first
-- Learned enum types are added if not already in the manual list
-- Manual mappings are persisted to the global singleton for future use
-- This ensures backward compatibility while providing immediate functionality
+`initializeSmartEnumMappings` / `reviveAfterTransport` are for **wire payloads** that include `__smart_enum_type`. They are exported from `smart-enums/transport` (and the root package), not from the old database utilities.
 
 ## Logging
 
@@ -669,7 +572,6 @@ initializeSmartEnumMappings({
   logLevel: 'debug',
 });
 // [smart-enums:info] Initialized smart enum mappings { enumCount: 2, enumTypes: ['UserStatus', 'Priority'], logLevel: 'debug' }
-// [smart-enums:debug] Learned field mapping { property: 'status', enumType: 'UserStatus', allMappings: ['UserStatus'] }
 ```
 
 ### Log Level Configuration
@@ -733,8 +635,8 @@ initializeSmartEnumMappings({
 
 ### Log Levels
 
-- **`debug`**: Detailed information for debugging (field mappings, enum revival attempts)
-- **`info`**: General information about operations (initialization, learning completion)
+- **`debug`**: Reserved for future verbose transport diagnostics
+- **`info`**: General information (e.g. registry initialization)
 - **`warn`**: Warning messages (missing configurations, failed operations)
 - **`error`**: Error conditions (missing enum types, invalid data)
 
@@ -758,21 +660,16 @@ initializeSmartEnumMappings({
 });
 ```
 
-### Logging Events
+### Logging events
 
-The library logs the following events:
-
-- **Initialization**: When `initializeSmartEnumMappings` is called
-- **Learning**: When field mappings are learned from data
-- **Manual Mappings**: When manual field mappings are merged
-- **Revival**: When enums are revived from database strings
-- **Warnings**: When configurations are missing or operations fail
+- **Initialization**: When `initializeSmartEnumMappings` is called (transport registry)
+- **Warnings / errors**: Emitted by other helpers when misconfigured (see JSDoc per API)
 
 ### Prisma Integration
 
 ```typescript
 import { PrismaClient } from '@prisma/client';
-import { prepareForDatabase, reviveFromDatabase } from 'smart-enums/database';
+import { prepareForDatabase, reviveRowFromDatabase } from 'smart-enums/database';
 
 const prisma = new PrismaClient();
 
@@ -803,10 +700,10 @@ async function getUser(id: string) {
   if (!dbUser) return null;
 
   // Revive enums from database strings
-  return reviveFromDatabase(dbUser, {
+  return reviveRowFromDatabase(dbUser as Record<string, unknown>, {
     fieldEnumMapping: {
-      status: ['UserStatus'],
-      priority: ['Priority'],
+      status: UserStatus,
+      priority: Priority,
     },
   });
 }
@@ -823,7 +720,7 @@ if (user) {
 
 ```typescript
 import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
-import { prepareForDatabase, reviveFromDatabase } from 'smart-enums/database';
+import { prepareForDatabase, reviveRowFromDatabase } from 'smart-enums/database';
 
 @Entity()
 export class User {
@@ -857,10 +754,10 @@ export class UserRepository {
     const dbUser = await this.repository.findOne({ where: { id } });
     if (!dbUser) return null;
 
-    return reviveFromDatabase(dbUser, {
+    return reviveRowFromDatabase(dbUser as Record<string, unknown>, {
       fieldEnumMapping: {
-        status: ['UserStatus'],
-        priority: ['Priority'],
+        status: UserStatus,
+        priority: Priority,
       },
     });
   }
@@ -895,7 +792,7 @@ function processStatus(statusValue: string) {
 All public APIs are documented with JSDoc. In supported editors (VS Code, WebStorm, etc.) you get:
 
 - **Hover tooltips** with descriptions and parameter/return types
-- **`@example` blocks** on key functions (e.g. `enumeration`, `serializeSmartEnums`, `reviveSmartEnums`, `isSmartEnumItem`, `isSmartEnum`, `prepareForDatabase`, `reviveFromDatabase`, transport and database helpers) so you can copy-paste or follow patterns without leaving the editor
+- **`@example` blocks** on key functions (e.g. `enumeration`, `serializeSmartEnums`, `reviveSmartEnums`, `isSmartEnumItem`, `isSmartEnum`, `prepareForDatabase`, `reviveRowFromDatabase`, transport and database helpers) so you can copy-paste or follow patterns without leaving the editor
 
 Import from the entry point you use (`smart-enums`, `smart-enums/core`, `smart-enums/transport`, or `smart-enums/database`) and hover over symbols to see the inline docs and examples.
 

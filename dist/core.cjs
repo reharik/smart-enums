@@ -85,6 +85,10 @@ var finalizeEnumItem = (item, enumType, enumInstanceId) => {
     value: () => ({ __smart_enum_type: enumType, value: item.value }),
     enumerable: false
   });
+  Object.defineProperty(item, "toPostgres", {
+    value: () => item.value,
+    enumerable: false
+  });
   return item;
 };
 var formatProperties = (k, formatters) => formatters.reduce(

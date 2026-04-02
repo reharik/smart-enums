@@ -1,10 +1,10 @@
 import { enumeration } from '../index.js';
 import {
   initializeSmartEnumMappings,
-  prepareForDatabase,
   type LogLevel,
-} from '../utilities/database/index.js';
+} from '../utilities/transport/index.js';
 
+/** `initializeSmartEnumMappings` configures the transport wire registry only, not DB revival. */
 describe('Log Level Configuration', () => {
   // Create test enums
   const UserStatus = enumeration('UserStatus', {
@@ -89,27 +89,9 @@ describe('Log Level Configuration', () => {
         logger: customLogger,
       });
 
-      // Should have the initialization log
       expect(logs).toHaveLength(1);
       expect(logs[0].level).toBe('info');
       expect(logs[0].message).toBe('Initialized smart enum mappings');
-
-      // Clear logs and do some operations that should produce debug logs
-      logs.length = 0;
-
-      const dataToLearn = {
-        user: {
-          status: UserStatus.ACTIVE,
-          priority: Priority.HIGH,
-        },
-      };
-
-      prepareForDatabase(dataToLearn);
-
-      // Should have debug logs for learning
-      const debugLogs = logs.filter(l => l.level === 'debug');
-      expect(debugLogs.length).toBeGreaterThan(0);
-      expect(debugLogs[0].message).toBe('Learned field mapping');
     });
 
     it('should default to error log level when not specified', () => {

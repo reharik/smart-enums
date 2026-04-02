@@ -11,11 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added `isSmartEnum()` function to check if an object is a full smart enum (as opposed to a single enum item)
 - Added `SMART_ENUM` symbol property to enum objects for runtime detection
-- JSDoc `@example` blocks on public API: type guards (`isSmartEnumItem`, `isSmartEnum`, `isSerializedSmartEnumItem`), `enumeration`, `serializeSmartEnums`, `reviveSmartEnums`, transport helpers (`serializeForTransport`, `reviveAfterTransport`), database helpers (`prepareForDatabase`, `reviveFromDatabase`, `initializeSmartEnumMappings`, `getLearnedMapping`, `getGlobalEnumRegistry`, `mergeFieldMappings`) for better IDE hover docs and discoverability
+- Database module rebuilt under `src/db`: `reviveRowFromDatabase`, `revivePayloadFromDatabase`, `EnumRevivalError`, and `prepareForDatabase` (serialization only)
+- `toPostgres()` on enum items for outbound PostgreSQL binding
+- `initializeSmartEnumMappings` / `getGlobalEnumRegistry` moved to transport (`src/utilities/transport/transportRegistry.ts`) — wire revival only
+
+### Removed
+
+- Entire previous `src/utilities/database` implementation: `reviveFromDatabase`, learned mappings, `getLearnedMapping`, `mergeFieldMappings`, `learnFromData`, registry-based DB revival, string / `string[]` field-to-type-name mappings
+- Tests that covered the old database behavior
 
 ### Changed
 
 - `isSmartEnum()` now uses a dedicated `SMART_ENUM` symbol property on enum objects for more accurate detection
+- **`smart-enums/database`** no longer exports transport registry helpers (import from `smart-enums/transport` or the root package)
+- **Breaking:** `reviveFromDatabase` and all learning / manual string-based enum mapping APIs are gone; use explicit `fieldEnumMapping` / `pathEnumMapping` with enum object references
 
 ## [0.0.21] - 2024-XX-XX
 

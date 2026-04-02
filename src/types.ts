@@ -60,6 +60,24 @@ export type AnyEnumLike = {
   tryFromKey: (key?: string | null) => unknown;
 } & Record<string, unknown>;
 
+export type SmartEnumLike<T = unknown> = {
+  tryFromValue: (value: string) => T | undefined;
+};
+
+export type FieldEnumMapping = Record<string, SmartEnumLike>;
+
+export type ReviveRowOptions = {
+  fieldEnumMapping: FieldEnumMapping;
+  strict?: boolean;
+};
+
+export type PathEnumMapping = Record<string, SmartEnumLike>;
+
+export type RevivePayloadOptions = {
+  pathEnumMapping: PathEnumMapping;
+  strict?: boolean;
+};
+
 export type RevivedSmartEnums<T, M extends Record<string, AnyEnumLike>> =
   T extends ReadonlyArray<infer U>
     ? RevivedSmartEnums<U, M>[]
@@ -78,14 +96,9 @@ export type SmartEnumItemSerialized = {
   value: string;
 };
 
-/**
- * Configuration for API helpers with auto-learning capabilities
- */
+/** Example shape for transport tests (`reviveAfterTransport` registry). */
 export type SmartApiHelperConfig = {
-  /** Registry of enum types for revival */
   enumRegistry: Record<string, AnyEnumLike>;
-  /** Optional mapping of field paths to enum types for database revival */
-  fieldEnumMapping?: Record<string, string | string[]>;
 };
 
 /**
@@ -133,6 +146,7 @@ export type StandardEnumItem = {
   readonly display: string;
   readonly index: number;
   readonly deprecated?: boolean;
+  readonly toPostgres: () => string;
 };
 export type EnumInputItem = Partial<{
   key: string;

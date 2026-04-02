@@ -1,30 +1,28 @@
 /**
- * Smart Enums with Database Utilities
+ * Smart Enums — database persistence helpers (`src/db`).
  *
- * This entry point includes the core enumeration functionality plus utilities
- * for preparing data for database storage and reviving from database records.
+ * Transport wire revival (`initializeSmartEnumMappings`, `reviveAfterTransport`)
+ * is exported from `smart-enums/transport` and `smart-enums` root.
  *
  * @example
  * ```typescript
- * import { enumeration, prepareForDatabase, reviveFromDatabase } from 'smart-enums/database';
+ * import {
+ *   enumeration,
+ *   prepareForDatabase,
+ *   reviveRowFromDatabase,
+ * } from 'smart-enums/database';
  * ```
  */
 
-// Re-export core functionality
 export { enumeration } from './enumerations.js';
 export { isSmartEnumItem, isSmartEnum } from './utilities/typeGuards.js';
 export {
   prepareForDatabase,
-  reviveFromDatabase,
-  initializeSmartEnumMappings,
-  getGlobalEnumRegistry,
-  getLearnedMapping,
-  mergeFieldMappings,
-} from './utilities/database/index.js';
-// Logger functions are internal-only, not exposed publicly
+  reviveRowFromDatabase,
+  revivePayloadFromDatabase,
+  EnumRevivalError,
+} from './db/index.js';
 export type { Logger } from './utilities/logger.js';
-
-// Re-export core types plus database-specific types
 export type {
   Enumeration,
   AnyEnumLike,
@@ -32,4 +30,9 @@ export type {
   SmartApiHelperConfig,
   LogLevel,
   SmartEnumMappingsConfig,
+  SmartEnumLike,
+  FieldEnumMapping,
+  ReviveRowOptions,
+  PathEnumMapping,
+  RevivePayloadOptions,
 } from './types.js';

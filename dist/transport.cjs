@@ -21,6 +21,8 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 var transport_exports = {};
 __export(transport_exports, {
   enumeration: () => enumeration,
+  getGlobalEnumRegistry: () => getGlobalEnumRegistry,
+  initializeSmartEnumMappings: () => initializeSmartEnumMappings,
   isSmartEnum: () => isSmartEnum,
   isSmartEnumItem: () => isSmartEnumItem,
   reviveAfterTransport: () => reviveAfterTransport,
@@ -87,6 +89,10 @@ var finalizeEnumItem = (item, enumType, enumInstanceId) => {
   });
   Object.defineProperty(item, "toJSON", {
     value: () => ({ __smart_enum_type: enumType, value: item.value }),
+    enumerable: false
+  });
+  Object.defineProperty(item, "toPostgres", {
+    value: () => item.value,
     enumerable: false
   });
   return item;
@@ -180,14 +186,17 @@ var consoleLogger = {
   }
 };
 var globalLogger = consoleLogger;
+function setLogger(logger) {
+  globalLogger = logger;
+}
+function getLogger() {
+  return globalLogger;
+}
 function debug(message, ...args) {
   globalLogger.debug(message, ...args);
 }
 function info(message, ...args) {
   globalLogger.info(message, ...args);
-}
-function warn(message, ...args) {
-  globalLogger.warn(message, ...args);
 }
 
 // src/utilities/transformation.ts
@@ -268,86 +277,68 @@ function reviveSmartEnums(input, registry) {
   return walk(input);
 }
 
-// src/utilities/database/fieldMappingBuilder.ts
-var isPlainObject2 = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
-var globalEnumRegistry;
-var globalFieldMapping = {};
-function learnFromData(data) {
-  if (!globalEnumRegistry) {
-    warn("learnFromData called but no global enum registry initialized");
-    return;
-  }
-  const seen = /* @__PURE__ */ new WeakSet();
-  let learnedCount = 0;
-  const walk = (v, propertyName) => {
-    if (isSmartEnumItem(v) && propertyName) {
-      const enumTypeName = v.__smart_enum_type;
-      if (!enumTypeName) {
-        warn("Smart enum item missing __smart_enum_type", {
-          propertyName,
-          item: v
-        });
-        return;
+// src/utilities/transport/transportRegistry.ts
+var createLevelFilteredLogger = (logger, level) => {
+  const levels = {
+    debug: 0,
+    info: 1,
+    warn: 2,
+    error: 3
+  };
+  const currentLevel = levels[level];
+  return {
+    debug: (message, ...args) => {
+      if (currentLevel <= levels.debug) {
+        logger.debug(message, ...args);
       }
-      if (!globalFieldMapping[propertyName] || !globalFieldMapping[propertyName].includes(enumTypeName)) {
-        globalFieldMapping[propertyName] = [
-          ...globalFieldMapping[propertyName] || [],
-          enumTypeName
-        ];
-        learnedCount++;
-        debug("Learned field mapping", {
-          property: propertyName,
-          enumType: enumTypeName,
-          allMappings: globalFieldMapping[propertyName]
-        });
+    },
+    info: (message, ...args) => {
+      if (currentLevel <= levels.info) {
+        logger.info(message, ...args);
       }
-      return;
-    }
-    if (typeof v === "object" && v !== null) {
-      if (seen.has(v)) {
-        return;
+    },
+    warn: (message, ...args) => {
+      if (currentLevel <= levels.warn) {
+        logger.warn(message, ...args);
       }
-      seen.add(v);
-    }
-    if (Array.isArray(v)) {
-      for (const item of v) {
-        walk(item, propertyName);
-      }
-    } else if (isPlainObject2(v)) {
-      for (const [key, value] of Object.entries(v)) {
-        walk(value, key);
+    },
+    error: (message, ...args) => {
+      if (currentLevel <= levels.error) {
+        logger.error(message, ...args);
       }
     }
   };
-  walk(data);
-  if (learnedCount > 0) {
-    info("Field mapping learning completed", {
-      learnedCount,
-      totalMappings: Object.keys(globalFieldMapping).length
-    });
-  }
-}
-function getGlobalEnumRegistry() {
-  return globalEnumRegistry;
-}
+};
+var globalEnumRegistry;
+var initializeSmartEnumMappings = (config) => {
+  globalEnumRegistry = config.enumRegistry;
+  const logLevel = config.logLevel ?? "error";
+  const logger = config.logger ?? getLogger();
+  setLogger(createLevelFilteredLogger(logger, logLevel));
+  info("Initialized smart enum mappings", {
+    enumCount: Object.keys(config.enumRegistry).length,
+    enumTypes: Object.keys(config.enumRegistry),
+    logLevel
+  });
+};
+var getGlobalEnumRegistry = () => globalEnumRegistry;
 
 // src/utilities/transport/reviveAfterTransport.ts
-function reviveAfterTransport(payload) {
-  const globalEnumRegistry2 = getGlobalEnumRegistry();
-  if (!globalEnumRegistry2) {
+var reviveAfterTransport = (payload) => {
+  const registry = getGlobalEnumRegistry();
+  if (!registry) {
     return payload;
   }
-  return reviveSmartEnums(payload, globalEnumRegistry2);
-}
+  return reviveSmartEnums(payload, registry);
+};
 
 // src/utilities/transport/serializeForTransport.ts
-function serializeForTransport(payload) {
-  learnFromData(payload);
-  return serializeSmartEnums(payload);
-}
+var serializeForTransport = (payload) => serializeSmartEnums(payload);
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   enumeration,
+  getGlobalEnumRegistry,
+  initializeSmartEnumMappings,
   isSmartEnum,
   isSmartEnumItem,
   reviveAfterTransport,

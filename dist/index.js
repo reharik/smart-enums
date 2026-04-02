@@ -1,33 +1,33 @@
 import {
+  EnumRevivalError,
   prepareForDatabase,
-  reviveFromDatabase
-} from "./chunk-VCLBWQGS.js";
+  revivePayloadFromDatabase,
+  reviveRowFromDatabase
+} from "./chunk-X4ZNSEK7.js";
 import {
+  getGlobalEnumRegistry,
+  initializeSmartEnumMappings,
   reviveAfterTransport,
   reviveSmartEnums,
   serializeForTransport,
   serializeSmartEnums
-} from "./chunk-6BXFPSAW.js";
-import {
-  getGlobalEnumRegistry,
-  getLearnedMapping,
-  initializeSmartEnumMappings
-} from "./chunk-KLNMEQAU.js";
+} from "./chunk-URSEP2QO.js";
 import {
   enumeration,
   isSmartEnum,
   isSmartEnumItem
-} from "./chunk-AIUEX63L.js";
+} from "./chunk-NASPJET6.js";
 export {
+  EnumRevivalError,
   enumeration,
   getGlobalEnumRegistry,
-  getLearnedMapping,
   initializeSmartEnumMappings,
   isSmartEnum,
   isSmartEnumItem,
   prepareForDatabase,
   reviveAfterTransport,
-  reviveFromDatabase,
+  revivePayloadFromDatabase,
+  reviveRowFromDatabase,
   reviveSmartEnums,
   serializeForTransport,
   serializeSmartEnums

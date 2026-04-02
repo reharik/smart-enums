@@ -28,14 +28,15 @@ export {
 export {
   reviveAfterTransport,
   serializeForTransport,
+  initializeSmartEnumMappings,
+  getGlobalEnumRegistry,
 } from './utilities/transport/index.js';
 export {
   prepareForDatabase,
-  reviveFromDatabase,
-  initializeSmartEnumMappings,
-  getGlobalEnumRegistry,
-  getLearnedMapping,
-} from './utilities/database/index.js';
+  reviveRowFromDatabase,
+  revivePayloadFromDatabase,
+  EnumRevivalError,
+} from './db/index.js';
 // Logger functions are internal-only, not exposed publicly
 export type { Logger } from './utilities/logger.js';
 export type {
@@ -48,4 +49,9 @@ export type {
   SerializedSmartEnums,
   RevivedSmartEnums,
   SmartEnumItemSerialized,
+  SmartEnumLike,
+  FieldEnumMapping,
+  ReviveRowOptions,
+  PathEnumMapping,
+  RevivePayloadOptions,
 } from './types.js';

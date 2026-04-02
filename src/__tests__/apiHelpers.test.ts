@@ -1,8 +1,9 @@
 import { enumeration } from '../index.js';
 import { reviveAfterTransport, serializeForTransport } from '../index.js';
-import { initializeSmartEnumMappings } from '../utilities/database/index.js';
+import { initializeSmartEnumMappings } from '../utilities/transport/index.js';
 import type { SmartApiHelperConfig } from '../types.js';
 
+/** Transport serialization/revival; unrelated to `src/db` explicit revival. */
 describe('API Helpers - Edge Cases and Performance', () => {
   // Setup test enums
   const UserStatus = enumeration('UserStatus', {
@@ -29,16 +30,6 @@ describe('API Helpers - Edge Cases and Performance', () => {
       UserStatus,
       OrderStatus,
       Priority,
-    },
-    fieldEnumMapping: {
-      'user.status': 'UserStatus',
-      'user.profile.priority': 'Priority',
-      'orders.status': 'OrderStatus',
-      'orders[].status': 'OrderStatus',
-      'data.users.status': 'UserStatus',
-      'data.users.orders.status': 'OrderStatus',
-      'data.users[].status': 'UserStatus',
-      'data.users[].orders[].status': 'OrderStatus',
     },
   };
 

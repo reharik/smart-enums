@@ -1,34 +1,13 @@
 import { reviveSmartEnums } from '../transformation.js';
-import { getGlobalEnumRegistry } from '../database/fieldMappingBuilder.js';
+import { getGlobalEnumRegistry } from './transportRegistry.js';
 
 /**
- * Revives smart enums after transport (from client request or API response).
- * Use this when receiving data that contains serialized enums.
- * Uses the global configuration set up with initializeSmartEnumMappings().
- *
- * @param payload - The payload received after transport
- * @returns The payload with enums revived to their proper enum items
- *
- * @example
- * ```typescript
- * // First, initialize the global configuration
- * initializeSmartEnumMappings({ enumRegistry: { UserStatus, Priority } });
- *
- * // Received: { user: { status: { __smart_enum_type: 'UserStatus', value: 'ACTIVE' } } }
- * const revivedPayload = reviveAfterTransport(requestBody);
- * // Result: { user: { status: UserStatus.ACTIVE } }
- * ```
+ * Revives smart enums after transport. Requires `initializeSmartEnumMappings`.
  */
-export function reviveAfterTransport<T>(payload: unknown): T {
-  const globalEnumRegistry = getGlobalEnumRegistry();
-
-  if (!globalEnumRegistry) {
-    // If no global configuration, return as-is
+export const reviveAfterTransport = <T>(payload: unknown): T => {
+  const registry = getGlobalEnumRegistry();
+  if (!registry) {
     return payload as T;
   }
-
-  // For transport revival, we don't need field mapping since serialized enums
-  // already contain the __smart_enum_type information. But we keep the same
-  // signature for consistency and future extensibility.
-  return reviveSmartEnums(payload, globalEnumRegistry);
-}
+  return reviveSmartEnums(payload, registry);
+};

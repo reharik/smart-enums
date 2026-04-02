@@ -7,6 +7,7 @@ type StandardEnumItem = {
     readonly display: string;
     readonly index: number;
     readonly deprecated?: boolean;
+    readonly toPostgres: () => string;
 };
 type EnumInputItem = Partial<{
     key: string;
@@ -98,6 +99,19 @@ type AnyEnumLike = {
     tryFromValue: (value?: string | null) => unknown;
     tryFromKey: (key?: string | null) => unknown;
 } & Record<string, unknown>;
+type SmartEnumLike<T = unknown> = {
+    tryFromValue: (value: string) => T | undefined;
+};
+type FieldEnumMapping = Record<string, SmartEnumLike>;
+type ReviveRowOptions = {
+    fieldEnumMapping: FieldEnumMapping;
+    strict?: boolean;
+};
+type PathEnumMapping = Record<string, SmartEnumLike>;
+type RevivePayloadOptions = {
+    pathEnumMapping: PathEnumMapping;
+    strict?: boolean;
+};
 type RevivedSmartEnums<T, M extends Record<string, AnyEnumLike>> = T extends ReadonlyArray<infer U> ? RevivedSmartEnums<U, M>[] : T extends Array<infer U> ? RevivedSmartEnums<U, M>[] : T extends object ? {
     [K in keyof T]: K extends Extract<keyof M, string> ? Enumeration<M[K]> : RevivedSmartEnums<T[K], M>;
 } : T;
@@ -105,14 +119,9 @@ type SmartEnumItemSerialized = {
     __smart_enum_type: string;
     value: string;
 };
-/**
- * Configuration for API helpers with auto-learning capabilities
- */
+/** Example shape for transport tests (`reviveAfterTransport` registry). */
 type SmartApiHelperConfig = {
-    /** Registry of enum types for revival */
     enumRegistry: Record<string, AnyEnumLike>;
-    /** Optional mapping of field paths to enum types for database revival */
-    fieldEnumMapping?: Record<string, string | string[]>;
 };
 /**
  * Compile-time transformer: replaces Smart Enum items with string values,
@@ -174,4 +183,4 @@ declare const isSmartEnumItem: (x: unknown) => x is {
  */
 declare const isSmartEnum: (x: unknown) => boolean;
 
-export { type AnyEnumLike as A, type DatabaseFormat as D, type Enumeration as E, type Logger as L, type RevivedSmartEnums as R, type SmartApiHelperConfig as S, isSmartEnum as a, type LogLevel as b, type SmartEnumMappingsConfig as c, type SerializedSmartEnums as d, enumeration as e, type SmartEnumItemSerialized as f, isSmartEnumItem as i };
+export { type AnyEnumLike as A, type DatabaseFormat as D, type Enumeration as E, type FieldEnumMapping as F, type Logger as L, type PathEnumMapping as P, type RevivedSmartEnums as R, type SmartApiHelperConfig as S, isSmartEnum as a, type LogLevel as b, type SmartEnumMappingsConfig as c, type SerializedSmartEnums as d, enumeration as e, type SmartEnumItemSerialized as f, type SmartEnumLike as g, type ReviveRowOptions as h, isSmartEnumItem as i, type RevivePayloadOptions as j };

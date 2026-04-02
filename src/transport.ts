@@ -20,6 +20,8 @@ export {
 export {
   reviveAfterTransport,
   serializeForTransport,
+  initializeSmartEnumMappings,
+  getGlobalEnumRegistry,
 } from './utilities/transport/index.js';
 
 // Re-export core types plus transport-specific types
@@ -29,4 +31,6 @@ export type {
   SerializedSmartEnums,
   RevivedSmartEnums,
   SmartEnumItemSerialized,
+  LogLevel,
+  SmartEnumMappingsConfig,
 } from './types.js';

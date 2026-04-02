@@ -1,12 +1,36 @@
 import {
-  debug,
-  getGlobalEnumRegistry,
-  learnFromData
-} from "./chunk-KLNMEQAU.js";
-import {
   isSerializedSmartEnumItem,
   isSmartEnumItem
-} from "./chunk-AIUEX63L.js";
+} from "./chunk-NASPJET6.js";
+
+// src/utilities/logger.ts
+var consoleLogger = {
+  debug(message, ...args) {
+    console.debug(`[smart-enums:debug] ${message}`, ...args);
+  },
+  info(message, ...args) {
+    console.info(`[smart-enums:info] ${message}`, ...args);
+  },
+  warn(message, ...args) {
+    console.warn(`[smart-enums:warn] ${message}`, ...args);
+  },
+  error(message, ...args) {
+    console.error(`[smart-enums:error] ${message}`, ...args);
+  }
+};
+var globalLogger = consoleLogger;
+function setLogger(logger) {
+  globalLogger = logger;
+}
+function getLogger() {
+  return globalLogger;
+}
+function debug(message, ...args) {
+  globalLogger.debug(message, ...args);
+}
+function info(message, ...args) {
+  globalLogger.info(message, ...args);
+}
 
 // src/utilities/transformation.ts
 var isPlainObject = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
@@ -86,25 +110,70 @@ function reviveSmartEnums(input, registry) {
   return walk(input);
 }
 
+// src/utilities/transport/transportRegistry.ts
+var createLevelFilteredLogger = (logger, level) => {
+  const levels = {
+    debug: 0,
+    info: 1,
+    warn: 2,
+    error: 3
+  };
+  const currentLevel = levels[level];
+  return {
+    debug: (message, ...args) => {
+      if (currentLevel <= levels.debug) {
+        logger.debug(message, ...args);
+      }
+    },
+    info: (message, ...args) => {
+      if (currentLevel <= levels.info) {
+        logger.info(message, ...args);
+      }
+    },
+    warn: (message, ...args) => {
+      if (currentLevel <= levels.warn) {
+        logger.warn(message, ...args);
+      }
+    },
+    error: (message, ...args) => {
+      if (currentLevel <= levels.error) {
+        logger.error(message, ...args);
+      }
+    }
+  };
+};
+var globalEnumRegistry;
+var initializeSmartEnumMappings = (config) => {
+  globalEnumRegistry = config.enumRegistry;
+  const logLevel = config.logLevel ?? "error";
+  const logger = config.logger ?? getLogger();
+  setLogger(createLevelFilteredLogger(logger, logLevel));
+  info("Initialized smart enum mappings", {
+    enumCount: Object.keys(config.enumRegistry).length,
+    enumTypes: Object.keys(config.enumRegistry),
+    logLevel
+  });
+};
+var getGlobalEnumRegistry = () => globalEnumRegistry;
+
 // src/utilities/transport/reviveAfterTransport.ts
-function reviveAfterTransport(payload) {
-  const globalEnumRegistry = getGlobalEnumRegistry();
-  if (!globalEnumRegistry) {
+var reviveAfterTransport = (payload) => {
+  const registry = getGlobalEnumRegistry();
+  if (!registry) {
     return payload;
   }
-  return reviveSmartEnums(payload, globalEnumRegistry);
-}
+  return reviveSmartEnums(payload, registry);
+};
 
 // src/utilities/transport/serializeForTransport.ts
-function serializeForTransport(payload) {
-  learnFromData(payload);
-  return serializeSmartEnums(payload);
-}
+var serializeForTransport = (payload) => serializeSmartEnums(payload);
 
 export {
   serializeSmartEnums,
   reviveSmartEnums,
+  initializeSmartEnumMappings,
+  getGlobalEnumRegistry,
   reviveAfterTransport,
   serializeForTransport
 };
-//# sourceMappingURL=chunk-6BXFPSAW.js.map
+//# sourceMappingURL=chunk-URSEP2QO.js.map
