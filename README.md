@@ -46,9 +46,9 @@ yarn add ts-smart-enum
 pnpm add ts-smart-enum
 ```
 
-The npm package name is **`ts-smart-enum`** (it was previously published as `smart-enums`).
+The npm package name is `**ts-smart-enum**` (it was previously published as `smart-enums`).
 
-**Installing from GitHub:** point your dependency at this repo with npm’s `path` option (for example `github:YOUR_ORG/YOUR_REPO#path:packages/core`). The package’s **`prepare`** script runs on install and builds `dist/`, so built files do not need to be committed.
+**Installing from GitHub:** point your dependency at this repo with npm’s `path` option (for example `github:YOUR_ORG/YOUR_REPO#path:packages/core`). The package’s **`prepare`** script runs on install and builds `dist/`, so built files do not need to be committed. If you depend on **`path:packages/knex`**, its `prepare` builds **`packages/core` first** (then the Knex package) so declaration files exist before the Knex build runs.
 
 ## Tree-Shaking Support
 
@@ -89,7 +89,7 @@ import {
 
 ### Knex (optional)
 
-For Knex, use [`@ts-smart-enum/knex`](packages/knex/README.md): it adds `withEnumRevival` and `createSmartEnumPostProcessResponse` on top of the same explicit `FieldEnumMapping` + `reviveRowFromDatabase` flow as `ts-smart-enum/database`. Revival is **not** inferred from the schema; you attach mapping per query via `queryContext`.
+For Knex, use `[@ts-smart-enum/knex](packages/knex/README.md)`: it adds `withEnumRevival` and `createSmartEnumPostProcessResponse` on top of the same explicit `FieldEnumMapping` + `reviveRowFromDatabase` flow as `ts-smart-enum/database`. Revival is **not** inferred from the schema; you attach mapping per query via `queryContext`.
 
 ## Quick Start
 
@@ -626,10 +626,10 @@ initializeSmartEnumMappings({
 
 ### Log Levels
 
-- **`debug`**: Reserved for future verbose transport diagnostics
-- **`info`**: General information (e.g. registry initialization)
-- **`warn`**: Warning messages (missing configurations, failed operations)
-- **`error`**: Error conditions (missing enum types, invalid data)
+- `**debug**`: Reserved for future verbose transport diagnostics
+- `**info**`: General information (e.g. registry initialization)
+- `**warn**`: Warning messages (missing configurations, failed operations)
+- `**error**`: Error conditions (missing enum types, invalid data)
 
 ### Disabling Logging
 
@@ -789,7 +789,7 @@ function processStatus(statusValue: string) {
 All public APIs are documented with JSDoc. In supported editors (VS Code, WebStorm, etc.) you get:
 
 - **Hover tooltips** with descriptions and parameter/return types
-- **`@example` blocks** on key functions (e.g. `enumeration`, `serializeSmartEnums`, `reviveSmartEnums`, `isSmartEnumItem`, `isSmartEnum`, `prepareForDatabase`, `reviveRowFromDatabase`, transport and database helpers) so you can copy-paste or follow patterns without leaving the editor
+- `**@example` blocks** on key functions (e.g. `enumeration`, `serializeSmartEnums`, `reviveSmartEnums`, `isSmartEnumItem`, `isSmartEnum`, `prepareForDatabase`, `reviveRowFromDatabase`, transport and database helpers) so you can copy-paste or follow patterns without leaving the editor
 
 Import from the entry point you use (`ts-smart-enum`, `ts-smart-enum/core`, `ts-smart-enum/transport`, or `ts-smart-enum/database`) and hover over symbols to see the inline docs and examples.
 
@@ -809,15 +809,17 @@ Main factory function for creating Smart Enums.
 
 ### Extension Methods
 
-| Method                | Description                             | Returns                    |
-| --------------------- | --------------------------------------- | -------------------------- |
-| `fromValue(value)`    | Get item by value (throws if not found) | `Enumeration`              |
-| `tryFromValue(value)` | Get item by value (safe)                | `Enumeration \| undefined` |
-| `fromKey(key)`        | Get item by key (throws if not found)   | `Enumeration`              |
-| `tryFromKey(key)`     | Get item by key (safe)                  | `Enumeration \| undefined` |
-| `items()`             | Get all items as array                  | `Enumeration[]`            |
-| `values()`            | Get all values                          | `string[]`                 |
-| `keys()`              | Get all keys                            | `string[]`                 |
+
+| Method                | Description                             | Returns                   |
+| --------------------- | --------------------------------------- | ------------------------- |
+| `fromValue(value)`    | Get item by value (throws if not found) | `Enumeration`             |
+| `tryFromValue(value)` | Get item by value (safe)                | `Enumeration | undefined` |
+| `fromKey(key)`        | Get item by key (throws if not found)   | `Enumeration`             |
+| `tryFromKey(key)`     | Get item by key (safe)                  | `Enumeration | undefined` |
+| `items()`             | Get all items as array                  | `Enumeration[]`           |
+| `values()`            | Get all values                          | `string[]`                |
+| `keys()`              | Get all keys                            | `string[]`                |
+
 
 ## Migration Guide
 
@@ -856,7 +858,7 @@ type Status = Enumeration<typeof Status>;
 
 1. **Always use `as const`** for array inputs to preserve literal types
 2. **Always provide `enumType`** parameter for serialization/revival support
-3. **Use `tryFrom*` methods** when dealing with external data
+3. **Use `tryFrom`* methods** when dealing with external data
 4. **Leverage filtering** to hide deprecated items from users
 5. **Add custom properties** for domain-specific needs
 
@@ -870,6 +872,7 @@ MIT
 
 ## Support
 
-- 📧 Email: harik.raif@gmail.com
+- 📧 Email: [harik.raif@gmail.com](mailto:harik.raif@gmail.com)
 - 🐛 Issues: [GitHub Issues](https://github.com/reharik/smart-enums/issues)
 - 📖 Docs: [Full Documentation](https://docs.reharik.com/ts-smart-enum)
+
