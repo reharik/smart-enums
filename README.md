@@ -48,6 +48,8 @@ pnpm add ts-smart-enum
 
 The npm package name is **`ts-smart-enum`** (it was previously published as `smart-enums`).
 
+**Installing from GitHub:** point your dependency at this repo with npm’s `path` option (for example `github:YOUR_ORG/YOUR_REPO#path:packages/core`). The package’s **`prepare`** script runs on install and builds `dist/`, so built files do not need to be committed.
+
 ## Tree-Shaking Support
 
 Smart Enums supports tree-shaking with multiple entry points for optimal bundle sizes:

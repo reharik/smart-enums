@@ -26,4 +26,7 @@ bin/data/*.json
 
 .vercel
 .turbo
-# dist
+
+# Build output (rebuilt via `prepare` when installing from git or publishing)
+dist/
+**/dist/
