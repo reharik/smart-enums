@@ -1,4 +1,5 @@
 import { reviveSmartEnums } from '../transformation.js';
+
 import { getGlobalEnumRegistry } from './transportRegistry.js';
 
 /**

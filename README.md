@@ -83,6 +83,10 @@ import {
 - `smart-enums/database`: ~379 bytes (core + database utilities)
 - `smart-enums`: ~598 bytes (everything)
 
+### Knex (optional)
+
+For Knex, use [`@smart-enums/knex`](packages/knex/README.md): it adds `withEnumRevival` and `createSmartEnumPostProcessResponse` on top of the same explicit `FieldEnumMapping` + `reviveRowFromDatabase` flow as `smart-enums/database`. Revival is **not** inferred from the schema; you attach mapping per query via `queryContext`.
+
 ## Quick Start
 
 ### Creating Enums from Arrays

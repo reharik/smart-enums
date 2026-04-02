@@ -17,40 +17,18 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// src/index.ts
-var index_exports = {};
-__export(index_exports, {
+// src/database.ts
+var database_exports = {};
+__export(database_exports, {
   EnumRevivalError: () => EnumRevivalError,
   enumeration: () => enumeration,
-  getGlobalEnumRegistry: () => getGlobalEnumRegistry,
-  initializeSmartEnumMappings: () => initializeSmartEnumMappings,
   isSmartEnum: () => isSmartEnum,
   isSmartEnumItem: () => isSmartEnumItem,
   prepareForDatabase: () => prepareForDatabase,
-  reviveAfterTransport: () => reviveAfterTransport,
   revivePayloadFromDatabase: () => revivePayloadFromDatabase,
-  reviveRowFromDatabase: () => reviveRowFromDatabase,
-  reviveSmartEnums: () => reviveSmartEnums,
-  serializeForTransport: () => serializeForTransport,
-  serializeSmartEnums: () => serializeSmartEnums
+  reviveRowFromDatabase: () => reviveRowFromDatabase
 });
-module.exports = __toCommonJS(index_exports);
-
-// src/types.ts
-var SMART_ENUM_ITEM = Symbol("smart-enum-item");
-var SMART_ENUM_ID = Symbol("smart-enum-id");
-var SMART_ENUM = Symbol("smart-enum");
-
-// src/utilities/typeGuards.ts
-var isSmartEnumItem = (x) => {
-  return !!x && typeof x === "object" && Reflect.get(x, SMART_ENUM_ITEM) === true;
-};
-var isSmartEnum = (x) => {
-  return !!x && typeof x === "object" && Reflect.get(x, SMART_ENUM) === true;
-};
-var isSerializedSmartEnumItem = (x) => {
-  return !!x && typeof x === "object" && Reflect.has(x, "__smart_enum_type") && Reflect.has(x, "value");
-};
+module.exports = __toCommonJS(database_exports);
 
 // src/enumerations.ts
 var import_case_anything = require("case-anything");
@@ -75,6 +53,11 @@ var addExtensionMethods = (enumItems) => {
     keys: () => enumItems.map((item) => item.key)
   };
 };
+
+// src/types.ts
+var SMART_ENUM_ITEM = Symbol("smart-enum-item");
+var SMART_ENUM_ID = Symbol("smart-enum-id");
+var SMART_ENUM = Symbol("smart-enum");
 
 // src/enumerations.ts
 function normalizeInput(input) {
@@ -174,173 +157,16 @@ function enumeration(enumType, props) {
   );
 }
 
-// src/utilities/logger.ts
-var consoleLogger = {
-  debug(message, ...args) {
-    console.debug(`[smart-enums:debug] ${message}`, ...args);
-  },
-  info(message, ...args) {
-    console.info(`[smart-enums:info] ${message}`, ...args);
-  },
-  warn(message, ...args) {
-    console.warn(`[smart-enums:warn] ${message}`, ...args);
-  },
-  error(message, ...args) {
-    console.error(`[smart-enums:error] ${message}`, ...args);
-  }
+// src/utilities/typeGuards.ts
+var isSmartEnumItem = (x) => {
+  return !!x && typeof x === "object" && Reflect.get(x, SMART_ENUM_ITEM) === true;
 };
-var globalLogger = consoleLogger;
-function setLogger(logger) {
-  globalLogger = logger;
-}
-function getLogger() {
-  return globalLogger;
-}
-function debug(message, ...args) {
-  globalLogger.debug(message, ...args);
-}
-function info(message, ...args) {
-  globalLogger.info(message, ...args);
-}
-
-// src/utilities/transformation.ts
-var isPlainObject = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
-function serializeSmartEnums(input) {
-  const seen = /* @__PURE__ */ new WeakMap();
-  const walk = (v) => {
-    if (isSmartEnumItem(v)) {
-      return {
-        __smart_enum_type: v.__smart_enum_type,
-        value: v.value
-      };
-    }
-    if (typeof v === "object" && v !== null && seen.has(v)) {
-      return seen.get(v);
-    }
-    if (Array.isArray(v)) {
-      const arr = [];
-      seen.set(v, arr);
-      for (const item of v) {
-        arr.push(walk(item));
-      }
-      return arr;
-    }
-    if (isPlainObject(v)) {
-      const out = {};
-      seen.set(v, out);
-      for (const [k, val] of Object.entries(v)) {
-        out[k] = walk(val);
-      }
-      return out;
-    }
-    return v;
-  };
-  return walk(input);
-}
-function reviveSmartEnums(input, registry) {
-  const seen = /* @__PURE__ */ new WeakMap();
-  const walk = (v) => {
-    if (isSerializedSmartEnumItem(v)) {
-      debug(`Found serialized smartEnum: ${v.__smart_enum_type}`);
-      const enumInstance = registry[v.__smart_enum_type];
-      if (enumInstance) {
-        debug(`Found enumInstance in registry: ${v.__smart_enum_type}`);
-        const enumItem = enumInstance.tryFromValue(v.value);
-        if (enumItem) {
-          debug(`Revived enumItem using value: ${v.value}`);
-          return enumItem;
-        }
-        const key = v.value.toLowerCase();
-        const enumItemFromKey = enumInstance.tryFromKey(key);
-        if (enumItemFromKey) {
-          debug(`Revived enumItem using key: ${key}`);
-          return enumItemFromKey;
-        }
-      }
-      return v;
-    }
-    if (typeof v === "object" && v !== null && seen.has(v)) {
-      return seen.get(v);
-    }
-    if (Array.isArray(v)) {
-      const arr = [];
-      seen.set(v, arr);
-      for (const item of v) arr.push(walk(item));
-      return arr;
-    }
-    if (isPlainObject(v)) {
-      const out = {};
-      seen.set(v, out);
-      for (const [k, val] of Object.entries(v)) {
-        out[k] = walk(val);
-      }
-      return out;
-    }
-    return v;
-  };
-  return walk(input);
-}
-
-// src/utilities/transport/transportRegistry.ts
-var createLevelFilteredLogger = (logger, level) => {
-  const levels = {
-    debug: 0,
-    info: 1,
-    warn: 2,
-    error: 3
-  };
-  const currentLevel = levels[level];
-  return {
-    debug: (message, ...args) => {
-      if (currentLevel <= levels.debug) {
-        logger.debug(message, ...args);
-      }
-    },
-    info: (message, ...args) => {
-      if (currentLevel <= levels.info) {
-        logger.info(message, ...args);
-      }
-    },
-    warn: (message, ...args) => {
-      if (currentLevel <= levels.warn) {
-        logger.warn(message, ...args);
-      }
-    },
-    error: (message, ...args) => {
-      if (currentLevel <= levels.error) {
-        logger.error(message, ...args);
-      }
-    }
-  };
+var isSmartEnum = (x) => {
+  return !!x && typeof x === "object" && Reflect.get(x, SMART_ENUM) === true;
 };
-var globalEnumRegistry;
-var initializeSmartEnumMappings = (config) => {
-  globalEnumRegistry = config.enumRegistry;
-  const logLevel = config.logLevel ?? "error";
-  const logger = config.logger ?? getLogger();
-  setLogger(createLevelFilteredLogger(logger, logLevel));
-  info("Initialized smart enum mappings", {
-    enumCount: Object.keys(config.enumRegistry).length,
-    enumTypes: Object.keys(config.enumRegistry),
-    logLevel
-  });
-};
-var getGlobalEnumRegistry = () => globalEnumRegistry;
-
-// src/utilities/transport/reviveAfterTransport.ts
-var reviveAfterTransport = (payload) => {
-  const registry = getGlobalEnumRegistry();
-  if (!registry) {
-    return payload;
-  }
-  return reviveSmartEnums(payload, registry);
-};
-
-// src/utilities/transport/serializeForTransport.ts
-var serializeForTransport = (payload) => serializeSmartEnums(payload);
 
 // src/db/prepareForDatabase.ts
-var isPlainObject2 = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
+var isPlainObject = (x) => typeof x === "object" && x !== null && Object.getPrototypeOf(x) === Object.prototype;
 var prepareForDatabase = (payload) => {
   const seen = /* @__PURE__ */ new WeakMap();
   const walk = (v) => {
@@ -358,7 +184,7 @@ var prepareForDatabase = (payload) => {
       }
       return arr;
     }
-    if (isPlainObject2(v)) {
+    if (isPlainObject(v)) {
       const out = {};
       seen.set(v, out);
       for (const [k, val] of Object.entries(v)) {
@@ -425,7 +251,7 @@ var parsePath = (pathStr) => {
       segs.push({ type: "prop", name: token });
     }
   }
-  const last = segs[segs.length - 1];
+  const last = segs.at(-1);
   if (!last || last.type !== "prop") {
     throw new Error(
       `Invalid enum revival path "${pathStr}": must end with a property name (not [])`
@@ -515,16 +341,10 @@ var revivePayloadFromDatabase = (payload, options) => {
 0 && (module.exports = {
   EnumRevivalError,
   enumeration,
-  getGlobalEnumRegistry,
-  initializeSmartEnumMappings,
   isSmartEnum,
   isSmartEnumItem,
   prepareForDatabase,
-  reviveAfterTransport,
   revivePayloadFromDatabase,
-  reviveRowFromDatabase,
-  reviveSmartEnums,
-  serializeForTransport,
-  serializeSmartEnums
+  reviveRowFromDatabase
 });
-//# sourceMappingURL=index.cjs.map
+//# sourceMappingURL=database.cjs.map

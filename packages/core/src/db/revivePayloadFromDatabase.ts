@@ -8,9 +8,7 @@ type PlainObject = Record<string, unknown>;
 const isObjectRecord = (x: unknown): x is PlainObject =>
   typeof x === 'object' && x !== null && !Array.isArray(x);
 
-type PathSeg =
-  | { type: 'prop'; name: string }
-  | { type: 'arrayEach' };
+type PathSeg = { type: 'prop'; name: string } | { type: 'arrayEach' };
 
 const parsePath = (pathStr: string): PathSeg[] => {
   const tokens = pathStr.split('.').filter(Boolean);
@@ -30,7 +28,7 @@ const parsePath = (pathStr: string): PathSeg[] => {
     }
   }
 
-  const last = segs[segs.length - 1];
+  const last = segs.at(-1);
   if (!last || last.type !== 'prop') {
     throw new Error(
       `Invalid enum revival path "${pathStr}": must end with a property name (not [])`,
@@ -133,7 +131,7 @@ export const revivePayloadFromDatabase = <T>(
   options: RevivePayloadOptions,
 ): T => {
   const { pathEnumMapping, strict = false } = options;
-  const root = structuredClone(payload) as T;
+  const root = structuredClone(payload);
 
   for (const [pathStr, smartEnum] of Object.entries(pathEnumMapping)) {
     const segs = parsePath(pathStr);

@@ -1,53 +1,18 @@
 {
-  "name": "smart-enums",
-  "version": "0.0.26",
+  "name": "smart-enums-monorepo",
+  "private": true,
   "type": "module",
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
-    },
-    "./core": {
-      "types": "./dist/core.d.ts",
-      "import": "./dist/core.js",
-      "require": "./dist/core.cjs"
-    },
-    "./transport": {
-      "types": "./dist/transport.d.ts",
-      "import": "./dist/transport.js",
-      "require": "./dist/transport.cjs"
-    },
-    "./database": {
-      "types": "./dist/database.d.ts",
-      "import": "./dist/database.js",
-      "require": "./dist/database.cjs"
-    }
-  },
-  "files": [
-    "dist"
+  "workspaces": [
+    "packages/*"
   ],
-  "publishConfig": {
-    "access": "public"
-  },
   "scripts": {
-    "clean": "rm -rf dist",
-    "build": "npm run clean && tsup",
-    "prepare": "npm run build",
-    "test": "jest",
-    "lint": "eslint .",
+    "build": "npm run build -w smart-enums && npm run build -w @smart-enums/knex",
+    "test": "npm run test -w smart-enums && npm run test -w @smart-enums/knex",
+    "lint": "eslint packages/core/src packages/knex/src",
     "dance": "npm run build && npm run test && npm run lint"
-  },
-  "jest-junit": {
-    "suiteName": "jest: smart-enums",
-    "filePathPrefix": ""
   },
   "devDependencies": {
     "@eslint/js": "^9.34.0",
-    "@types/jest": "^30.0.0",
     "@typescript-eslint/eslint-plugin": "^8.41.0",
     "@typescript-eslint/parser": "^8.41.0",
     "eslint": "^9.34.0",
@@ -57,15 +22,9 @@
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-prettier": "^5.5.4",
     "eslint-plugin-unicorn": "^60.0.0",
-    "jest": "^30.0.5",
-    "jest-junit": "^16.0.0",
+    "globals": "^16.3.0",
     "prettier": "^3.6.2",
-    "ts-jest": "^29.4.0",
-    "tsup": "^8.5.0",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.41.0"
-  },
-  "dependencies": {
-    "case-anything": "^3.1.2"
   }
 }

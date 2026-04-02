@@ -88,7 +88,7 @@ var parsePath = (pathStr) => {
       segs.push({ type: "prop", name: token });
     }
   }
-  const last = segs[segs.length - 1];
+  const last = segs.at(-1);
   if (!last || last.type !== "prop") {
     throw new Error(
       `Invalid enum revival path "${pathStr}": must end with a property name (not [])`
@@ -181,4 +181,4 @@ export {
   reviveRowFromDatabase,
   revivePayloadFromDatabase
 };
-//# sourceMappingURL=chunk-X4ZNSEK7.js.map
+//# sourceMappingURL=chunk-YGXDKW6W.js.map

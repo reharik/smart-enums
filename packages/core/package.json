@@ -1,0 +1,59 @@
+{
+  "name": "smart-enums",
+  "version": "0.0.26",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./core": {
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js",
+      "require": "./dist/core.cjs"
+    },
+    "./transport": {
+      "types": "./dist/transport.d.ts",
+      "import": "./dist/transport.js",
+      "require": "./dist/transport.cjs"
+    },
+    "./database": {
+      "types": "./dist/database.d.ts",
+      "import": "./dist/database.js",
+      "require": "./dist/database.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "npm run clean && tsup",
+    "prepare": "npm run build",
+    "test": "jest --config jest.config.cjs",
+    "dance": "npm run build && npm run test"
+  },
+  "jest-junit": {
+    "suiteName": "jest: smart-enums",
+    "filePathPrefix": ""
+  },
+  "devDependencies": {
+    "@swc/core": "^1.13.5",
+    "@swc/jest": "^0.2.39",
+    "@types/jest": "^30.0.0",
+    "jest": "^30.0.5",
+    "jest-junit": "^16.0.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "case-anything": "^3.1.2"
+  }
+}

@@ -13,6 +13,7 @@ export default [
   {
     ignores: [
       'dist/**',
+      '**/dist/**',
       'build/**',
       'coverage/**',
       '.history',
@@ -34,7 +35,10 @@ export default [
     files: ['**/*.{ts,tsx,js,jsx}'],
     languageOptions: {
       parserOptions: {
-        project: ['./tsconfig.json'],
+        project: [
+          './packages/core/tsconfig.json',
+          './packages/knex/tsconfig.json',
+        ],
         tsconfigRootDir: import.meta.dirname,
       },
     },

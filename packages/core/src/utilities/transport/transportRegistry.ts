@@ -1,4 +1,8 @@
-import type { AnyEnumLike, LogLevel, SmartEnumMappingsConfig } from '../../types.js';
+import type {
+  AnyEnumLike,
+  LogLevel,
+  SmartEnumMappingsConfig,
+} from '../../types.js';
 import { info, setLogger, getLogger, type Logger } from '../logger.js';
 
 const createLevelFilteredLogger = (logger: Logger, level: LogLevel): Logger => {

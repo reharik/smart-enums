@@ -1,0 +1,43 @@
+{
+  "name": "@smart-enums/knex",
+  "version": "0.0.26",
+  "description": "Thin Knex adapter for smart-enums row revival via explicit query context",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "npm run clean && tsup",
+    "test": "jest --config jest.config.cjs",
+    "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "knex": ">=2.0.0"
+  },
+  "dependencies": {
+    "smart-enums": "0.0.26"
+  },
+  "devDependencies": {
+    "@swc/core": "^1.13.5",
+    "@swc/jest": "^0.2.39",
+    "@types/jest": "^30.0.0",
+    "jest": "^30.0.5",
+    "knex": "^3.1.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.8.3"
+  }
+}
