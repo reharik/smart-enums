@@ -6,9 +6,9 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build -w @reharik/smart-enum && npm run build -w @reharik/smart-enum-knex",
-    "test": "npm run test -w @reharik/smart-enum && npm run test -w @reharik/smart-enum-knex",
-    "lint": "eslint packages/core/src packages/knex/src",
+    "build": "npm run build -w @reharik/smart-enum && npm run build -w @reharik/smart-enum-knex && npm run build -w @reharik/graphql-codegen-smart-enum",
+    "test": "npm run test -w @reharik/smart-enum && npm run test -w @reharik/smart-enum-knex && npm run test -w @reharik/graphql-codegen-smart-enum",
+    "lint": "eslint packages/core/src packages/knex/src packages/gql-codegen-smart-enum/src packages/gql-codegen-smart-enum/test packages/gql-codegen-smart-enum/examples",
     "dance": "npm run build && npm run test && npm run lint"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
 {
   "name": "@reharik/smart-enum-knex",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Thin Knex adapter for @reharik/smart-enum row revival via explicit query context",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -14,8 +14,7 @@
     }
   },
   "files": [
-    "dist",
-    "scripts/prepare.mjs"
+    "dist"
   ],
   "publishConfig": {
     "access": "public"
@@ -23,15 +22,12 @@
   "scripts": {
     "clean": "rm -rf dist",
     "build": "npm run clean && tsup",
-    "prepare": "node ./scripts/prepare.mjs",
     "test": "jest --config jest.config.cjs",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build --prefix ../core && npm run build"
   },
   "peerDependencies": {
-    "knex": ">=2.0.0"
-  },
-  "dependencies": {
-    "@reharik/smart-enum": "0.0.26"
+    "knex": ">=2.0.0",
+    "@reharik/smart-enum": ">=0.0.1"
   },
   "devDependencies": {
     "@swc/core": "^1.13.5",

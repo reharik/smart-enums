@@ -17,6 +17,7 @@ export default [
       'build/**',
       'coverage/**',
       '.history',
+      'packages/gql-codegen-smart-enum/examples/generated/**',
       'eslint.config.js',
       'jest.config.js',
       'jest.config.cjs',
@@ -38,6 +39,8 @@ export default [
         project: [
           './packages/core/tsconfig.json',
           './packages/knex/tsconfig.json',
+          './packages/gql-codegen-smart-enum/tsconfig.json',
+          './packages/gql-codegen-smart-enum/tsconfig.tests.json',
         ],
         tsconfigRootDir: import.meta.dirname,
       },
