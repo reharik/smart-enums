@@ -33,4 +33,5 @@ export type {
   SmartEnumItemSerialized,
   LogLevel,
   SmartEnumMappingsConfig,
+  StandardEnumItemBase as StandardEnumItem,
 } from './types.js';

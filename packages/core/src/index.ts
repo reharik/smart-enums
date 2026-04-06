@@ -54,4 +54,5 @@ export type {
   ReviveRowOptions,
   PathEnumMapping,
   RevivePayloadOptions,
+  StandardEnumItemBase as StandardEnumItem,
 } from './types.js';

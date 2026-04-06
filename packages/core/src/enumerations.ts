@@ -1,7 +1,12 @@
 import { capitalCase, constantCase } from 'case-anything';
 
 import { addExtensionMethods } from './extensionMethods.js';
-import { SMART_ENUM, SMART_ENUM_ID, SMART_ENUM_ITEM } from './types.js';
+import {
+  SMART_ENUM,
+  SMART_ENUM_ID,
+  SMART_ENUM_ITEM,
+  StandardEnumItem,
+} from './types.js';
 
 type BuiltInOverrideKeys =
   | 'key'
@@ -11,17 +16,6 @@ type BuiltInOverrideKeys =
   | 'index'
   | '__smart_enum_brand'
   | '__smart_enum_type';
-
-export type StandardEnumItem = {
-  readonly __smart_enum_brand: true;
-  readonly __smart_enum_type: string;
-  readonly key: string;
-  readonly value: string;
-  readonly display: string;
-  readonly index: number;
-  readonly deprecated?: boolean;
-  readonly toPostgres: () => string;
-};
 
 export type EnumInputItem = Partial<{
   key: string;

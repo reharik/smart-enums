@@ -138,16 +138,20 @@ type BuiltInOverrideKeys =
   | '__smart_enum_brand'
   | '__smart_enum_type';
 
-export type StandardEnumItem = {
-  readonly __smart_enum_brand: true;
-  readonly __smart_enum_type: string;
+export type StandardEnumItemBase = {
   readonly key: string;
   readonly value: string;
   readonly display: string;
   readonly index: number;
   readonly deprecated?: boolean;
+};
+
+export type StandardEnumItem = StandardEnumItemBase & {
+  readonly __smart_enum_brand: true;
+  readonly __smart_enum_type: string;
   readonly toPostgres: () => string;
 };
+
 export type EnumInputItem = Partial<{
   key: string;
   value: string;

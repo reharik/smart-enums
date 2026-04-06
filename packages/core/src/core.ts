@@ -12,4 +12,8 @@
 
 export { enumeration } from './enumerations.js';
 export { isSmartEnumItem, isSmartEnum } from './utilities/typeGuards.js';
-export type { Enumeration, AnyEnumLike } from './types.js';
+export type {
+  Enumeration,
+  AnyEnumLike,
+  StandardEnumItemBase as StandardEnumItem,
+} from './types.js';
