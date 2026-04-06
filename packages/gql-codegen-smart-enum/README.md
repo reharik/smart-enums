@@ -66,7 +66,9 @@ enum RowKind {
 }
 ```
 
-The plugin emits each pair as a property on the item object. Property names are emitted with computed keys (for example `["column"]: 'person_id'`) so names stay valid even when they are not simple JavaScript identifiers.
+The plugin emits each pair as a property on the item object. Names that are valid JavaScript identifiers use plain keys (for example `column: 'created_at'`). Other names use computed keys (for example `["weird-key"]: 'x'`).
+
+If `@enumMeta` on a value **only** supplies `props` (no `display`, `shortDisplay`, `description`, or `sortOrder` arguments), the plugin does **not** emit a `display` field for that value—even when `emitDescriptionsAsDisplay` is true.
 
 Reserved names (cannot appear in `props[].name`): `key`, `value`, `display`, `shortDisplay`, `description`, `sortOrder`, `deprecated`, `deprecationReason`, `index`, `__smart_enum_brand`, `__smart_enum_type`. Duplicate `name` values within the same enum value are rejected at codegen time.
 

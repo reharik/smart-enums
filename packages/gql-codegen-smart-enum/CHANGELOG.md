@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+
+- **Props-only `@enumMeta`:** if a value’s directive only passes `props` (no `display` / `shortDisplay` / `description` / `sortOrder`), omit generated `display` for that item.
+- Emit valid identifier prop names as plain keys (`column:`) instead of always using bracket notation.
+
 ## 0.2.0
 
 - Add `@enumMeta(props: [...])` support: optional list of `EnumMetaProp { name, value }` entries per enum value, emitted as extra SmartEnum item fields. Duplicate `name` values or reserved names fail at codegen time.

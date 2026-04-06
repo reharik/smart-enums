@@ -226,9 +226,45 @@ describe('SmartEnum plugin', () => {
       const normalized = await generateFromSchemaText(schemaWithProps);
 
       // assert
-      expect(normalized).toContain('["column"]: \'person_id\'');
-      expect(normalized).toContain('["locale"]: \'en-US\'');
-      expect(normalized).toContain('["column"]: \'org_id\'');
+      expect(normalized).toContain("column: 'person_id'");
+      expect(normalized).toContain("locale: 'en-US'");
+      expect(normalized).toContain("column: 'org_id'");
+    });
+
+    it('should omit display when enumMeta only defines props', async () => {
+      // arrange
+      const schemaPropsOnly = enumMetaDirectiveSchema(`
+        enum AlbumSortBy {
+          CREATED_AT @enumMeta(
+            props: [{ name: "column", value: "created_at" }]
+          )
+          TITLE @enumMeta(props: [{ name: "column", value: "title" }])
+        }
+      `);
+
+      // act
+      const normalized = await generateFromSchemaText(schemaPropsOnly);
+
+      // assert
+      expect(normalized).toContain(
+        "const albumSortByInput = { 'createdAt': { column: 'created_at' }, 'title': { column: 'title' } } as const;",
+      );
+      expect(normalized).not.toContain("display: 'Created At'");
+    });
+
+    it('should use bracket keys for props names that are not valid identifiers', async () => {
+      // arrange
+      const schemaWeirdKey = enumMetaDirectiveSchema(`
+        enum E {
+          A @enumMeta(props: [{ name: "weird-key", value: "1" }])
+        }
+      `);
+
+      // act
+      const normalized = await generateFromSchemaText(schemaWeirdKey);
+
+      // assert
+      expect(normalized).toContain('["weird-key"]: \'1\'');
     });
 
     it('should fail when props repeats the same name', async () => {

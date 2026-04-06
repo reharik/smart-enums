@@ -160,6 +160,39 @@ const parsePropsListFromDirective = (
   return pairs.length > 0 ? pairs : undefined;
 };
 
+/** True when @enumMeta only contributes `props` (no display/shortDisplay/description/sortOrder args). */
+const isPropsOnlyMeta = (
+  parsedMeta?: ParsedEnumValueMeta,
+): parsedMeta is ParsedEnumValueMeta & {
+  props: readonly { name: string; value: string }[];
+} => {
+  if (
+    parsedMeta === undefined ||
+    parsedMeta.props === undefined ||
+    parsedMeta.props.length === 0
+  ) {
+    return false;
+  }
+  return (
+    parsedMeta.display === undefined &&
+    parsedMeta.shortDisplay === undefined &&
+    parsedMeta.description === undefined &&
+    parsedMeta.sortOrder === undefined
+  );
+};
+
+const UNQUOTED_OBJECT_KEY_PATTERN = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+
+const formatEmittedCustomPropKey = (name: string): string => {
+  if (
+    UNQUOTED_OBJECT_KEY_PATTERN.test(name) &&
+    !RESERVED_CUSTOM_PROP_NAMES.has(name)
+  ) {
+    return name;
+  }
+  return `[${JSON.stringify(name)}]`;
+};
+
 const validateCustomProps = (
   props: readonly { name: string; value: string }[],
   enumTypeName: string,
@@ -433,8 +466,9 @@ const buildInput = (
           const objectFields: string[] = [];
           const entryKey = toCamelCase(enumValue.name);
           const hasParsedMeta = parsedMeta !== undefined;
+          const propsOnly = isPropsOnlyMeta(parsedMeta);
 
-          if (emitDescriptionsAsDisplay || hasParsedMeta) {
+          if (!propsOnly && (emitDescriptionsAsDisplay || hasParsedMeta)) {
             objectFields.push(`display: '${escapeString(resolvedDisplay)}'`);
           }
 
@@ -462,7 +496,7 @@ const buildInput = (
             );
             for (const prop of parsedMeta.props) {
               objectFields.push(
-                `[${JSON.stringify(prop.name)}]: '${escapeString(prop.value)}'`,
+                `${formatEmittedCustomPropKey(prop.name)}: '${escapeString(prop.value)}'`,
               );
             }
           }
