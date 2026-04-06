@@ -6,6 +6,7 @@ import {
   type GraphQLEnumType,
   type GraphQLEnumValue,
   type GraphQLSchema,
+  type ObjectValueNode,
 } from 'graphql';
 
 export type SmartEnumPluginConfig = {
@@ -16,11 +17,27 @@ export type SmartEnumPluginConfig = {
 const DEFAULT_ENUM_CLASS_SUFFIX = '';
 const ENUM_META_DIRECTIVE_NAME = 'enumMeta';
 
+/** Names that must not appear in `props` (SmartEnum item keys and plugin-emitted fields). */
+const RESERVED_CUSTOM_PROP_NAMES = new Set([
+  'key',
+  'value',
+  'display',
+  'shortDisplay',
+  'description',
+  'sortOrder',
+  'deprecated',
+  'deprecationReason',
+  'index',
+  '__smart_enum_brand',
+  '__smart_enum_type',
+]);
+
 type ParsedEnumValueMeta = {
   display?: string;
   shortDisplay?: string;
   description?: string;
   sortOrder?: number;
+  props?: readonly { name: string; value: string }[];
 };
 
 const escapeString = (value: string): string => {
@@ -106,6 +123,64 @@ const parseIntDirectiveArg = (
   return Number.isNaN(parsed) ? undefined : parsed;
 };
 
+const parseObjectFieldString = (
+  objectNode: ObjectValueNode,
+  fieldName: string,
+): string | undefined => {
+  const field = objectNode.fields.find(f => f.name.value === fieldName)?.value;
+  return field !== undefined && field.kind === Kind.STRING
+    ? field.value
+    : undefined;
+};
+
+const parsePropsListFromDirective = (
+  directive: DirectiveNode,
+  argName: string,
+): readonly { name: string; value: string }[] | undefined => {
+  const argValue = directive.arguments?.find(
+    argument => argument.name.value === argName,
+  )?.value;
+
+  if (argValue?.kind !== Kind.LIST) {
+    return undefined;
+  }
+
+  const pairs: { name: string; value: string }[] = [];
+  for (const element of argValue.values) {
+    if (element.kind !== Kind.OBJECT) {
+      continue;
+    }
+    const name = parseObjectFieldString(element, 'name');
+    const value = parseObjectFieldString(element, 'value');
+    if (name !== undefined && value !== undefined) {
+      pairs.push({ name, value });
+    }
+  }
+
+  return pairs.length > 0 ? pairs : undefined;
+};
+
+const validateCustomProps = (
+  props: readonly { name: string; value: string }[],
+  enumTypeName: string,
+  enumValueName: string,
+): void => {
+  const seen = new Set<string>();
+  for (const prop of props) {
+    if (seen.has(prop.name)) {
+      throw new Error(
+        `[graphql-codegen-smart-enum] Duplicate enumMeta props name "${prop.name}" on ${enumTypeName}.${enumValueName}.`,
+      );
+    }
+    seen.add(prop.name);
+    if (RESERVED_CUSTOM_PROP_NAMES.has(prop.name)) {
+      throw new Error(
+        `[graphql-codegen-smart-enum] enumMeta props name "${prop.name}" is reserved on ${enumTypeName}.${enumValueName}.`,
+      );
+    }
+  }
+};
+
 const parseEnumMetaDirective = (
   enumValue: GraphQLEnumValue,
 ): ParsedEnumValueMeta | undefined => {
@@ -117,18 +192,22 @@ const parseEnumMetaDirective = (
     return undefined;
   }
 
+  const props = parsePropsListFromDirective(enumMetaDirective, 'props');
+
   const parsedMeta: ParsedEnumValueMeta = {
     display: parseStringDirectiveArg(enumMetaDirective, 'display'),
     shortDisplay: parseStringDirectiveArg(enumMetaDirective, 'shortDisplay'),
     description: parseStringDirectiveArg(enumMetaDirective, 'description'),
     sortOrder: parseIntDirectiveArg(enumMetaDirective, 'sortOrder'),
+    props,
   };
 
   if (
     parsedMeta.display === undefined &&
     parsedMeta.shortDisplay === undefined &&
     parsedMeta.description === undefined &&
-    parsedMeta.sortOrder === undefined
+    parsedMeta.sortOrder === undefined &&
+    (parsedMeta.props === undefined || parsedMeta.props.length === 0)
   ) {
     return undefined;
   }
@@ -373,6 +452,19 @@ const buildInput = (
 
           if (typeof parsedMeta?.sortOrder === 'number') {
             objectFields.push(`sortOrder: ${parsedMeta.sortOrder}`);
+          }
+
+          if (parsedMeta?.props !== undefined && parsedMeta.props.length > 0) {
+            validateCustomProps(
+              parsedMeta.props,
+              enumType.name,
+              enumValue.name,
+            );
+            for (const prop of parsedMeta.props) {
+              objectFields.push(
+                `[${JSON.stringify(prop.name)}]: '${escapeString(prop.value)}'`,
+              );
+            }
           }
 
           if (typeof enumValue.deprecationReason === 'string') {

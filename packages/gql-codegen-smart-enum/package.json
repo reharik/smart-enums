@@ -1,6 +1,6 @@
 {
   "name": "@reharik/graphql-codegen-smart-enum",
-  "version": "0.1.4",
+  "version": "0.2.1",
   "description": "GraphQL Code Generator plugin for SmartEnum generation from schema enums",
   "license": "MIT",
   "type": "module",
@@ -16,7 +16,8 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts --out-dir dist",

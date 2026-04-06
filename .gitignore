@@ -27,6 +27,9 @@ bin/data/*.json
 .vercel
 .turbo
 
+# Copied from repo root during `npm publish` for the npm package page (see packages/core prepublishOnly)
+packages/core/README.md
+
 # Build output (rebuilt via `prepare` when installing from git or publishing)
 dist/
 **/dist/

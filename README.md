@@ -89,7 +89,7 @@ import {
 
 ### Knex (optional)
 
-For Knex, use `[@ts-smart-enum/knex](packages/knex/README.md)`: it adds `withEnumRevival` and `createSmartEnumPostProcessResponse` on top of the same explicit `FieldEnumMapping` + `reviveRowFromDatabase` flow as `ts-smart-enum/database`. Revival is **not** inferred from the schema; you attach mapping per query via `queryContext`.
+For Knex, use [`@reharik/smart-enum-knex`](https://www.npmjs.com/package/@reharik/smart-enum-knex): it adds `withEnumRevival` and `createSmartEnumPostProcessResponse` on top of the same explicit `FieldEnumMapping` + `reviveRowFromDatabase` flow as `ts-smart-enum/database`. Revival is **not** inferred from the schema; you attach mapping per query via `queryContext`.
 
 ## Quick Start
 

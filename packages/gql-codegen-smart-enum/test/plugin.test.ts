@@ -28,6 +28,24 @@ const normalizeOutput = async (
   return typeof resolved === 'string' ? resolved : resolved.content;
 };
 
+/** SDL fragment: `EnumMetaProp` input + `@enumMeta` with `props` list (optional in schema). */
+const enumMetaDirectiveSchema = (enumBody: string): string => `
+input EnumMetaProp {
+  name: String!
+  value: String!
+}
+
+directive @enumMeta(
+  display: String
+  shortDisplay: String
+  description: String
+  sortOrder: Int
+  props: [EnumMetaProp!]
+) on ENUM_VALUE
+
+${enumBody}
+`;
+
 describe('SmartEnum plugin', () => {
   describe('When generating from schema enums', () => {
     it('should produce deterministic enumeration output with display metadata', async () => {
@@ -74,18 +92,11 @@ describe('SmartEnum plugin', () => {
   describe('When enum metadata directives are present', () => {
     it('should emit display from enumMeta(display)', async () => {
       // arrange
-      const schemaWithEnumMeta = `
-        directive @enumMeta(
-          display: String
-          shortDisplay: String
-          description: String
-          sortOrder: Int
-        ) on ENUM_VALUE
-
+      const schemaWithEnumMeta = enumMetaDirectiveSchema(`
         enum ClaimStatus {
           OPEN @enumMeta(display: "Open")
         }
-      `;
+      `);
 
       // act
       const normalized = await generateFromSchemaText(schemaWithEnumMeta);
@@ -98,14 +109,7 @@ describe('SmartEnum plugin', () => {
 
     it('should emit full enumMeta payload fields', async () => {
       // arrange
-      const schemaWithEnumMeta = `
-        directive @enumMeta(
-          display: String
-          shortDisplay: String
-          description: String
-          sortOrder: Int
-        ) on ENUM_VALUE
-
+      const schemaWithEnumMeta = enumMetaDirectiveSchema(`
         enum ClaimStatus {
           IN_REVIEW @enumMeta(
             display: "In Review"
@@ -114,7 +118,7 @@ describe('SmartEnum plugin', () => {
             sortOrder: 2
           )
         }
-      `;
+      `);
 
       // act
       const normalized = await generateFromSchemaText(schemaWithEnumMeta);
@@ -127,18 +131,11 @@ describe('SmartEnum plugin', () => {
 
     it('should fallback display to derived value when metadata and description are missing', async () => {
       // arrange
-      const schemaWithEnumMeta = `
-        directive @enumMeta(
-          display: String
-          shortDisplay: String
-          description: String
-          sortOrder: Int
-        ) on ENUM_VALUE
-
+      const schemaWithEnumMeta = enumMetaDirectiveSchema(`
         enum ClaimStatus {
           IN_REVIEW @enumMeta(sortOrder: 3)
         }
-      `;
+      `);
 
       // act
       const normalized = await generateFromSchemaText(schemaWithEnumMeta);
@@ -151,19 +148,12 @@ describe('SmartEnum plugin', () => {
 
     it('should fallback description to enum value description when directive description is missing', async () => {
       // arrange
-      const schemaWithEnumMeta = `
-        directive @enumMeta(
-          display: String
-          shortDisplay: String
-          description: String
-          sortOrder: Int
-        ) on ENUM_VALUE
-
+      const schemaWithEnumMeta = enumMetaDirectiveSchema(`
         enum ClaimStatus {
           """Needs manual review"""
           IN_REVIEW @enumMeta(display: "In Review")
         }
-      `;
+      `);
 
       // act
       const normalized = await generateFromSchemaText(schemaWithEnumMeta);
@@ -195,14 +185,7 @@ describe('SmartEnum plugin', () => {
 
     it('should handle mixed metadata across multiple enum values', async () => {
       // arrange
-      const schemaWithMixedEnumMeta = `
-        directive @enumMeta(
-          display: String
-          shortDisplay: String
-          description: String
-          sortOrder: Int
-        ) on ENUM_VALUE
-
+      const schemaWithMixedEnumMeta = enumMetaDirectiveSchema(`
         enum ClaimStatus {
           OPEN @enumMeta(display: "Open")
           """Review queue"""
@@ -210,7 +193,7 @@ describe('SmartEnum plugin', () => {
           CLOSED
           ARCHIVED @enumMeta(sortOrder: "bad")
         }
-      `;
+      `);
 
       // act
       const normalized = await generateFromSchemaText(schemaWithMixedEnumMeta);
@@ -219,6 +202,66 @@ describe('SmartEnum plugin', () => {
       expect(normalized).toContain(
         "const claimStatusInput = { 'open': { display: 'Open' }, 'inReview': { display: 'Review queue', shortDisplay: 'Review', description: 'Review queue' }, 'closed': { display: 'Closed' }, 'archived': { display: 'Archived' } } as const;",
       );
+    });
+
+    it('should emit enumMeta props as extra item fields', async () => {
+      // arrange
+      const schemaWithProps = enumMetaDirectiveSchema(`
+        enum RowKind {
+          PERSON @enumMeta(
+            display: "Person"
+            props: [
+              { name: "column", value: "person_id" }
+              { name: "locale", value: "en-US" }
+            ]
+          )
+          ORG @enumMeta(
+            display: "Organization"
+            props: [{ name: "column", value: "org_id" }]
+          )
+        }
+      `);
+
+      // act
+      const normalized = await generateFromSchemaText(schemaWithProps);
+
+      // assert
+      expect(normalized).toContain('["column"]: \'person_id\'');
+      expect(normalized).toContain('["locale"]: \'en-US\'');
+      expect(normalized).toContain('["column"]: \'org_id\'');
+    });
+
+    it('should fail when props repeats the same name', async () => {
+      // arrange
+      const badSchema = enumMetaDirectiveSchema(`
+        enum E {
+          A @enumMeta(props: [
+            { name: "x", value: "1" }
+            { name: "x", value: "2" }
+          ])
+        }
+      `);
+
+      // act
+      const run = () => plugin(buildSchema(badSchema), [], {});
+
+      // assert
+      expect(run).toThrowError(/Duplicate enumMeta props name "x"/);
+    });
+
+    it('should fail when props uses a reserved name', async () => {
+      // arrange
+      const badSchema = enumMetaDirectiveSchema(`
+        enum E {
+          A @enumMeta(props: [{ name: "display", value: "oops" }])
+        }
+      `);
+
+      // act
+      const run = () => plugin(buildSchema(badSchema), [], {});
+
+      // assert
+      expect(run).toThrowError(/enumMeta props name "display" is reserved/);
     });
   });
 

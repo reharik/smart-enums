@@ -1,6 +1,6 @@
 {
   "name": "@reharik/smart-enum",
-  "version": "0.0.3",
+  "version": "0.0.5",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -36,7 +36,7 @@
   "scripts": {
     "clean": "rm -rf dist",
     "build": "npm run clean && tsup",
-    "prepublishOnly": "npm run build",
+    "prepublishOnly": "node -e \"require('fs').copyFileSync('../../README.md', 'README.md')\" && npm run build",
     "test": "jest --config jest.config.cjs",
     "dance": "npm run build && npm run test"
   },
