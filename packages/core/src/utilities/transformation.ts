@@ -139,3 +139,38 @@ export function reviveSmartEnums<R>(
   };
   return walk(input) as R;
 }
+
+/**
+ * Maps a plain string (for example a column value from a database query) to the
+ * corresponding Smart Enum item by calling `tryFromValue` on the given enum.
+ *
+ * Use this when you already know which enum type a field uses and the stored
+ * value is the enum’s wire `value` string (same shape `tryFromValue` expects).
+ *
+ * @param value - Raw value; only strings are resolved—anything else returns `undefined`
+ * @param smartEnum - Smart enum instance (`AnyEnumLike<TItem>`; same shape as registry entries)
+ * @param strict - When `true`, throws if the string does not match any member; when `false`, returns `undefined`
+ * @returns The matching enum item, or `undefined` if not found (non-string input always yields `undefined`)
+ *
+ * @example
+ * ```typescript
+ * const item = reviveEnumField(row.status, UserStatus);
+ * const mustMatch = reviveEnumField(row.code, OrderStatus, true);
+ * ```
+ */
+export const reviveEnumField = <TItem>(
+  value: unknown,
+  smartEnum: AnyEnumLike<TItem>,
+  strict = false,
+): TItem | undefined => {
+  if (typeof value !== 'string') return undefined;
+
+  const revived = smartEnum.tryFromValue(value);
+  if (revived !== undefined) return revived;
+
+  if (strict) {
+    throw new Error(`Unknown enum value: ${JSON.stringify(value)}`);
+  }
+
+  return undefined;
+};

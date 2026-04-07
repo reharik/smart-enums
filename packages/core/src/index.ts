@@ -24,6 +24,7 @@ export { enumeration } from './enumerations.js';
 export {
   serializeSmartEnums,
   reviveSmartEnums,
+  reviveEnumField,
 } from './utilities/transformation.js';
 export {
   reviveAfterTransport,

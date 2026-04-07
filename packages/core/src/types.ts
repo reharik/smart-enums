@@ -54,14 +54,18 @@ export type EnumItemFromEnum<TEnum> =
       : never
     : never;
 
-// Structural constraint for enum objects passed to reviveSmartEnums mapping
-export type AnyEnumLike = {
-  tryFromValue: (value?: string | null) => unknown;
-  tryFromKey: (key?: string | null) => unknown;
+/**
+ * Structural constraint for smart enum instances (registry entries, `reviveSmartEnums`, etc.).
+ * `T` is the enum item type returned by `tryFromValue` / `tryFromKey` (default `unknown` when heterogeneous).
+ */
+export type AnyEnumLike<T = unknown> = {
+  tryFromValue: (value?: string | null) => T | undefined;
+  tryFromKey: (key?: string | null) => T | undefined;
 } & Record<string, unknown>;
 
 export type SmartEnumLike<T = unknown> = {
   tryFromValue: (value: string) => T | undefined;
+  fromValue: (value: string) => T | undefined;
 };
 
 export type FieldEnumMapping = Record<string, SmartEnumLike>;

@@ -16,6 +16,7 @@ export { isSmartEnumItem, isSmartEnum } from './utilities/typeGuards.js';
 export {
   serializeSmartEnums,
   reviveSmartEnums,
+  reviveEnumField,
 } from './utilities/transformation.js';
 export {
   reviveAfterTransport,

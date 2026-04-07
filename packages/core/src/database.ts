@@ -9,6 +9,7 @@
  * import {
  *   enumeration,
  *   prepareForDatabase,
+ *   reviveEnumField,
  *   reviveRowFromDatabase,
  * } from 'ts-smart-enum/database';
  * ```
@@ -16,6 +17,7 @@
 
 export { enumeration } from './enumerations.js';
 export { isSmartEnumItem, isSmartEnum } from './utilities/typeGuards.js';
+export { reviveEnumField } from './utilities/transformation.js';
 export {
   prepareForDatabase,
   reviveRowFromDatabase,

@@ -6,14 +6,21 @@
  *
  * @example
  * ```typescript
- * import { enumeration, isSmartEnumItem, isSmartEnum } from 'ts-smart-enum/core';
+ * import {
+ *   enumeration,
+ *   isSmartEnumItem,
+ *   isSmartEnum,
+ *   reviveEnumField,
+ * } from 'ts-smart-enum/core';
  * ```
  */
 
 export { enumeration } from './enumerations.js';
 export { isSmartEnumItem, isSmartEnum } from './utilities/typeGuards.js';
+export { reviveEnumField } from './utilities/transformation.js';
 export type {
   Enumeration,
   AnyEnumLike,
+  SmartEnumLike,
   StandardEnumItemBase as StandardEnumItem,
 } from './types.js';
