@@ -20,6 +20,10 @@
  */
 
 export { isSmartEnumItem, isSmartEnum } from './utilities/typeGuards.js';
+export {
+  getSubsetByProp,
+  subsetByProp,
+} from './utilities/getSubsetByProp.js';
 export { enumeration } from './enumerations.js';
 export {
   serializeSmartEnums,

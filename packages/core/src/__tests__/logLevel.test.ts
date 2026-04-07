@@ -1,8 +1,6 @@
 import { enumeration } from '../index.js';
-import {
-  initializeSmartEnumMappings,
-  type LogLevel,
-} from '../utilities/transport/index.js';
+import type { LogLevel } from '../types.js';
+import { initializeSmartEnumMappings } from '../utilities/transport/index.js';
 
 /** `initializeSmartEnumMappings` configures the transport wire registry only, not DB revival. */
 describe('Log Level Configuration', () => {

@@ -157,8 +157,48 @@ export type ObjectEnumInput = Record<string, EnumInputItem>;
 
 export type EmptyEnumInputItem = Record<never, never>;
 
+type Separator = '-' | '_' | ' ' | '.';
+
+type IsUpperChar<C extends string> =
+  C extends Uppercase<C> ? (C extends Lowercase<C> ? false : true) : false;
+
+type IsLowerChar<C extends string> =
+  C extends Lowercase<C> ? (C extends Uppercase<C> ? false : true) : false;
+
+type PushUnderscore<S extends string> = S extends '' | `${string}_`
+  ? S
+  : `${S}_`;
+
+type TrimUnderscore<S extends string> = S extends `_${infer R}`
+  ? TrimUnderscore<R>
+  : S extends `${infer R}_`
+    ? TrimUnderscore<R>
+    : S;
+
+type CollapseUnderscores<S extends string> = S extends `${infer A}__${infer B}`
+  ? CollapseUnderscores<`${A}_${B}`>
+  : S;
+
+type ConstantCaseInternal<
+  S extends string,
+  Prev extends string = '',
+  Out extends string = '',
+> = S extends `${infer C}${infer Rest}`
+  ? C extends Separator
+    ? ConstantCaseInternal<Rest, C, PushUnderscore<Out>>
+    : IsUpperChar<C> extends true
+      ? IsLowerChar<Prev> extends true
+        ? ConstantCaseInternal<Rest, C, `${PushUnderscore<Out>}${Uppercase<C>}`>
+        : ConstantCaseInternal<Rest, C, `${Out}${Uppercase<C>}`>
+      : ConstantCaseInternal<Rest, C, `${Out}${Uppercase<C>}`>
+  : CollapseUnderscores<TrimUnderscore<Out>>;
+
+type ConstantCase<S extends string> = string extends S
+  ? string
+  : ConstantCaseInternal<S>;
+
 export type ArrayToObjectType<T extends readonly string[]> = {
-  [K in T[number]]: EmptyEnumInputItem;
+  [K in T[number]]: EmptyEnumInputItem & { readonly value?: ConstantCase<K> };
 };
 
 export type NormalizedInputType<TInput> = TInput extends readonly string[]
@@ -167,12 +207,23 @@ export type NormalizedInputType<TInput> = TInput extends readonly string[]
     ? TInput
     : never;
 
+/** Input-derived fields for one member key (excludes built-ins filled by `enumeration()`). */
+export type EnumMemberExtra<
+  TObj extends ObjectEnumInput,
+  K extends keyof TObj,
+> = Omit<TObj[K], BuiltInOverrideKeys>;
+
 export type EnumItemFromNormalizedObject<
   TObj extends ObjectEnumInput,
   K extends keyof TObj = keyof TObj,
-> = Omit<StandardEnumItem, 'key'> &
-  InferredExtraFields<TObj> & {
+> = Omit<StandardEnumItem, 'key' | 'value'> &
+  EnumMemberExtra<TObj, K> & {
     readonly key: Extract<K, string>;
+    readonly value: TObj[K] extends { value?: infer V }
+      ? Extract<V, string> extends never
+        ? string
+        : Extract<V, string>
+      : string;
   };
 
 export type EnumMemberUnionFromNormalizedObject<TObj extends ObjectEnumInput> =
@@ -235,8 +286,10 @@ export type CoreEnumMethods<TItem extends StandardEnumItem> = {
   fromKey(key: string): TItem;
   tryFromKey(key?: string | null): TItem | undefined;
   items(): readonly TItem[];
-  values(): readonly string[];
-  keys(): readonly string[];
+  /** Matches runtime: `items.map(i => i.value)` (see {@link EnumLikeBase}). */
+  values(): readonly TItem['value'][];
+  /** Matches runtime: `items.map(i => i.key)` (see {@link EnumLikeBase}). */
+  keys(): readonly TItem['key'][];
 };
 
 /**
@@ -261,6 +314,37 @@ export type EnumLikeBase<
  */
 export type SmartEnumLike<TItem extends StandardEnumItem = StandardEnumItem> =
   EnumLikeBase<TItem>;
+
+/** Union of branded enum member values on an enum object `T`. */
+export type SmartEnumMemberUnion<T extends Record<string, unknown>> = {
+  [K in keyof T]: T[K] extends StandardEnumItem ? T[K] : never;
+}[keyof T];
+
+/** Keys on `TEnum` whose member matches `Record<P, V>` within `ItemUnion`. */
+export type SmartEnumSubsetKeys<
+  TEnum extends Record<string, unknown>,
+  ItemUnion extends StandardEnumItem,
+  P extends keyof ItemUnion & string,
+  V extends ItemUnion[P],
+> = {
+  [K in keyof TEnum]: TEnum[K] extends Extract<ItemUnion, Record<P, V>>
+    ? K
+    : never;
+}[keyof TEnum];
+
+export type SmartEnumSubsetItemUnion<
+  ItemUnion extends StandardEnumItem,
+  P extends keyof ItemUnion & string,
+  V extends ItemUnion[P],
+> = Extract<ItemUnion, Record<P, V>>;
+
+export type SmartEnumSubsetView<
+  TEnum extends Record<string, unknown>,
+  ItemUnion extends StandardEnumItem,
+  P extends keyof ItemUnion & string,
+  V extends ItemUnion[P],
+> = Pick<TEnum, SmartEnumSubsetKeys<TEnum, ItemUnion, P, V>> &
+  CoreEnumMethods<SmartEnumSubsetItemUnion<ItemUnion, P, V>>;
 
 export type FieldEnumMapping = Record<string, SmartEnumLike>;
 

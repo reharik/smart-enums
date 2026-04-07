@@ -16,6 +16,10 @@
  */
 
 export { enumeration } from './enumerations.js';
+export {
+  getSubsetByProp,
+  subsetByProp,
+} from './utilities/getSubsetByProp.js';
 export { isSmartEnumItem, isSmartEnum } from './utilities/typeGuards.js';
 export { reviveEnumField } from './utilities/transformation.js';
 export type {

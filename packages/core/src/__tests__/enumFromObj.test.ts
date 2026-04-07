@@ -45,7 +45,7 @@ describe('ENUM FROM OBJECT', () => {
       expect(TestEnum.one.slug).toBe('/one');
       expect(TestEnum.two.slug).toBe('/two');
       expect(TestEnum.two.title).toBe('Two');
-      expect(TestEnum.three.title).toBeUndefined();
+      expect(Object.hasOwn(TestEnum.three, 'title')).toBe(false);
     });
 
     describe('when passing function for displayFormatter', () => {

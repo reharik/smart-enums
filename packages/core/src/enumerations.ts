@@ -5,153 +5,22 @@ import {
   SMART_ENUM,
   SMART_ENUM_ID,
   SMART_ENUM_ITEM,
-  StandardEnumItem,
+  type EnumFromNormalizedObject,
+  type EnumItemFromNormalizedObject,
+  type EnumMemberUnionFromNormalizedObject,
+  type EnumerationProps,
+  type FinalizableEnumItem,
+  type FinalizedEnumFields,
+  type NormalizedInputType,
+  type ObjectEnumInput,
+  type PropertyAutoFormatter,
 } from './types.js';
-
-type BuiltInOverrideKeys =
-  | 'key'
-  | 'value'
-  | 'display'
-  | 'deprecated'
-  | 'index'
-  | '__smart_enum_brand'
-  | '__smart_enum_type';
-
-export type EnumInputItem = Partial<{
-  key: string;
-  value: string;
-  display: string;
-  deprecated: boolean;
-}> &
-  object;
-
-export type ObjectEnumInput = Record<string, EnumInputItem>;
-
-type EmptyEnumInputItem = Record<never, never>;
-
-type Separator = '-' | '_' | ' ' | '.';
-
-type IsUpperChar<C extends string> =
-  C extends Uppercase<C> ? (C extends Lowercase<C> ? false : true) : false;
-
-type IsLowerChar<C extends string> =
-  C extends Lowercase<C> ? (C extends Uppercase<C> ? false : true) : false;
-
-type PushUnderscore<S extends string> = S extends '' | `${string}_`
-  ? S
-  : `${S}_`;
-
-type TrimUnderscore<S extends string> = S extends `_${infer R}`
-  ? TrimUnderscore<R>
-  : S extends `${infer R}_`
-    ? TrimUnderscore<R>
-    : S;
-
-type CollapseUnderscores<S extends string> = S extends `${infer A}__${infer B}`
-  ? CollapseUnderscores<`${A}_${B}`>
-  : S;
-
-type ConstantCaseInternal<
-  S extends string,
-  Prev extends string = '',
-  Out extends string = '',
-> = S extends `${infer C}${infer Rest}`
-  ? C extends Separator
-    ? ConstantCaseInternal<Rest, C, PushUnderscore<Out>>
-    : IsUpperChar<C> extends true
-      ? IsLowerChar<Prev> extends true
-        ? ConstantCaseInternal<Rest, C, `${PushUnderscore<Out>}${Uppercase<C>}`>
-        : ConstantCaseInternal<Rest, C, `${Out}${Uppercase<C>}`>
-      : ConstantCaseInternal<Rest, C, `${Out}${Uppercase<C>}`>
-  : CollapseUnderscores<TrimUnderscore<Out>>;
-
-type ConstantCase<S extends string> = string extends S
-  ? string
-  : ConstantCaseInternal<S>;
-
-type ArrayToObjectType<T extends readonly string[]> = {
-  [K in T[number]]: EmptyEnumInputItem & { readonly value?: ConstantCase<K> };
-};
-
-type NormalizedInputType<TInput> = TInput extends readonly string[]
-  ? ArrayToObjectType<TInput>
-  : TInput extends ObjectEnumInput
-    ? TInput
-    : never;
-
-type UnionKeys<T> = T extends T ? keyof T : never;
-
-type MergeUnionToObject<T> = {
-  [K in UnionKeys<T>]: T extends Record<K, infer V> ? V : undefined;
-};
-
-type ExtraShapeUnion<TObj extends ObjectEnumInput> = {
-  [K in keyof TObj]: Omit<TObj[K], BuiltInOverrideKeys>;
-}[keyof TObj];
-
-export type InferredExtraFields<TObj extends ObjectEnumInput> =
-  MergeUnionToObject<ExtraShapeUnion<TObj>>;
-
-export type EnumItemFromNormalizedObject<
-  TObj extends ObjectEnumInput,
-  K extends keyof TObj = keyof TObj,
-> = Omit<StandardEnumItem, 'key' | 'value'> &
-  InferredExtraFields<TObj> & {
-    readonly key: Extract<K, string>;
-    readonly value: TObj[K] extends { value?: infer V }
-      ? Extract<V, string> extends never
-        ? string
-        : Extract<V, string>
-      : string;
-  };
-
-export type EnumMemberUnionFromNormalizedObject<TObj extends ObjectEnumInput> =
-  {
-    [K in keyof TObj]: EnumItemFromNormalizedObject<TObj, K>;
-  }[keyof TObj];
-
-export type CoreEnumMethods<TItem extends StandardEnumItem> = {
-  fromValue(value: string): TItem;
-  tryFromValue(value?: string | null): TItem | undefined;
-  fromKey(key: string): TItem;
-  tryFromKey(key?: string | null): TItem | undefined;
-  items(): readonly TItem[];
-  values(): readonly string[];
-  keys(): readonly string[];
-};
-
-export type EnumFromNormalizedObject<TObj extends ObjectEnumInput> = {
-  [K in keyof TObj]: EnumItemFromNormalizedObject<TObj, K>;
-} & CoreEnumMethods<EnumMemberUnionFromNormalizedObject<TObj>>;
-
-export type EnumerationProps<TInput> = {
-  input: TInput;
-  propertyAutoFormatters?: PropertyAutoFormatter[];
-};
 
 export type EnumItem<TEnum> = {
   [K in keyof TEnum]: TEnum[K] extends { __smart_enum_brand: true }
     ? TEnum[K]
     : never;
 }[keyof TEnum];
-
-export type PropertyAutoFormatter = {
-  key: string;
-  format: (k: string) => string;
-};
-
-type FinalizedEnumFields = Pick<
-  StandardEnumItem,
-  '__smart_enum_brand' | '__smart_enum_type'
->;
-
-type FinalizableEnumItem = {
-  key: string;
-  value: string;
-  display: string;
-  index: number;
-  deprecated?: boolean;
-};
 
 function normalizeInput<TInput extends readonly string[] | ObjectEnumInput>(
   input: TInput,
@@ -229,11 +98,11 @@ function buildEnumFromObject<TObj extends ObjectEnumInput>(
     ...(propertyAutoFormatters ?? []),
   ];
 
-  type TItem = EnumItemFromNormalizedObject<TObj>;
+  type TItem = EnumMemberUnionFromNormalizedObject<TObj>;
 
-  const rawEnumItems = {} as {
+  const rawEnumItems: Partial<{
     [K in keyof TObj]: EnumItemFromNormalizedObject<TObj, K>;
-  };
+  }> = {};
 
   const enumInstanceId = Symbol('smart-enum-instance');
   let index = 0;
@@ -257,7 +126,7 @@ function buildEnumFromObject<TObj extends ObjectEnumInput>(
       ) as unknown as TItem;
 
       Object.freeze(enumItem);
-      rawEnumItems[typedKey] = enumItem;
+      rawEnumItems[typedKey as keyof TObj] = enumItem;
       index++;
     }
   }
