@@ -63,25 +63,6 @@ export type AnyEnumLike<T = unknown> = {
   tryFromKey: (key?: string | null) => T | undefined;
 } & Record<string, unknown>;
 
-export type SmartEnumLike<T = unknown> = {
-  tryFromValue: (value: string) => T | undefined;
-  fromValue: (value: string) => T | undefined;
-};
-
-export type FieldEnumMapping = Record<string, SmartEnumLike>;
-
-export type ReviveRowOptions = {
-  fieldEnumMapping: FieldEnumMapping;
-  strict?: boolean;
-};
-
-export type PathEnumMapping = Record<string, SmartEnumLike>;
-
-export type RevivePayloadOptions = {
-  pathEnumMapping: PathEnumMapping;
-  strict?: boolean;
-};
-
 export type RevivedSmartEnums<T, M extends Record<string, AnyEnumLike>> =
   T extends ReadonlyArray<infer U>
     ? RevivedSmartEnums<U, M>[]
@@ -142,6 +123,10 @@ type BuiltInOverrideKeys =
   | '__smart_enum_brand'
   | '__smart_enum_type';
 
+/**
+ * Structural fields shared by every enum member (key, value, display, index, optional deprecated).
+ * Does not include smart-enum branding or database helpers; see {@link StandardEnumItem}.
+ */
 export type StandardEnumItemBase = {
   readonly key: string;
   readonly value: string;
@@ -150,6 +135,10 @@ export type StandardEnumItemBase = {
   readonly deprecated?: boolean;
 };
 
+/**
+ * Branded item produced by `enumeration()`: {@link StandardEnumItemBase} plus runtime identity
+ * (`__smart_enum_brand`, `__smart_enum_type`) and `toPostgres()`.
+ */
 export type StandardEnumItem = StandardEnumItemBase & {
   readonly __smart_enum_brand: true;
   readonly __smart_enum_type: string;
@@ -248,6 +237,43 @@ export type CoreEnumMethods<TItem extends StandardEnumItem> = {
   items(): readonly TItem[];
   values(): readonly string[];
   keys(): readonly string[];
+};
+
+/**
+ * Structural shape of a smart-style enum object: lookup by value/key, list items/values/keys,
+ * plus an index signature so registry and mapping types can treat instances as records.
+ * Use {@link SmartEnumLike} when items are full {@link StandardEnumItem}s (the usual case).
+ */
+export type EnumLikeBase<
+  TItem extends StandardEnumItemBase = StandardEnumItemBase,
+> = {
+  fromValue(value: string): TItem;
+  tryFromValue(value?: string | null): TItem | undefined;
+  fromKey(key: string): TItem;
+  tryFromKey(key?: string | null): TItem | undefined;
+  items(): readonly TItem[];
+  values(): readonly TItem['value'][];
+  keys(): readonly TItem['key'][];
+} & Record<string, unknown>;
+
+/**
+ * A {@link EnumLikeBase} whose items are branded {@link StandardEnumItem}s (typical `enumeration()` result).
+ */
+export type SmartEnumLike<TItem extends StandardEnumItem = StandardEnumItem> =
+  EnumLikeBase<TItem>;
+
+export type FieldEnumMapping = Record<string, SmartEnumLike>;
+
+export type ReviveRowOptions = {
+  fieldEnumMapping: FieldEnumMapping;
+  strict?: boolean;
+};
+
+export type PathEnumMapping = Record<string, SmartEnumLike>;
+
+export type RevivePayloadOptions = {
+  pathEnumMapping: PathEnumMapping;
+  strict?: boolean;
 };
 
 export type EnumerationProps<TInput> = {

@@ -21,6 +21,8 @@ export { reviveEnumField } from './utilities/transformation.js';
 export type {
   Enumeration,
   AnyEnumLike,
+  EnumLikeBase,
   SmartEnumLike,
-  StandardEnumItemBase as StandardEnumItem,
+  StandardEnumItemBase,
+  StandardEnumItem,
 } from './types.js';

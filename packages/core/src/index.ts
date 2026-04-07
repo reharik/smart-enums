@@ -50,10 +50,12 @@ export type {
   SerializedSmartEnums,
   RevivedSmartEnums,
   SmartEnumItemSerialized,
+  EnumLikeBase,
   SmartEnumLike,
   FieldEnumMapping,
   ReviveRowOptions,
   PathEnumMapping,
   RevivePayloadOptions,
-  StandardEnumItemBase as StandardEnumItem,
+  StandardEnumItemBase,
+  StandardEnumItem,
 } from './types.js';

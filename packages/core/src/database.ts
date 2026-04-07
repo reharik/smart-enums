@@ -32,10 +32,12 @@ export type {
   SmartApiHelperConfig,
   LogLevel,
   SmartEnumMappingsConfig,
+  EnumLikeBase,
   SmartEnumLike,
   FieldEnumMapping,
   ReviveRowOptions,
   PathEnumMapping,
   RevivePayloadOptions,
-  StandardEnumItemBase as StandardEnumItem,
+  StandardEnumItemBase,
+  StandardEnumItem,
 } from './types.js';
