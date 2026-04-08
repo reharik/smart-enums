@@ -264,6 +264,56 @@ describe('Helper method typing', () => {
       expect(true).toBe(true);
     });
 
+    it('should derive literal value and display from member key when built-ins omitted', () => {
+      const ContractError = enumeration('ContractError', {
+        input: {
+          MediaItemNotReady: {
+            code: 'MEDIA_ITEM_NOT_READY',
+            category: 'domain',
+            area: 'mediaItem',
+            retryable: false,
+          },
+        } as const,
+      });
+
+      type M = (typeof ContractError)['MediaItemNotReady'];
+
+      type KeyOk = Expect<Equal<M['key'], 'MediaItemNotReady'>>;
+      type ValueOk = Expect<Equal<M['value'], 'MEDIA_ITEM_NOT_READY'>>;
+      type DisplayOk = Expect<Equal<M['display'], 'Media Item Not Ready'>>;
+      type CodeOk = Expect<Equal<M['code'], 'MEDIA_ITEM_NOT_READY'>>;
+
+      expect(ContractError.MediaItemNotReady.value).toBe(
+        'MEDIA_ITEM_NOT_READY',
+      );
+      expect(ContractError.MediaItemNotReady.display).toBe(
+        'Media Item Not Ready',
+      );
+      expect(true).toBe(true as KeyOk);
+      expect(true).toBe(true as ValueOk);
+      expect(true).toBe(true as DisplayOk);
+      expect(true).toBe(true as CodeOk);
+    });
+
+    it('should keep explicit value and display literals when provided on object input', () => {
+      const E = enumeration('E', {
+        input: {
+          a: {
+            value: 'CUSTOM_VALUE',
+            display: 'Custom Label',
+            extra: 1,
+          },
+        } as const,
+      });
+      type A = (typeof E)['a'];
+      type V = Expect<Equal<A['value'], 'CUSTOM_VALUE'>>;
+      type D = Expect<Equal<A['display'], 'Custom Label'>>;
+      expect(E.a.value).toBe('CUSTOM_VALUE');
+      expect(E.a.display).toBe('Custom Label');
+      expect(true).toBe(true as V);
+      expect(true).toBe(true as D);
+    });
+
     it('should type enumeration results as SmartEnumLike with narrowed values() and keys()', () => {
       const LetterEnum = enumeration('LetterEnum', {
         input: ['a', 'b'] as const,

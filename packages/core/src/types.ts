@@ -197,6 +197,38 @@ type ConstantCase<S extends string> = string extends S
   ? string
   : ConstantCaseInternal<S>;
 
+/** Segments of a `ConstantCase` string (underscore-separated ALL CAPS words). */
+type SplitConstantCaseSegments<S extends string> =
+  S extends `${infer A}_${infer B}`
+    ? [A, ...SplitConstantCaseSegments<B>]
+    : [S];
+
+/** First character upper, remainder lower (for ALL-CAPS words from `ConstantCase`). */
+type TitleCaseAllCapsWord<W extends string> = W extends ''
+  ? ''
+  : W extends `${infer F}${infer R}`
+    ? `${Uppercase<F>}${Lowercase<R>}`
+    : W;
+
+type JoinDisplaySegments<T extends readonly string[]> = T extends readonly [
+  infer A extends string,
+  ...infer Rest extends readonly string[],
+]
+  ? Rest extends readonly []
+    ? TitleCaseAllCapsWord<A>
+    : `${TitleCaseAllCapsWord<A>} ${JoinDisplaySegments<Rest>}`
+  : '';
+
+/**
+ * Display string derived from the enum member key: `ConstantCase` → split → title-case words → join with spaces.
+ * Matches default runtime `capitalCase(key)` for typical PascalCase / camelCase keys. Member keys that already
+ * contain separators may differ from `capitalCase` at runtime; custom `propertyAutoFormatters` for `display`
+ * are not reflected in this type.
+ */
+type DisplayCaseFromEnumKey<K extends string> = string extends K
+  ? string
+  : JoinDisplaySegments<SplitConstantCaseSegments<ConstantCase<K>>>;
+
 export type ArrayToObjectType<T extends readonly string[]> = {
   [K in T[number]]: EmptyEnumInputItem & { readonly value?: ConstantCase<K> };
 };
@@ -216,14 +248,19 @@ export type EnumMemberExtra<
 export type EnumItemFromNormalizedObject<
   TObj extends ObjectEnumInput,
   K extends keyof TObj = keyof TObj,
-> = Omit<StandardEnumItem, 'key' | 'value'> &
+> = Omit<StandardEnumItem, 'key' | 'value' | 'display'> &
   EnumMemberExtra<TObj, K> & {
     readonly key: Extract<K, string>;
     readonly value: TObj[K] extends { value?: infer V }
-      ? Extract<V, string> extends never
-        ? string
+      ? [Extract<V, string>] extends [never]
+        ? ConstantCase<Extract<K, string>>
         : Extract<V, string>
-      : string;
+      : ConstantCase<Extract<K, string>>;
+    readonly display: TObj[K] extends { display?: infer D }
+      ? [Extract<D, string>] extends [never]
+        ? DisplayCaseFromEnumKey<Extract<K, string>>
+        : Extract<D, string>
+      : DisplayCaseFromEnumKey<Extract<K, string>>;
   };
 
 export type EnumMemberUnionFromNormalizedObject<TObj extends ObjectEnumInput> =
