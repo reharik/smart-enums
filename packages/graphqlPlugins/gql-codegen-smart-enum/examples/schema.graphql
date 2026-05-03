@@ -1,0 +1,49 @@
+"""Payment processing status"""
+enum PaymentStatus {
+  """Waiting for payment"""
+  PENDING
+  """Payment completed successfully"""
+  PAID
+  """Payment was canceled"""
+  CANCELED @deprecated(reason: "Use VOIDED")
+  """Payment was voided"""
+  VOIDED
+}
+
+enum SortDirection {
+  ASC
+  DESC
+}
+
+enum OrderType {
+  ONLINE
+  IN_STORE
+  PHONE
+}
+
+type Query {
+  order(id: ID!): Order
+  orders(sort: SortDirection): [Order!]!
+  customer(id: ID!): Customer
+}
+
+type Order {
+  id: ID!
+  status: PaymentStatus!
+  type: OrderType!
+  direction: SortDirection
+  total: Float!
+  items: [OrderItem!]!
+}
+
+type OrderItem {
+  id: ID!
+  name: String!
+  status: PaymentStatus
+}
+
+type Customer {
+  id: ID!
+  name: String!
+  preferredSort: SortDirection!
+}

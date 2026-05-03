@@ -1,5 +1,5 @@
 /**
- * Logger interface for ts-smart-enum library
+ * Logger interface for @reharik/smart-enum library
  *
  * This interface allows users to inject their own logging implementation
  * or use the default console logger.
@@ -17,19 +17,19 @@ export type Logger = {
  */
 const consoleLogger: Logger = {
   debug(message: string, ...args: unknown[]): void {
-    console.debug(`[ts-smart-enum:debug] ${message}`, ...args);
+    console.debug(`[@reharik/smart-enum:debug] ${message}`, ...args);
   },
 
   info(message: string, ...args: unknown[]): void {
-    console.info(`[ts-smart-enum:info] ${message}`, ...args);
+    console.info(`[@reharik/smart-enum:info] ${message}`, ...args);
   },
 
   warn(message: string, ...args: unknown[]): void {
-    console.warn(`[ts-smart-enum:warn] ${message}`, ...args);
+    console.warn(`[@reharik/smart-enum:warn] ${message}`, ...args);
   },
 
   error(message: string, ...args: unknown[]): void {
-    console.error(`[ts-smart-enum:error] ${message}`, ...args);
+    console.error(`[@reharik/smart-enum:error] ${message}`, ...args);
   },
 };
 
@@ -46,7 +46,7 @@ let globalLogger: Logger = consoleLogger;
  *
  * @example
  * ```typescript
- * import { setLogger } from 'ts-smart-enum';
+ * import { setLogger } from '@reharik/smart-enum';
  *
  * // Use custom logger
  * setLogger({

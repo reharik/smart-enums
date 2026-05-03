@@ -3,12 +3,13 @@
   "private": true,
   "type": "module",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "packages/graphqlPlugins/*"
   ],
   "scripts": {
-    "build": "npm run build -w @reharik/smart-enum && npm run build -w @reharik/smart-enum-knex && npm run build -w @reharik/graphql-codegen-smart-enum",
-    "test": "npm run test -w @reharik/smart-enum && npm run test -w @reharik/smart-enum-knex && npm run test -w @reharik/graphql-codegen-smart-enum",
-    "lint": "eslint packages/core/src packages/knex/src packages/gql-codegen-smart-enum/src packages/gql-codegen-smart-enum/test packages/gql-codegen-smart-enum/examples",
+    "build": "npm run build -w @reharik/smart-enum && npm run build -w @reharik/smart-enum-knex && npm run build -w @reharik/graphql-codegen-smart-enum && npm run build -w @reharik/graphql-codegen-smart-enum-type-policies",
+    "test": "npm run test -w @reharik/smart-enum && npm run test -w @reharik/smart-enum-knex && npm run test -w @reharik/graphql-codegen-smart-enum && npm run test -w @reharik/graphql-codegen-smart-enum-type-policies",
+    "lint": "eslint packages/core/src packages/knex/src packages/graphqlPlugins/gql-codegen-smart-enum/src packages/graphqlPlugins/gql-codegen-smart-enum/test packages/graphqlPlugins/gql-codegen-smart-enum/examples packages/graphqlPlugins/gql-codegen-smart-enum-type-policies/src packages/graphqlPlugins/gql-codegen-smart-enum-type-policies/test packages/graphqlPlugins/gql-codegen-smart-enum-type-policies/examples",
     "dance": "npm run build && npm run test && npm run lint"
   },
   "devDependencies": {

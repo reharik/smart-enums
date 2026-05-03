@@ -1,6 +1,6 @@
 {
   "name": "@reharik/smart-enum",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -25,6 +25,11 @@
       "types": "./dist/database.d.ts",
       "import": "./dist/database.js",
       "require": "./dist/database.cjs"
+    },
+    "./graphql": {
+      "types": "./dist/graphql.d.ts",
+      "import": "./dist/graphql.js",
+      "require": "./dist/graphql.cjs"
     }
   },
   "files": [
@@ -36,7 +41,7 @@
   "scripts": {
     "clean": "rm -rf dist",
     "build": "npm run clean && tsup",
-    "prepublishOnly": "node -e \"require('fs').copyFileSync('../../README.md', 'README.md')\" && npm run build",
+    "prepublishOnly": "npm run build",
     "test": "jest --config jest.config.cjs",
     "dance": "npm run build && npm run test"
   },
@@ -55,6 +60,14 @@
   },
   "dependencies": {
     "case-anything": "^3.1.2"
+  },
+  "peerDependencies": {
+    "graphql": "^16.0.0"
+  },
+  "peerDependenciesMeta": {
+    "graphql": {
+      "optional": true
+    }
   },
   "description": "Type-safe smart enums for TypeScript with database and transport serialization support",
   "keywords": [

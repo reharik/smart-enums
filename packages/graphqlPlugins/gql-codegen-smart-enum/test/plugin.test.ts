@@ -267,7 +267,7 @@ describe('SmartEnum plugin', () => {
       expect(normalized).toContain('["weird-key"]: \'1\'');
     });
 
-    it('should fail when props repeats the same name', async () => {
+    it('should fail when props repeats the same name', () => {
       // arrange
       const badSchema = enumMetaDirectiveSchema(`
         enum E {
@@ -285,7 +285,7 @@ describe('SmartEnum plugin', () => {
       expect(run).toThrowError(/Duplicate enumMeta props name "x"/);
     });
 
-    it('should fail when props uses a reserved name', async () => {
+    it('should fail when props uses a reserved name', () => {
       // arrange
       const badSchema = enumMetaDirectiveSchema(`
         enum E {
@@ -391,7 +391,7 @@ describe('SmartEnum plugin', () => {
     it('should return empty output when all enums are skipped', async () => {
       // arrange
       const output = plugin(schema, [], {
-        skipEnums: ['PaymentStatus', 'SortDirection'],
+        skipEnums: ['PaymentStatus', 'SortDirection', 'OrderType'],
       });
 
       // act

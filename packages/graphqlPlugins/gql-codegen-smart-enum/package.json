@@ -24,6 +24,7 @@
     "prepack": "npm run build",
     "test": "vitest run",
     "test:integration": "npm run build && graphql-codegen --config examples/codegen.ts",
+    "show:generated": "npm run build && graphql-codegen --config examples/codegen.ts && echo '\\n=== Smart Enum Definitions ===' && cat examples/generated/graphql-smart-enums.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.tests.json",
     "publish:npm": "npm publish --access public --otp=$NPM_OTP"
   },
@@ -36,6 +37,7 @@
   "devDependencies": {
     "@graphql-codegen/cli": "^5.0.7",
     "@graphql-codegen/typescript": "^4.1.6",
+    "@reharik/smart-enum": "*",
     "@types/node": "^22.14.1",
     "graphql": "^16.11.0",
     "tsup": "^8.5.0",

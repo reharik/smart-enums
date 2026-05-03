@@ -4,26 +4,23 @@
  * This is the main entry point that exports all functionality.
  * For better tree-shaking, consider using specific entry points:
  *
- * - `ts-smart-enum/core` - Just enumeration and basic types
- * - `ts-smart-enum/transport` - Core + serialization/revival for APIs
- * - `ts-smart-enum/database` - Core + database utilities
+ * - `@reharik/smart-enum/core` - Just enumeration and basic types
+ * - `@reharik/smart-enum/transport` - Core + serialization/revival for APIs
+ * - `@reharik/smart-enum/database` - Core + database utilities
  *
  * @example
  * ```typescript
  * // Full API (current usage)
- * import { enumeration, serializeSmartEnums } from 'ts-smart-enum';
+ * import { enumeration, serializeSmartEnums } from '@reharik/smart-enum';
  *
  * // Tree-shaking friendly (recommended)
- * import { enumeration } from 'ts-smart-enum/core';
- * import { serializeSmartEnums } from 'ts-smart-enum/transport';
+ * import { enumeration } from '@reharik/smart-enum/core';
+ * import { serializeSmartEnums } from '@reharik/smart-enum/transport';
  * ```
  */
 
 export { isSmartEnumItem, isSmartEnum } from './utilities/typeGuards.js';
-export {
-  getSubsetByProp,
-  subsetByProp,
-} from './utilities/getSubsetByProp.js';
+export { getSubsetByProp, subsetByProp } from './utilities/getSubsetByProp.js';
 export { enumeration } from './enumerations.js';
 export {
   serializeSmartEnums,

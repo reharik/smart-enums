@@ -1,0 +1,47 @@
+{
+  "name": "@reharik/graphql-codegen-smart-enum-type-policies",
+  "version": "0.1.0",
+  "description": "GraphQL Code Generator plugin for SmartEnum type policies generation from schema enums",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --out-dir dist",
+    "prepack": "npm run build",
+    "test": "vitest run",
+    "test:integration": "npm run build -w @reharik/graphql-codegen-smart-enum && npm run build && graphql-codegen --config examples/codegen.ts",
+    "show:generated": "npm run build && graphql-codegen --config examples/codegen.ts && echo '\\n=== Smart Enum Definitions ===' && cat examples/generated/graphql-smart-enums.ts && echo '\\n=== Type Policies ===' && cat examples/generated/graphql-smart-enum-type-policies.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.tests.json",
+    "publish:npm": "npm publish --access public --otp=$NPM_OTP"
+  },
+  "peerDependencies": {
+    "graphql": "^16.0.0"
+  },
+  "dependencies": {
+    "@graphql-codegen/plugin-helpers": "^5.1.0"
+  },
+  "devDependencies": {
+    "@graphql-codegen/cli": "^5.0.7",
+    "@graphql-codegen/typescript": "^4.1.6",
+    "@reharik/smart-enum": "*",
+    "@types/node": "^22.14.1",
+    "graphql": "^16.11.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.1"
+  }
+}

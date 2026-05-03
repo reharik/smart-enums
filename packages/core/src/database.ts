@@ -2,7 +2,7 @@
  * Smart Enums — database persistence helpers (`src/db`).
  *
  * Transport wire revival (`initializeSmartEnumMappings`, `reviveAfterTransport`)
- * is exported from `ts-smart-enum/transport` and `ts-smart-enum` root.
+ * is exported from `@reharik/smart-enum/transport` and `@reharik/smart-enum` root.
  *
  * @example
  * ```typescript
@@ -11,7 +11,7 @@
  *   prepareForDatabase,
  *   reviveEnumField,
  *   reviveRowFromDatabase,
- * } from 'ts-smart-enum/database';
+ * } from '@reharik/smart-enum/database';
  * ```
  */
 

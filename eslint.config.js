@@ -17,7 +17,8 @@ export default [
       'build/**',
       'coverage/**',
       '.history',
-      'packages/gql-codegen-smart-enum/examples/generated/**',
+      'packages/graphqlPlugins/gql-codegen-smart-enum/examples/generated/**',
+      'packages/graphqlPlugins/gql-codegen-smart-enum-type-policies/examples/generated/**',
       'eslint.config.js',
       'jest.config.js',
       'jest.config.cjs',
@@ -39,8 +40,10 @@ export default [
         project: [
           './packages/core/tsconfig.json',
           './packages/knex/tsconfig.json',
-          './packages/gql-codegen-smart-enum/tsconfig.json',
-          './packages/gql-codegen-smart-enum/tsconfig.tests.json',
+          './packages/graphqlPlugins/gql-codegen-smart-enum/tsconfig.json',
+          './packages/graphqlPlugins/gql-codegen-smart-enum/tsconfig.tests.json',
+          './packages/graphqlPlugins/gql-codegen-smart-enum-type-policies/tsconfig.json',
+          './packages/graphqlPlugins/gql-codegen-smart-enum-type-policies/tsconfig.tests.json',
         ],
         tsconfigRootDir: import.meta.dirname,
       },
@@ -69,6 +72,15 @@ export default [
 
       // Prettier
       'prettier/prettier': 'warn',
+    },
+  },
+
+  {
+    files: [
+      'packages/graphqlPlugins/gql-codegen-smart-enum-type-policies/src/index.ts',
+    ],
+    rules: {
+      'unicorn/prefer-single-call': 'off',
     },
   },
 

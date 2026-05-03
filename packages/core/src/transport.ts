@@ -6,7 +6,7 @@
  *
  * @example
  * ```typescript
- * import { enumeration, serializeForTransport, reviveAfterTransport } from 'ts-smart-enum/transport';
+ * import { enumeration, serializeForTransport, reviveAfterTransport } from '@reharik/smart-enum/transport';
  * ```
  */
 

@@ -13,13 +13,13 @@ describe('Logging', () => {
     // Reset to console logger for each test
     setLogger({
       debug: (message, ...args) =>
-        console.debug(`[ts-smart-enum:debug] ${message}`, ...args),
+        console.debug(`[@reharik/smart-enum:debug] ${message}`, ...args),
       info: (message, ...args) =>
-        console.info(`[ts-smart-enum:info] ${message}`, ...args),
+        console.info(`[@reharik/smart-enum:info] ${message}`, ...args),
       warn: (message, ...args) =>
-        console.warn(`[ts-smart-enum:warn] ${message}`, ...args),
+        console.warn(`[@reharik/smart-enum:warn] ${message}`, ...args),
       error: (message, ...args) =>
-        console.error(`[ts-smart-enum:error] ${message}`, ...args),
+        console.error(`[@reharik/smart-enum:error] ${message}`, ...args),
     });
   });
 
