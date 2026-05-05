@@ -1,5 +1,5 @@
 import { isEnumType, type GraphQLEnumType, type GraphQLSchema } from 'graphql';
-
+import { camelCase } from 'case-anything';
 export type SharedPluginConfig = {
   skipEnums?: string[];
 };
@@ -31,31 +31,12 @@ export const escapeString = (value: string): string => {
 };
 
 /** Lowercases the first character (previous name: `lcFirst` / camelCase-leading de-cap). */
-export const uncapitalize = (value: string): string => {
+export const lcFirst = (value: string): string => {
   if (value.length === 0) {
     return value;
   }
 
   return `${value.charAt(0).toLowerCase()}${value.slice(1)}`;
-};
-
-export const toCamelCase = (value: string): string => {
-  const normalized = value
-    .trim()
-    .replaceAll(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .replaceAll(/[_\-\s]+/g, ' ')
-    .toLowerCase();
-  const parts = normalized.split(' ').filter(Boolean);
-
-  if (parts.length === 0) {
-    return '';
-  }
-
-  const [first, ...rest] = parts;
-  return [
-    first,
-    ...rest.map(part => `${part.charAt(0).toUpperCase()}${part.slice(1)}`),
-  ].join('');
 };
 
 export const isNonIntrospectionEnumType = (
@@ -91,7 +72,7 @@ export const assertNoCamelCaseCollisions = (
   const byCamelCase = new Map<string, string[]>();
 
   for (const originalValue of originalValues) {
-    const camelCasedValue = toCamelCase(originalValue);
+    const camelCasedValue = camelCase(originalValue);
     const existing = byCamelCase.get(camelCasedValue) ?? [];
     byCamelCase.set(camelCasedValue, [...existing, originalValue]);
   }

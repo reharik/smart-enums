@@ -1,0 +1,60 @@
+{
+  "name": "@reharik/graphql-codegen-smart-enum-preset",
+  "version": "0.1.1",
+  "description": "GraphQL Code Generator preset for end-to-end smart-enum integration. Auto-derives enumValues maps and orchestrates smart-enum codegen plugins.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "prepack": "npm run build",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "publish:npm": "npm publish --access public --otp=$NPM_OTP"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@reharik/graphql-codegen-smart-enum": "^0.3.7",
+    "@reharik/graphql-codegen-smart-enum-type-policies": "^0.1.2"
+  },
+  "peerDependencies": {
+    "graphql": "^16.0.0",
+    "@graphql-codegen/plugin-helpers": "^5.0.0"
+  },
+  "devDependencies": {
+    "@graphql-codegen/plugin-helpers": "^5.1.0",
+    "@graphql-codegen/typescript": "^4.1.6",
+    "@graphql-codegen/typescript-operations": "^4.0.0",
+    "@graphql-codegen/typescript-resolvers": "^4.0.0",
+    "graphql": "^16.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  },
+  "keywords": [
+    "graphql",
+    "graphql-codegen",
+    "graphql-codegen-preset",
+    "smart-enum",
+    "typescript"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/reharik/smart-enums"
+  }
+}

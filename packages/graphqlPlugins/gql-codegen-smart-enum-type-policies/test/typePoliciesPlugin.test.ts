@@ -215,4 +215,128 @@ describe('typePoliciesPlugin', () => {
       expect(output).not.toContain('Unused');
     });
   });
+  // Add this describe block to the existing typePoliciesPlugin.test.ts file,
+  // alongside the other top-level describe blocks.
+
+  describe('When a field is a list of enums', () => {
+    it('should emit a list-aware read function for [Enum!]! fields', async () => {
+      const schema = buildSchema(`
+      enum Tag { A, B, C }
+      type Item { tags: [Tag!]! }
+    `);
+
+      const output = await normalizeOutput(plugin(schema, [], baseConfig));
+
+      expect(output).toContain('read(existing: string[])');
+      expect(output).toContain(
+        'return existing ? existing.map(v => Tag.fromValue(v)) : existing;',
+      );
+    });
+
+    it('should emit a list-aware read for [Enum] (nullable list, nullable inner)', async () => {
+      const schema = buildSchema(`
+      enum Tag { A, B }
+      type Item { tags: [Tag] }
+    `);
+
+      const output = await normalizeOutput(plugin(schema, [], baseConfig));
+
+      expect(output).toContain('read(existing: string[])');
+      expect(output).toContain('existing.map(v => Tag.fromValue(v))');
+    });
+
+    it('should emit a list-aware read for [Enum!] (nullable list, non-null inner)', async () => {
+      const schema = buildSchema(`
+      enum Tag { A, B }
+      type Item { tags: [Tag!] }
+    `);
+
+      const output = await normalizeOutput(plugin(schema, [], baseConfig));
+
+      expect(output).toContain('read(existing: string[])');
+      expect(output).toContain('existing.map(v => Tag.fromValue(v))');
+    });
+
+    it('should emit a list-aware read for [Enum]! (non-null list, nullable inner)', async () => {
+      const schema = buildSchema(`
+      enum Tag { A, B }
+      type Item { tags: [Tag]! }
+    `);
+
+      const output = await normalizeOutput(plugin(schema, [], baseConfig));
+
+      expect(output).toContain('read(existing: string[])');
+      expect(output).toContain('existing.map(v => Tag.fromValue(v))');
+    });
+
+    it('should not emit list-aware shape for scalar enum fields', async () => {
+      const schema = buildSchema(`
+      enum Status { A, B }
+      type Item { status: Status! }
+    `);
+
+      const output = await normalizeOutput(plugin(schema, [], baseConfig));
+
+      expect(output).toContain('read(existing: string)');
+      expect(output).not.toContain('existing.map');
+      expect(output).not.toContain('string[]');
+    });
+
+    it('should emit both shapes when the same enum appears as scalar and list on the same type', async () => {
+      const schema = buildSchema(`
+      enum Tag { A, B }
+      type Item {
+        primary: Tag!
+        secondary: [Tag!]!
+      }
+    `);
+
+      const output = await normalizeOutput(plugin(schema, [], baseConfig));
+
+      // primary uses scalar shape
+      expect(output).toMatch(/primary:\s*\{[\s\S]*?read\(existing: string\)/);
+
+      // secondary uses list shape
+      expect(output).toMatch(
+        /secondary:\s*\{[\s\S]*?read\(existing: string\[\]\)/,
+      );
+
+      // Tag is imported (only once — the import is shared)
+      expect(output).toContain("import { Tag } from './graphql-smart-enums';");
+    });
+
+    it('should apply enumClassSuffix correctly to list-of-enum read functions', async () => {
+      const schema = buildSchema(`
+      enum Tag { A, B }
+      type Item { tags: [Tag!]! }
+    `);
+
+      const output = await normalizeOutput(
+        plugin(schema, [], { ...baseConfig, enumClassSuffix: 'Enum' }),
+      );
+
+      expect(output).toContain('TagEnum');
+      expect(output).toContain('existing.map(v => TagEnum.fromValue(v))');
+    });
+
+    it('should respect skipEnums for list-of-enum fields', async () => {
+      const schema = buildSchema(`
+      enum Tag { A, B }
+      enum Status { OPEN, CLOSED }
+      type Item {
+        tags: [Tag!]!
+        status: Status!
+      }
+    `);
+
+      const output = await normalizeOutput(
+        plugin(schema, [], { ...baseConfig, skipEnums: ['Tag'] }),
+      );
+
+      expect(output).not.toContain('Tag');
+      expect(output).toContain('Status');
+      expect(output).toContain('status: {');
+      expect(output).not.toContain('tags:');
+    });
+  });
 });

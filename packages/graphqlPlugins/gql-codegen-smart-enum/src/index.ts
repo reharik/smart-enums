@@ -6,22 +6,23 @@ import {
   type GraphQLEnumValue,
   type ObjectValueNode,
 } from 'graphql';
+import { camelCase } from 'case-anything';
 
 import type { SharedPluginConfig } from './shared.js';
 import {
   escapeString,
-  toCamelCase,
   validateSharedConfig,
   filterSkippedEnumTypes,
   getEnumTypes,
   assertNoCamelCaseCollisions,
   quoteLiteral,
-  uncapitalize,
+  lcFirst,
 } from './shared.js';
 
 export type SmartEnumPluginConfig = SharedPluginConfig & {
   enumClassSuffix?: string;
   emitDescriptionsAsDisplay?: boolean;
+  serializeAs?: 'value' | 'wrapped';
 };
 
 const validateConfig = (config: SmartEnumPluginConfig): void => {
@@ -42,6 +43,16 @@ const validateConfig = (config: SmartEnumPluginConfig): void => {
   ) {
     throw new TypeError(
       '[graphql-codegen-smart-enum] Config `emitDescriptionsAsDisplay` must be a boolean when provided.',
+    );
+  }
+
+  if (
+    config.serializeAs !== undefined &&
+    config.serializeAs !== 'value' &&
+    config.serializeAs !== 'wrapped'
+  ) {
+    throw new TypeError(
+      `[graphql-codegen-smart-enum] config.serializeAs must be 'value' or 'wrapped'`,
     );
   }
 };
@@ -286,6 +297,7 @@ const buildEnumBlock = (
   enumType: GraphQLEnumType,
   enumClassSuffix: string,
   emitDescriptionsAsDisplay: boolean,
+  serializeAs?: 'value' | 'wrapped',
 ): { inputLine: string; typeLine: string; enumLine: string } => {
   const generatedName = `${enumName}${enumClassSuffix}`;
   const { inputDefinition, inputName } = buildInput(
@@ -297,7 +309,9 @@ const buildEnumBlock = (
   return {
     inputLine: inputDefinition,
     typeLine: `export type ${generatedName} = Enumeration<typeof ${generatedName}>;`,
-    enumLine: `export const ${generatedName} = enumeration<typeof ${inputName}>('${escapeString(enumName)}', { input: ${inputName} });`,
+    enumLine: `export const ${generatedName} = enumeration<typeof ${inputName}>('${escapeString(enumName)}', { input: ${inputName}${
+      serializeAs ? `, serializeAs: '${serializeAs}'` : ''
+    } });`,
   };
 };
 
@@ -326,11 +340,22 @@ export const plugin: PluginFunction<SmartEnumPluginConfig> = (
       enumType,
       enumClassSuffix,
       emitDescriptionsAsDisplay,
+      config.serializeAs,
     ),
   );
   const inputLines = blocks.map(block => block.inputLine);
   const typeLines = blocks.map(block => block.typeLine);
   const enumLines = blocks.map(block => block.enumLine);
+
+  // New: collect every generated enum name for the registry barrel
+  const generatedNames = enumTypes.map(
+    enumType => `${enumType.name}${enumClassSuffix}`,
+  );
+
+  const registryLine =
+    generatedNames.length > 0
+      ? `export const enumRegistry = { ${generatedNames.join(', ')} } as const;`
+      : '';
 
   return [
     '/**',
@@ -348,6 +373,8 @@ export const plugin: PluginFunction<SmartEnumPluginConfig> = (
     '',
     ...enumLines,
     '',
+    registryLine,
+    '',
   ].join('\n');
 };
 
@@ -356,7 +383,7 @@ const buildInput = (
   enumType: GraphQLEnumType,
   emitDescriptionsAsDisplay: boolean,
 ): { inputDefinition: string; inputName: string } => {
-  const inputName = `${uncapitalize(generatedName)}Input`;
+  const inputName = `${lcFirst(generatedName)}Input`;
   const enumValues = enumType.getValues();
   const originalEnumValues = enumValues.map(enumValue => enumValue.name);
   assertNoCamelCaseCollisions(enumType.name, originalEnumValues);
@@ -389,7 +416,7 @@ const buildInput = (
             parsedMeta,
           );
           const objectFields: string[] = [];
-          const entryKey = toCamelCase(enumValue.name);
+          const entryKey = camelCase(enumValue.name);
           const hasParsedMeta = parsedMeta !== undefined;
           const propsOnly = isPropsOnlyMeta(parsedMeta);
 
@@ -437,7 +464,7 @@ const buildInput = (
         })
         .join(', ')} } as const;`
     : `const ${inputName} = [${enumValues
-        .map(enumValue => quoteLiteral(toCamelCase(enumValue.name)))
+        .map(enumValue => quoteLiteral(camelCase(enumValue.name)))
         .join(', ')}] as const;`;
   return { inputDefinition, inputName };
 };

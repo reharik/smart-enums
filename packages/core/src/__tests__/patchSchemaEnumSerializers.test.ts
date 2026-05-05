@@ -13,7 +13,7 @@ describe('patchSchemaEnumSerializers', () => {
       type Query { status: Status }
     `);
 
-    patchSchemaEnumSerializers(schema);
+    patchSchemaEnumSerializers(schema, { Status });
 
     const statusType = schema.getType('Status');
     if (!isEnumType(statusType)) throw new Error('Expected enum type');
@@ -27,7 +27,7 @@ describe('patchSchemaEnumSerializers', () => {
       type Query { status: Status }
     `);
 
-    patchSchemaEnumSerializers(schema);
+    patchSchemaEnumSerializers(schema, { Status });
 
     const statusType = schema.getType('Status');
     if (!isEnumType(statusType)) throw new Error('Expected enum type');

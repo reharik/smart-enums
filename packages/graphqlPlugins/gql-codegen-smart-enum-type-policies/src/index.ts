@@ -1,9 +1,12 @@
 import type { PluginFunction } from '@graphql-codegen/plugin-helpers';
 import {
-  getNamedType,
   isEnumType,
+  isListType,
+  isNonNullType,
   isObjectType,
+  type GraphQLEnumType,
   type GraphQLObjectType,
+  type GraphQLOutputType,
 } from 'graphql';
 
 import {
@@ -20,6 +23,13 @@ export type TypePoliciesPluginConfig = SharedPluginConfig & {
   /** Suffix appended to GraphQL enum names when importing. Default: '' */
   enumClassSuffix?: string;
 };
+
+type EnumFieldKind = 'scalar' | 'list';
+
+interface ResolvedEnumField {
+  enumType: GraphQLEnumType;
+  kind: EnumFieldKind;
+}
 
 const AUTO_HEADER_LINES = [
   '/**',
@@ -41,6 +51,44 @@ const validateTypePoliciesConfig = (config: TypePoliciesPluginConfig): void => {
       '[graphql-codegen-smart-enum-type-policies] Config `enumImportPath` must be a non-empty string.',
     );
   }
+};
+
+/**
+ * Inspect a GraphQL output type and determine whether it represents
+ * a scalar enum or a list of enums.
+ *
+ * Handles all wrapping permutations:
+ *   Status        → { scalar }
+ *   Status!       → { scalar }
+ *   [Status]      → { list }
+ *   [Status]!     → { list }
+ *   [Status!]     → { list }
+ *   [Status!]!    → { list }
+ *
+ * Returns null for any non-enum type (String, Int, object types, etc).
+ */
+const resolveEnumField = (
+  fieldType: GraphQLOutputType,
+): ResolvedEnumField | null => {
+  // Strip outer NonNull
+  const outerInner = isNonNullType(fieldType) ? fieldType.ofType : fieldType;
+
+  if (isListType(outerInner)) {
+    // Strip the list, then strip any inner NonNull
+    const listInner = outerInner.ofType;
+    const namedInner = isNonNullType(listInner) ? listInner.ofType : listInner;
+
+    if (isEnumType(namedInner)) {
+      return { enumType: namedInner, kind: 'list' };
+    }
+    return null;
+  }
+
+  if (isEnumType(outerInner)) {
+    return { enumType: outerInner, kind: 'scalar' };
+  }
+
+  return null;
 };
 
 export const plugin: PluginFunction<TypePoliciesPluginConfig> = (
@@ -66,7 +114,11 @@ export const plugin: PluginFunction<TypePoliciesPluginConfig> = (
 
   const typeEntries: {
     typeName: string;
-    fields: readonly { fieldName: string; enumTypeName: string }[];
+    fields: readonly {
+      fieldName: string;
+      enumTypeName: string;
+      kind: EnumFieldKind;
+    }[];
   }[] = [];
 
   for (const objectType of objectTypes) {
@@ -74,12 +126,20 @@ export const plugin: PluginFunction<TypePoliciesPluginConfig> = (
     const sortedFieldNames = Object.keys(fieldMap).sort((a, b) =>
       a.localeCompare(b),
     );
-    const enumFields: { fieldName: string; enumTypeName: string }[] = [];
+    const enumFields: {
+      fieldName: string;
+      enumTypeName: string;
+      kind: EnumFieldKind;
+    }[] = [];
     for (const fieldName of sortedFieldNames) {
       const field = fieldMap[fieldName];
-      const named = getNamedType(field.type);
-      if (isEnumType(named) && allowedEnumNames.has(named.name)) {
-        enumFields.push({ fieldName, enumTypeName: named.name });
+      const resolved = resolveEnumField(field.type);
+      if (resolved !== null && allowedEnumNames.has(resolved.enumType.name)) {
+        enumFields.push({
+          fieldName,
+          enumTypeName: resolved.enumType.name,
+          kind: resolved.kind,
+        });
       }
     }
     if (enumFields.length > 0) {
@@ -119,10 +179,17 @@ export const plugin: PluginFunction<TypePoliciesPluginConfig> = (
     for (const field of entry.fields) {
       const className = `${field.enumTypeName}${enumClassSuffix}`;
       lines.push(`      ${field.fieldName}: {`);
-      lines.push('        read(existing: string) {');
-      lines.push(
-        `          return existing ? ${className}.fromValue(existing) : existing;`,
-      );
+      if (field.kind === 'list') {
+        lines.push('        read(existing: string[]) {');
+        lines.push(
+          `          return existing ? existing.map(v => ${className}.fromValue(v)) : existing;`,
+        );
+      } else {
+        lines.push('        read(existing: string) {');
+        lines.push(
+          `          return existing ? ${className}.fromValue(existing) : existing;`,
+        );
+      }
       lines.push('        },');
       lines.push('      },');
     }

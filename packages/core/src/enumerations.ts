@@ -5,6 +5,7 @@ import {
   SMART_ENUM,
   SMART_ENUM_ID,
   SMART_ENUM_ITEM,
+  SerializationMode,
   type EnumFromNormalizedObject,
   type EnumItemFromNormalizedObject,
   type EnumMemberUnionFromNormalizedObject,
@@ -15,6 +16,7 @@ import {
   type ObjectEnumInput,
   type PropertyAutoFormatter,
 } from './types.js';
+import { resolveSerializationMode } from './utilities/serializationMode.js';
 
 export type EnumItem<TEnum> = {
   [K in keyof TEnum]: TEnum[K] extends { __smart_enum_brand: true }
@@ -38,6 +40,7 @@ const finalizeEnumItem = <T extends { value: string }>(
   item: T,
   enumType: string,
   enumInstanceId: symbol,
+  serializeAs: SerializationMode | undefined,
 ): T & FinalizedEnumFields => {
   Object.defineProperty(item, SMART_ENUM_ITEM, {
     value: true,
@@ -60,7 +63,13 @@ const finalizeEnumItem = <T extends { value: string }>(
   });
 
   Object.defineProperty(item, 'toJSON', {
-    value: () => ({ __smart_enum_type: enumType, value: item.value }),
+    value: () => {
+      const mode = resolveSerializationMode(serializeAs);
+      if (mode === 'value') {
+        return item.value;
+      }
+      return { __smart_enum_type: enumType, value: item.value };
+    },
     enumerable: false,
   });
 
@@ -91,6 +100,7 @@ function buildEnumFromObject<TObj extends ObjectEnumInput>(
   enumType: string,
   input: TObj,
   propertyAutoFormatters?: PropertyAutoFormatter[],
+  serializeAs?: SerializationMode,
 ): EnumFromNormalizedObject<TObj> {
   const formattersWithDefaults: PropertyAutoFormatter[] = [
     { key: 'value', format: constantCase },
@@ -123,6 +133,7 @@ function buildEnumFromObject<TObj extends ObjectEnumInput>(
         enumItemBase,
         enumType,
         enumInstanceId,
+        serializeAs,
       ) as unknown as TItem;
 
       Object.freeze(enumItem);
@@ -169,5 +180,6 @@ export function enumeration(
     enumType,
     normalized,
     props.propertyAutoFormatters,
+    props.serializeAs,
   );
 }

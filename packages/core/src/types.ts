@@ -143,6 +143,7 @@ export type StandardEnumItem = StandardEnumItemBase & {
   readonly __smart_enum_brand: true;
   readonly __smart_enum_type: string;
   readonly toPostgres: () => string;
+  readonly toJSON: () => string | { __smart_enum_type: string; value: string };
 };
 
 export type EnumInputItem = Partial<{
@@ -397,9 +398,28 @@ export type RevivePayloadOptions = {
   strict?: boolean;
 };
 
+/**
+ * Serialization mode controls how smart-enum items are serialized to JSON.
+ *
+ * - 'wrapped' (default): toJSON returns { __smart_enum_type, value }.
+ *   Use this when payloads need to be self-describing for revival on the
+ *   receiving end (e.g. REST APIs with explicit revive middleware).
+ *
+ * - 'value': toJSON returns just the wire value string.
+ *   Use this when the receiving end already knows the enum types from
+ *   schema context (e.g. GraphQL boundaries).
+ *
+ * Resolution order at toJSON call time:
+ *   1. Per-enum `serializeAs` option (if set on enumeration())
+ *   2. Global default (set via setDefaultSerializationMode)
+ *   3. 'wrapped' (built-in default, preserves backward compatibility)
+ */
+export type SerializationMode = 'wrapped' | 'value';
+
 export type EnumerationProps<TInput> = {
   input: TInput;
   propertyAutoFormatters?: PropertyAutoFormatter[];
+  serializeAs?: SerializationMode;
 };
 
 export type Enumeration<TEnum> =
@@ -411,7 +431,7 @@ export type Enumeration<TEnum> =
 
 export type FinalizedEnumFields = Pick<
   StandardEnumItem,
-  '__smart_enum_brand' | '__smart_enum_type'
+  '__smart_enum_brand' | '__smart_enum_type' | 'toJSON'
 >;
 export type FinalizableEnumItem = {
   key: string;

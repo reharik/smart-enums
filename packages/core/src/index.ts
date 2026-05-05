@@ -59,4 +59,9 @@ export type {
   RevivePayloadOptions,
   StandardEnumItemBase,
   StandardEnumItem,
+  SerializationMode,
 } from './types.js';
+export {
+  setDefaultSerializationMode,
+  resetDefaultSerializationMode,
+} from './utilities/serializationMode.js';

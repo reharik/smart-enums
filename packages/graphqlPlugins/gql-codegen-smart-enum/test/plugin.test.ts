@@ -420,4 +420,125 @@ describe('SmartEnum plugin', () => {
       );
     });
   });
+  describe('enumRegistry barrel export', () => {
+    it('should emit a registry containing every generated enum', async () => {
+      const schema = buildSchema(`
+        enum Status { ACTIVE, INACTIVE }
+        enum Priority { LOW, HIGH }
+      `);
+
+      const output = await plugin(schema, [], {});
+
+      expect(output).toContain(
+        'export const enumRegistry = { Priority, Status } as const;',
+      );
+    });
+
+    it('should apply enumClassSuffix to registry entries', async () => {
+      const schema = buildSchema(`
+        enum Status { ACTIVE }
+        enum Priority { LOW }
+      `);
+
+      const output = await plugin(schema, [], { enumClassSuffix: 'Enum' });
+
+      expect(output).toContain(
+        'export const enumRegistry = { PriorityEnum, StatusEnum } as const;',
+      );
+    });
+
+    it('should respect skipEnums in the registry', async () => {
+      const schema = buildSchema(`
+        enum Status { ACTIVE }
+        enum Internal { A }
+      `);
+
+      const output = await plugin(schema, [], { skipEnums: ['Internal'] });
+
+      expect(output).toContain(
+        'export const enumRegistry = { Status } as const;',
+      );
+      expect(output).not.toContain('Internal');
+    });
+
+    it('should omit the registry export when no enums are emitted', async () => {
+      const schema = buildSchema(`
+        type Query { hello: String }
+      `);
+
+      const output = await plugin(schema, [], {});
+
+      expect(output).not.toContain('enumRegistry');
+    });
+  });
+
+  describe('serializeAs config', () => {
+    it("should emit serializeAs: 'value' when configured", async () => {
+      const schema = buildSchema(`enum Status { ACTIVE }`);
+
+      const output = await plugin(schema, [], { serializeAs: 'value' });
+
+      expect(output).toContain("input: statusInput, serializeAs: 'value'");
+    });
+
+    it("should emit serializeAs: 'wrapped' when configured", async () => {
+      const schema = buildSchema(`enum Status { ACTIVE }`);
+
+      const output = await plugin(schema, [], { serializeAs: 'wrapped' });
+
+      expect(output).toContain("input: statusInput, serializeAs: 'wrapped'");
+    });
+
+    it('should not emit serializeAs when not configured', async () => {
+      const schema = buildSchema(`enum Status { ACTIVE }`);
+
+      const output = await plugin(schema, [], {});
+
+      expect(output).not.toContain('serializeAs');
+      expect(output).toContain('input: statusInput }');
+    });
+
+    it('should reject invalid serializeAs values', () => {
+      const schema = buildSchema(`enum Status { ACTIVE }`);
+
+      expect(() =>
+        plugin(schema, [], { serializeAs: 'bogus' as 'value' }),
+      ).toThrow(/serializeAs must be 'value' or 'wrapped'/);
+    });
+  });
+
+  describe('serializeAs config', () => {
+    it("should emit serializeAs: 'value' when configured", async () => {
+      const schema = buildSchema(`enum Status { ACTIVE }`);
+
+      const output = await plugin(schema, [], { serializeAs: 'value' });
+
+      expect(output).toContain("input: statusInput, serializeAs: 'value'");
+    });
+
+    it("should emit serializeAs: 'wrapped' when configured", async () => {
+      const schema = buildSchema(`enum Status { ACTIVE }`);
+
+      const output = await plugin(schema, [], { serializeAs: 'wrapped' });
+
+      expect(output).toContain("input: statusInput, serializeAs: 'wrapped'");
+    });
+
+    it('should not emit serializeAs when not configured', async () => {
+      const schema = buildSchema(`enum Status { ACTIVE }`);
+
+      const output = await plugin(schema, [], {});
+
+      expect(output).not.toContain('serializeAs');
+      expect(output).toContain('input: statusInput }');
+    });
+
+    it('should reject invalid serializeAs values', () => {
+      const schema = buildSchema(`enum Status { ACTIVE }`);
+
+      expect(() =>
+        plugin(schema, [], { serializeAs: 'bogus' as 'value' }),
+      ).toThrow(/serializeAs must be 'value' or 'wrapped'/);
+    });
+  });
 });
