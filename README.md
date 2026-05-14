@@ -294,6 +294,37 @@ const resolvers = {
 
 The patched `serialize` does `val?.value ?? val` — smart-enum items return their `.value` string, and raw strings pass through unchanged. This means you can adopt it incrementally without breaking existing resolvers that already return strings.
 
+### Client-side: outgoing variables
+
+If your Apollo Client uses a link that processes variables against the schema — most commonly [`apollo-link-scalars`](https://www.npmjs.com/package/apollo-link-scalars) — that link will call `serialize` on every variable value, including smart-enum instances, _before_ JSON.stringify runs. GraphQL's default `serialize` on `GraphQLEnumType` doesn't know how to handle smart-enum objects and throws:
+
+```
+Enum "ReactionEmoji" cannot represent value: { __smart_enum_type: ..., value: ... }
+```
+
+The same `patchSchemaEnumSerializers` that you use on the server also fixes this on the client. Patch your client schema before passing it to the link:
+
+```typescript
+import { buildSchema } from 'graphql';
+import { ApolloClient, ApolloLink, InMemoryCache } from '@apollo/client';
+import { withScalars } from 'apollo-link-scalars';
+import { patchSchemaEnumSerializers } from '@reharik/smart-enum/graphql';
+import { enumRegistry } from '@packages/contracts';
+import sdl from './generated/schema.graphql?raw';
+
+const schema = buildSchema(sdl);
+patchSchemaEnumSerializers(schema, enumRegistry);
+
+const scalarLink = withScalars({ schema, typesMap: { /* ... */ } });
+
+export const client = new ApolloClient({
+  link: ApolloLink.from([scalarLink, httpLink]),
+  cache: new InMemoryCache({ /* ... */ }),
+});
+```
+
+If you're not using a schema-aware link, you don't need this — Apollo's default behavior calls `JSON.stringify` on variables directly, which goes through smart-enum's `toJSON` (with `serializeAs: 'value'`) and produces the correct wire format.
+
 ### Client-side: Apollo cache rehydration
 
 The [`@reharik/graphql-codegen-smart-enum`](https://www.npmjs.com/package/@reharik/graphql-codegen-smart-enum) package includes a second codegen plugin that generates Apollo `typePolicies` with `read` functions for every enum field. Spread the output into your `InMemoryCache` and components receive smart-enum instances from queries instead of raw strings:

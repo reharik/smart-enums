@@ -4,6 +4,7 @@ import {
   type DirectiveNode,
   type GraphQLEnumType,
   type GraphQLEnumValue,
+  type GraphQLSchema,
   type ObjectValueNode,
 } from 'graphql';
 import { camelCase } from 'case-anything';
@@ -23,6 +24,87 @@ export type SmartEnumPluginConfig = SharedPluginConfig & {
   enumClassSuffix?: string;
   emitDescriptionsAsDisplay?: boolean;
   serializeAs?: 'value' | 'wrapped';
+  /**
+   * Map of GraphQL enum type name → relative import path. Each key must appear
+   * in `skipEnums` and must exist in the schema. Imports populate `enumRegistry`
+   * for `patchSchemaEnumSerializers` without re-exporting the symbols.
+   */
+  externalEnums?: Record<string, string>;
+};
+
+const PLUGIN_PREFIX = '[graphql-codegen-smart-enum]';
+
+const GRAPHQL_NAME_PATTERN = /^[_A-Za-z][_0-9A-Za-z]*$/;
+
+const validateExternalEnumsConfig = (
+  schema: GraphQLSchema,
+  config: SmartEnumPluginConfig,
+): void => {
+  if (config.externalEnums === undefined) {
+    return;
+  }
+
+  const externalEnums = config.externalEnums;
+
+  if (
+    typeof externalEnums !== 'object' ||
+    externalEnums === null ||
+    Array.isArray(externalEnums)
+  ) {
+    throw new TypeError(
+      `${PLUGIN_PREFIX} Config \`externalEnums\` must be a plain object when provided.`,
+    );
+  }
+
+  const keys = Object.keys(externalEnums);
+  const skipSet = new Set(config.skipEnums ?? []);
+
+  for (const key of keys) {
+    if (typeof key !== 'string' || key.length === 0) {
+      throw new TypeError(
+        `${PLUGIN_PREFIX} Config \`externalEnums\` keys must be non-empty strings.`,
+      );
+    }
+
+    if (!GRAPHQL_NAME_PATTERN.test(key)) {
+      throw new TypeError(
+        `${PLUGIN_PREFIX} Config \`externalEnums\` keys must be valid GraphQL type names. Invalid key: '${key}'.`,
+      );
+    }
+
+    const importPath = externalEnums[key];
+    if (typeof importPath !== 'string' || importPath.trim().length === 0) {
+      throw new TypeError(
+        `${PLUGIN_PREFIX} Config \`externalEnums['${key}']\` must be a non-empty import path string.`,
+      );
+    }
+  }
+
+  const notInSkipEnums = keys.filter(name => !skipSet.has(name));
+  if (notInSkipEnums.length > 0) {
+    throw new TypeError(
+      `${PLUGIN_PREFIX} Config \`externalEnums\` must only reference enums that also appear in \`skipEnums\`. Missing from \`skipEnums\`: ${notInSkipEnums
+        .map(n => `'${n}'`)
+        .join(', ')}.`,
+    );
+  }
+
+  const allEnumNames = new Set(
+    getEnumTypes(schema).map(enumType => enumType.name),
+  );
+  const unknown = keys.filter(name => !allEnumNames.has(name));
+  if (unknown.length > 0) {
+    throw new Error(
+      `${PLUGIN_PREFIX} Config \`externalEnums\` contains names that don't correspond to enum types in the schema: ${unknown
+        .map(n => `'${n}'`)
+        .join(', ')}. Available enum types: ${
+        [...allEnumNames]
+          .sort()
+          .map(n => `'${n}'`)
+          .join(', ') || '(none)'
+      }.`,
+    );
+  }
 };
 
 const validateConfig = (config: SmartEnumPluginConfig): void => {
@@ -315,12 +397,43 @@ const buildEnumBlock = (
   };
 };
 
+const buildExternalImportLines = (
+  externalEntries: readonly { importPath: string; identifier: string }[],
+): string[] => {
+  if (externalEntries.length === 0) {
+    return [];
+  }
+
+  const byPath = new Map<string, Set<string>>();
+  for (const entry of externalEntries) {
+    const set = byPath.get(entry.importPath) ?? new Set<string>();
+    set.add(entry.identifier);
+    byPath.set(entry.importPath, set);
+  }
+
+  return [...byPath.entries()]
+    .sort(([leftPath], [rightPath]) => leftPath.localeCompare(rightPath))
+    .map(([importPath, identifiers]) => {
+      const names = [...identifiers].sort((a, b) => a.localeCompare(b));
+      return `import { ${names.join(', ')} } from '${escapeString(importPath)}';`;
+    });
+};
+
+const formatRegistryProperty = (
+  graphqlTypeName: string,
+  tsIdentifier: string,
+): string =>
+  graphqlTypeName === tsIdentifier
+    ? tsIdentifier
+    : `${graphqlTypeName}: ${tsIdentifier}`;
+
 export const plugin: PluginFunction<SmartEnumPluginConfig> = (
   schema,
   _documents,
   config,
 ): string => {
   validateConfig(config);
+  validateExternalEnumsConfig(schema, config);
 
   const enumClassSuffix = config.enumClassSuffix ?? DEFAULT_ENUM_CLASS_SUFFIX;
   const emitDescriptionsAsDisplay = config.emitDescriptionsAsDisplay ?? true;
@@ -330,7 +443,18 @@ export const plugin: PluginFunction<SmartEnumPluginConfig> = (
     config.skipEnums,
   );
 
-  if (enumTypes.length === 0) {
+  const externalEnumTypeNames =
+    config.externalEnums === undefined
+      ? []
+      : Object.keys(config.externalEnums).sort((a, b) => a.localeCompare(b));
+
+  const externalRegistryEntries = externalEnumTypeNames.map(typeName => ({
+    graphqlTypeName: typeName,
+    importPath: config.externalEnums![typeName],
+    identifier: `${typeName}${enumClassSuffix}`,
+  }));
+
+  if (enumTypes.length === 0 && externalRegistryEntries.length === 0) {
     return '';
   }
 
@@ -347,35 +471,73 @@ export const plugin: PluginFunction<SmartEnumPluginConfig> = (
   const typeLines = blocks.map(block => block.typeLine);
   const enumLines = blocks.map(block => block.enumLine);
 
-  // New: collect every generated enum name for the registry barrel
-  const generatedNames = enumTypes.map(
-    enumType => `${enumType.name}${enumClassSuffix}`,
+  const generatedRegistryRows = enumTypes.map(enumType => ({
+    graphqlTypeName: enumType.name,
+    identifier: `${enumType.name}${enumClassSuffix}`,
+  }));
+
+  const combinedRegistryRows = [
+    ...generatedRegistryRows,
+    ...externalRegistryEntries.map(e => ({
+      graphqlTypeName: e.graphqlTypeName,
+      identifier: e.identifier,
+    })),
+  ].sort((a, b) =>
+    a.graphqlTypeName.localeCompare(b.graphqlTypeName, undefined, {
+      sensitivity: 'base',
+    }),
+  );
+
+  const registryProperties = combinedRegistryRows.map(row =>
+    formatRegistryProperty(row.graphqlTypeName, row.identifier),
   );
 
   const registryLine =
-    generatedNames.length > 0
-      ? `export const enumRegistry = { ${generatedNames.join(', ')} } as const;`
+    registryProperties.length > 0
+      ? `export const enumRegistry = { ${registryProperties.join(', ')} } as const;`
       : '';
 
-  return [
+  const externalImportLines = buildExternalImportLines(externalRegistryEntries);
+
+  const smartEnumImportLine =
+    enumTypes.length > 0
+      ? "import { enumeration, type Enumeration } from '@reharik/smart-enum';"
+      : '';
+
+  const lines: string[] = [
     '/**',
     ' * -----------------------------------------------------------------------------',
     ' * THIS FILE IS AUTO-GENERATED. DO NOT EDIT MANUALLY.',
     ' * Any manual changes will be overwritten by GraphQL Code Generator.',
     ' * -----------------------------------------------------------------------------',
     ' */',
-    '',
-    "import { enumeration, type Enumeration } from '@reharik/smart-enum';",
-    '',
-    ...inputLines,
-    '',
-    ...typeLines,
-    '',
-    ...enumLines,
-    '',
-    registryLine,
-    '',
-  ].join('\n');
+  ];
+
+  const appendBlock = (chunk: readonly string[]): void => {
+    if (chunk.length === 0) {
+      return;
+    }
+    lines.push('', ...chunk);
+  };
+
+  if (smartEnumImportLine.length > 0) {
+    appendBlock([smartEnumImportLine]);
+  }
+
+  if (externalImportLines.length > 0) {
+    appendBlock(externalImportLines);
+  }
+
+  appendBlock(inputLines);
+  appendBlock(typeLines);
+  appendBlock(enumLines);
+
+  if (registryLine.length > 0) {
+    appendBlock([registryLine]);
+  }
+
+  lines.push('');
+  return lines.join('\n');
 };
 
 const buildInput = (

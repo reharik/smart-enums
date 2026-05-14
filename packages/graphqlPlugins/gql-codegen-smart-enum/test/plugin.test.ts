@@ -443,7 +443,7 @@ describe('SmartEnum plugin', () => {
       const output = await plugin(schema, [], { enumClassSuffix: 'Enum' });
 
       expect(output).toContain(
-        'export const enumRegistry = { PriorityEnum, StatusEnum } as const;',
+        'export const enumRegistry = { Priority: PriorityEnum, Status: StatusEnum } as const;',
       );
     });
 
@@ -507,38 +507,136 @@ describe('SmartEnum plugin', () => {
     });
   });
 
-  describe('serializeAs config', () => {
-    it("should emit serializeAs: 'value' when configured", async () => {
-      const schema = buildSchema(`enum Status { ACTIVE }`);
+  describe('externalEnums config', () => {
+    describe('When skipEnums and externalEnums reference a hand-authored enum', () => {
+      it('should emit imports for each external enum', async () => {
+        const schema = buildSchema(`
+      enum Status { OPEN, CLOSED }
+      enum CustomEnum { A, B }
+    `);
 
-      const output = await plugin(schema, [], { serializeAs: 'value' });
+        const output = await normalizeOutput(
+          plugin(schema, [], {
+            skipEnums: ['CustomEnum'],
+            externalEnums: { CustomEnum: '../hand-authored/customEnum' },
+          }),
+        );
 
-      expect(output).toContain("input: statusInput, serializeAs: 'value'");
+        expect(output).toContain(
+          "import { CustomEnum } from '../hand-authored/customEnum';",
+        );
+      });
+
+      it('should include external enums in enumRegistry alongside generated ones', async () => {
+        const schema = buildSchema(`
+      enum Status { OPEN, CLOSED }
+      enum CustomEnum { A, B }
+    `);
+
+        const output = await normalizeOutput(
+          plugin(schema, [], {
+            skipEnums: ['CustomEnum'],
+            externalEnums: { CustomEnum: '../hand-authored/customEnum' },
+          }),
+        );
+
+        expect(output).toMatch(
+          /export const enumRegistry = \{[^}]*CustomEnum[^}]*Status[^}]*\}/s,
+        );
+      });
+
+      it('should not re-export external enums as named exports', async () => {
+        const schema = buildSchema(`
+      enum CustomEnum { A }
+    `);
+
+        const output = await normalizeOutput(
+          plugin(schema, [], {
+            skipEnums: ['CustomEnum'],
+            externalEnums: { CustomEnum: '../hand-authored/customEnum' },
+          }),
+        );
+
+        expect(output).toContain('import { CustomEnum }');
+        expect(output).not.toContain('export { CustomEnum }');
+        expect(output).not.toContain('export const CustomEnum');
+      });
     });
 
-    it("should emit serializeAs: 'wrapped' when configured", async () => {
-      const schema = buildSchema(`enum Status { ACTIVE }`);
+    describe('When enumClassSuffix is set for external enums', () => {
+      it('should apply enumClassSuffix to external enum imports and values', async () => {
+        const schema = buildSchema(`
+      enum CustomEnum { A }
+    `);
 
-      const output = await plugin(schema, [], { serializeAs: 'wrapped' });
+        const output = await normalizeOutput(
+          plugin(schema, [], {
+            enumClassSuffix: 'Enum',
+            skipEnums: ['CustomEnum'],
+            externalEnums: { CustomEnum: '../hand-authored/customEnum' },
+          }),
+        );
 
-      expect(output).toContain("input: statusInput, serializeAs: 'wrapped'");
+        expect(output).toContain(
+          "import { CustomEnumEnum } from '../hand-authored/customEnum';",
+        );
+        expect(output).toContain('CustomEnum: CustomEnumEnum');
+      });
     });
 
-    it('should not emit serializeAs when not configured', async () => {
-      const schema = buildSchema(`enum Status { ACTIVE }`);
+    describe('When externalEnums lists a type that is not skipped', () => {
+      it('should throw with a clear message', () => {
+        const schema = buildSchema(`enum Status { OPEN }`);
 
-      const output = await plugin(schema, [], {});
-
-      expect(output).not.toContain('serializeAs');
-      expect(output).toContain('input: statusInput }');
+        expect(() =>
+          plugin(schema, [], {
+            externalEnums: { Status: '../somewhere' },
+          }),
+        ).toThrow(/externalEnums.*also.*skipEnums/i);
+      });
     });
 
-    it('should reject invalid serializeAs values', () => {
-      const schema = buildSchema(`enum Status { ACTIVE }`);
+    describe('When externalEnums references a name that is not an enum in the schema', () => {
+      it('should throw', () => {
+        const schema = buildSchema(`enum Status { OPEN }`);
 
-      expect(() =>
-        plugin(schema, [], { serializeAs: 'bogus' as 'value' }),
-      ).toThrow(/serializeAs must be 'value' or 'wrapped'/);
+        expect(() =>
+          plugin(schema, [], {
+            skipEnums: ['DoesNotExist'],
+            externalEnums: { DoesNotExist: '../somewhere' },
+          }),
+        ).toThrow();
+      });
+    });
+
+    describe('When all schema enums are skipped but externalEnums supplies the registry', () => {
+      it('should emit imports and enumRegistry without generated enum bodies', async () => {
+        const schema = buildSchema(`
+          enum PaymentStatus { PENDING }
+          enum SortDirection { ASC }
+        `);
+
+        const output = await normalizeOutput(
+          plugin(schema, [], {
+            skipEnums: ['PaymentStatus', 'SortDirection'],
+            externalEnums: {
+              PaymentStatus: '../hand-authored/payment',
+              SortDirection: '../hand-authored/sort',
+            },
+          }),
+        );
+
+        expect(output).toContain(
+          "import { PaymentStatus } from '../hand-authored/payment';",
+        );
+        expect(output).toContain(
+          "import { SortDirection } from '../hand-authored/sort';",
+        );
+        expect(output).not.toContain("import { enumeration");
+        expect(output).toContain(
+          'export const enumRegistry = { PaymentStatus, SortDirection } as const;',
+        );
+      });
     });
   });
 });

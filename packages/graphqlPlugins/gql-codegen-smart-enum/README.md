@@ -112,7 +112,8 @@ export default config;
 | --------------------------- | ---------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `emitDescriptionsAsDisplay` | `boolean`  | `true`  | Use GraphQL enum value descriptions as the `display` field. When `false`, only enums with deprecated values or `@enumMeta` directives get object input. |
 | `enumClassSuffix`           | `string`   | `''`    | Suffix appended to generated enum names (e.g. `'Enum'` → `PaymentStatusEnum`).                                                                          |
-| `skipEnums`                 | `string[]` | —       | GraphQL enum type names to exclude from output.                                                                                                         |
+| `skipEnums`                 | `string[]`               | —       | GraphQL enum type names to exclude from output.                                                                                                         |
+| `externalEnums`             | `Record<string, string>` | —       | Map of GraphQL enum type names to import paths for hand-authored enums. Each named enum must also appear in `skipEnums`. The plugin imports each one and includes it in the generated `enumRegistry` so `patchSchemaEnumSerializers` and friends can find it. The plugin does not re-export them as named exports — consumers continue to import hand-authored enums from their original location. |
 
 ## Enum metadata with `@enumMeta`
 
@@ -204,6 +205,39 @@ generates:
 ```
 
 Without this, `@enumMeta` directives are dropped from the output file.
+
+## Hand-authored enums
+
+Sometimes you want to hand-author an enum — to add custom methods, derive props at runtime, or wrap a third-party value object. List those enum names in `skipEnums` so the plugin doesn't generate them. But the generated `enumRegistry` barrel still needs to include them, otherwise the server-side `patchSchemaEnumSerializers` won't be able to find them when GraphQL calls `parseValue` on a request argument — and the resolver will receive a raw string instead of a smart-enum instance.
+
+Use `externalEnums` to bridge the gap:
+
+```yaml
+config:
+  skipEnums:
+    - ReactionEmoji
+    - ViewerOperation
+  externalEnums:
+    ReactionEmoji: '../hand-authored/reactions'
+    ViewerOperation: '../hand-authored/viewerOperations'
+```
+
+The plugin will emit imports for each hand-authored enum and include them in the registry:
+
+```typescript
+import { ReactionEmoji } from '../hand-authored/reactions';
+import { ViewerOperation } from '../hand-authored/viewerOperations';
+
+// ... generated enums ...
+
+export const enumRegistry = {
+  // ... generated enums ...
+  ReactionEmoji,
+  ViewerOperation,
+} as const;
+```
+
+The registry key is always the GraphQL type name. The plugin does not re-export hand-authored enums as named exports — consumers continue to import them from their original location.
 
 ## Local development
 
