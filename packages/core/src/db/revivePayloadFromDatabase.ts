@@ -46,18 +46,43 @@ const reviveLeaf = (
   pathLabel: string,
 ): void => {
   const raw = host[key];
-  if (typeof raw !== 'string') {
+
+  if (typeof raw === 'string') {
+    const revived = smartEnum.tryFromValue(raw);
+    if (revived !== undefined) {
+      host[key] = revived as unknown;
+    } else if (strict) {
+      throw new EnumRevivalError(
+        `Cannot revive path "${pathLabel}": unknown enum value ${JSON.stringify(raw)}`,
+        pathLabel,
+        raw,
+      );
+    }
     return;
   }
-  const revived = smartEnum.tryFromValue(raw);
-  if (revived !== undefined) {
-    host[key] = revived as unknown;
-  } else if (strict) {
-    throw new EnumRevivalError(
-      `Cannot revive path "${pathLabel}": unknown enum value ${JSON.stringify(raw)}`,
-      pathLabel,
-      raw,
-    );
+
+  if (Array.isArray(raw)) {
+    const revivedItems: unknown[] = [];
+    for (const item of raw) {
+      if (typeof item !== 'string') {
+        revivedItems.push(item);
+        continue;
+      }
+      const revived = smartEnum.tryFromValue(item);
+      if (revived !== undefined) {
+        revivedItems.push(revived);
+      } else if (strict) {
+        throw new EnumRevivalError(
+          `Cannot revive path "${pathLabel}": unknown enum value ${JSON.stringify(item)} in array`,
+          pathLabel,
+          item,
+        );
+      } else {
+        revivedItems.push(item);
+      }
+    }
+    host[key] = revivedItems;
+    return;
   }
 };
 

@@ -251,6 +251,8 @@ const doc = revivePayloadFromDatabase(payload, {
 
 `strict: true` throws `EnumRevivalError` when a mapped string doesn't match any member. Without it, unrecognized values are left as-is.
 
+For columns that hold arrays of enum values (e.g. Postgres `text[]`), pass the column name in `fieldEnumMapping` (or its path in `pathEnumMapping`) the same way you would for a scalar enum column. Each element of the array is revived independently. Strict mode applies element-by-element — an unknown value in one position throws and identifies the offending value.
+
 ## Type guards
 
 ```typescript

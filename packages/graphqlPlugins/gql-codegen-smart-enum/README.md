@@ -1,6 +1,6 @@
 # @reharik/graphql-codegen-smart-enum
 
-[GraphQL Code Generator](https://the-guild.dev/graphql/codegen) plugin that turns your schema's `enum` types into [`@reharik/smart-enum`](https://www.npmjs.com/package/@reharik/smart-enum) definitions. You define enums in your SDL; codegen produces type-safe smart-enum objects with lookup methods, display strings, and full TypeScript inference — no hand-authored enum files to keep in sync with your schema.
+[GraphQL Code Generator](https://the-guild.dev/graphql/codegen) plugin that turns your schema's `enum` types into `[@reharik/smart-enum](https://www.npmjs.com/package/@reharik/smart-enum)` definitions. You define enums in your SDL; codegen produces type-safe smart-enum objects with lookup methods, display strings, and full TypeScript inference — no hand-authored enum files to keep in sync with your schema.
 
 ## What it generates
 
@@ -108,12 +108,14 @@ export default config;
 
 ### Config options
 
-| Option                      | Type       | Default | Description                                                                                                                                             |
-| --------------------------- | ---------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `emitDescriptionsAsDisplay` | `boolean`  | `true`  | Use GraphQL enum value descriptions as the `display` field. When `false`, only enums with deprecated values or `@enumMeta` directives get object input. |
-| `enumClassSuffix`           | `string`   | `''`    | Suffix appended to generated enum names (e.g. `'Enum'` → `PaymentStatusEnum`).                                                                          |
-| `skipEnums`                 | `string[]`               | —       | GraphQL enum type names to exclude from output.                                                                                                         |
+
+| Option                      | Type                     | Default | Description                                                                                                                                                                                                                                                                                                                                                                                        |
+| --------------------------- | ------------------------ | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `emitDescriptionsAsDisplay` | `boolean`                | `true`  | Use GraphQL enum value descriptions as the `display` field. When `false`, only enums with deprecated values or `@enumMeta` directives get object input.                                                                                                                                                                                                                                            |
+| `enumClassSuffix`           | `string`                 | `''`    | Suffix appended to generated enum names (e.g. `'Enum'` → `PaymentStatusEnum`).                                                                                                                                                                                                                                                                                                                     |
+| `skipEnums`                 | `string[]`               | —       | GraphQL enum type names to exclude from output.                                                                                                                                                                                                                                                                                                                                                    |
 | `externalEnums`             | `Record<string, string>` | —       | Map of GraphQL enum type names to import paths for hand-authored enums. Each named enum must also appear in `skipEnums`. The plugin imports each one and includes it in the generated `enumRegistry` so `patchSchemaEnumSerializers` and friends can find it. The plugin does not re-export them as named exports — consumers continue to import hand-authored enums from their original location. |
+
 
 ## Enum metadata with `@enumMeta`
 
@@ -134,7 +136,7 @@ directive @enumMeta(
   shortDisplay: String
   description: String
   sortOrder: Int
-  props: [EnumMetaProp!]
+  props: [EnumMetaProp!]ext
 ) on ENUM_VALUE
 ```
 
@@ -158,12 +160,14 @@ enum ClaimStatus {
 
 Each field resolves with these fallbacks:
 
+
 | Field          | Priority                                                                                         |
 | -------------- | ------------------------------------------------------------------------------------------------ |
 | `display`      | `@enumMeta(display:)` → GraphQL value description → derived from key (`IN_REVIEW` → `In Review`) |
 | `description`  | `@enumMeta(description:)` → GraphQL value description → omitted                                  |
 | `shortDisplay` | `@enumMeta(shortDisplay:)` → omitted                                                             |
 | `sortOrder`    | `@enumMeta(sortOrder:)` → omitted                                                                |
+
 
 ### Custom key-value props
 
@@ -185,7 +189,7 @@ const albumSortByInput = {
 } as const;
 ```
 
-When `@enumMeta` on a value _only_ supplies `props` (no `display`, `shortDisplay`, `description`, or `sortOrder`), the plugin does not emit a derived `display` field — even when `emitDescriptionsAsDisplay` is `true`.
+When `@enumMeta` on a value *only* supplies `props` (no `display`, `shortDisplay`, `description`, or `sortOrder`), the plugin does not emit a derived `display` field — even when `emitDescriptionsAsDisplay` is `true`.
 
 Prop names that aren't valid JS identifiers use computed keys (e.g. `["weird-key"]: 'value'`). Duplicate prop names and reserved names (`key`, `value`, `display`, `deprecated`, `index`, etc.) are rejected at codegen time.
 
@@ -253,10 +257,12 @@ generates: {
 
 ## Related packages
 
+
 | Package                                                                              | Purpose                                      |
 | ------------------------------------------------------------------------------------ | -------------------------------------------- |
-| [`@reharik/smart-enum`](https://www.npmjs.com/package/@reharik/smart-enum)           | Core smart-enum library (runtime dependency) |
-| [`@reharik/smart-enum-knex`](https://www.npmjs.com/package/@reharik/smart-enum-knex) | Knex query-level enum revival                |
+| `[@reharik/smart-enum](https://www.npmjs.com/package/@reharik/smart-enum)`           | Core smart-enum library (runtime dependency) |
+| `[@reharik/smart-enum-knex](https://www.npmjs.com/package/@reharik/smart-enum-knex)` | Knex query-level enum revival                |
+
 
 ## License
 

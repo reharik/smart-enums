@@ -14,18 +14,43 @@ export const reviveRowFromDatabase = <T extends Record<string, unknown>>(
       continue;
     }
     const raw = out[field];
-    if (typeof raw !== 'string') {
+
+    if (typeof raw === 'string') {
+      const revived = smartEnum.tryFromValue(raw);
+      if (revived !== undefined) {
+        out[field] = revived as unknown;
+      } else if (strict) {
+        throw new EnumRevivalError(
+          `Cannot revive field ${JSON.stringify(field)}: unknown enum value ${JSON.stringify(raw)}`,
+          field,
+          raw,
+        );
+      }
       continue;
     }
-    const revived = smartEnum.tryFromValue(raw);
-    if (revived !== undefined) {
-      out[field] = revived as unknown;
-    } else if (strict) {
-      throw new EnumRevivalError(
-        `Cannot revive field ${JSON.stringify(field)}: unknown enum value ${JSON.stringify(raw)}`,
-        field,
-        raw,
-      );
+
+    if (Array.isArray(raw)) {
+      const revivedItems: unknown[] = [];
+      for (const item of raw) {
+        if (typeof item !== 'string') {
+          revivedItems.push(item);
+          continue;
+        }
+        const revived = smartEnum.tryFromValue(item);
+        if (revived !== undefined) {
+          revivedItems.push(revived);
+        } else if (strict) {
+          throw new EnumRevivalError(
+            `Cannot revive field ${JSON.stringify(field)}: unknown enum value ${JSON.stringify(item)} in array`,
+            field,
+            item,
+          );
+        } else {
+          revivedItems.push(item);
+        }
+      }
+      out[field] = revivedItems;
+      continue;
     }
   }
 

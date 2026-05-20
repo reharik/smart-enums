@@ -103,6 +103,67 @@ describe('reviveRowFromDatabase', () => {
       expect(out.status).toBe('NOPE');
     });
   });
+
+  describe('array-of-enum support', () => {
+    const Status = enumeration('Status', {
+      input: ['active', 'pending', 'closed'] as const,
+    });
+
+    it('should revive each element of a string array', () => {
+      const row = { id: '1', statuses: ['ACTIVE', 'PENDING'] };
+      const result = reviveRowFromDatabase(row, {
+        fieldEnumMapping: { statuses: Status },
+      });
+      expect(result.statuses).toEqual([Status.active, Status.pending]);
+    });
+
+    it('should pass through unrecognized array values in non-strict mode', () => {
+      const row = { id: '1', statuses: ['ACTIVE', 'BOGUS'] };
+      const result = reviveRowFromDatabase(row, {
+        fieldEnumMapping: { statuses: Status },
+      });
+      expect(result.statuses).toEqual([Status.active, 'BOGUS']);
+    });
+
+    it('should throw on unrecognized array values in strict mode', () => {
+      const row = { id: '1', statuses: ['ACTIVE', 'BOGUS'] };
+      expect(() =>
+        reviveRowFromDatabase(row, {
+          fieldEnumMapping: { statuses: Status },
+          strict: true,
+        }),
+      ).toThrow(/unknown enum value "BOGUS" in array/);
+    });
+
+    it('should handle empty arrays', () => {
+      const row = { id: '1', statuses: [] };
+      const result = reviveRowFromDatabase(row, {
+        fieldEnumMapping: { statuses: Status },
+      });
+      expect(result.statuses).toEqual([]);
+    });
+
+    it('should leave non-string array elements alone', () => {
+      const row = { id: '1', mixed: ['ACTIVE', null, 42] };
+      const result = reviveRowFromDatabase(row, {
+        fieldEnumMapping: { mixed: Status },
+      });
+      expect(result.mixed).toEqual([Status.active, null, 42]);
+    });
+
+    it('should still handle scalar string fields alongside array fields', () => {
+      const row = {
+        id: '1',
+        primaryStatus: 'ACTIVE',
+        statuses: ['PENDING', 'CLOSED'],
+      };
+      const result = reviveRowFromDatabase(row, {
+        fieldEnumMapping: { primaryStatus: Status, statuses: Status },
+      });
+      expect(result.primaryStatus).toBe(Status.active);
+      expect(result.statuses).toEqual([Status.pending, Status.closed]);
+    });
+  });
 });
 
 describe('revivePayloadFromDatabase', () => {
@@ -147,6 +208,43 @@ describe('revivePayloadFromDatabase', () => {
           strict: true,
         }),
       ).toThrow(EnumRevivalError);
+    });
+  });
+
+  describe('array-of-enum support at leaf paths', () => {
+    const Status = enumeration('Status', {
+      input: ['active', 'pending'] as const,
+    });
+
+    it('should revive an array at a leaf path', () => {
+      const payload = { user: { statuses: ['ACTIVE', 'PENDING'] } };
+      const result = revivePayloadFromDatabase(payload, {
+        pathEnumMapping: { 'user.statuses': Status },
+      });
+      expect(result.user.statuses).toEqual([Status.active, Status.pending]);
+    });
+
+    it('should throw on unknown array values in strict mode', () => {
+      const payload = { user: { statuses: ['ACTIVE', 'BOGUS'] } };
+      expect(() =>
+        revivePayloadFromDatabase(payload, {
+          pathEnumMapping: { 'user.statuses': Status },
+          strict: true,
+        }),
+      ).toThrow(/unknown enum value "BOGUS" in array/);
+    });
+
+    it('should still handle the existing items[].field syntax for arrays of objects', () => {
+      const payload = {
+        items: [{ kind: 'ACTIVE' }, { kind: 'PENDING' }],
+      };
+      const result = revivePayloadFromDatabase(payload, {
+        pathEnumMapping: { 'items[].kind': Status },
+      });
+      expect(result.items).toEqual([
+        { kind: Status.active },
+        { kind: Status.pending },
+      ]);
     });
   });
 });

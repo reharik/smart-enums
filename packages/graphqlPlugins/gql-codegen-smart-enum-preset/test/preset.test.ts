@@ -125,6 +125,7 @@ describe('smart-enum preset', () => {
           emitDescriptionsAsDisplay: false,
           serializeAs: 'value',
           skipEnums: ['Internal'],
+          externalEnums: { Internal: '../hand-authored/internal' },
         },
       });
 
@@ -135,6 +136,9 @@ describe('smart-enum preset', () => {
       expect(config.emitDescriptionsAsDisplay).toBe(false);
       expect(config.serializeAs).toBe('value');
       expect(config.skipEnums).toEqual(['Internal']);
+      expect(config.externalEnums).toEqual({
+        Internal: '../hand-authored/internal',
+      });
     });
 
     it('should not include unset config keys', () => {
@@ -148,6 +152,7 @@ describe('smart-enum preset', () => {
       expect(config).not.toHaveProperty('enumClassSuffix');
       expect(config).not.toHaveProperty('serializeAs');
       expect(config).not.toHaveProperty('skipEnums');
+      expect(config).not.toHaveProperty('externalEnums');
     });
   });
 

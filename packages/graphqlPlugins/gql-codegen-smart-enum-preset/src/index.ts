@@ -55,6 +55,12 @@ export type SmartEnumPresetConfig = {
    * Only used in `enums` mode. Passed through to the enum-definition plugin.
    */
   serializeAs?: 'value' | 'wrapped';
+
+  /**
+   * Only used in `enums` mode. Passed through to the enum-definition plugin
+   * (`externalEnums` on `@reharik/graphql-codegen-smart-enum`).
+   */
+  externalEnums?: Record<string, string>;
 };
 
 const PRESET_PREFIX = '[graphql-codegen-smart-enum-preset]';
@@ -206,6 +212,9 @@ export const preset: Types.OutputPreset<SmartEnumPresetConfig> = {
               : {}),
             ...(presetConfig.skipEnums !== undefined
               ? { skipEnums: presetConfig.skipEnums }
+              : {}),
+            ...(presetConfig.externalEnums !== undefined
+              ? { externalEnums: presetConfig.externalEnums }
               : {}),
           },
         },

@@ -1,6 +1,6 @@
 {
   "name": "@reharik/graphql-codegen-smart-enum-preset",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "GraphQL Code Generator preset for end-to-end smart-enum integration. Auto-derives enumValues maps and orchestrates smart-enum codegen plugins.",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -28,7 +28,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@reharik/graphql-codegen-smart-enum": "^0.3.7",
+    "@reharik/graphql-codegen-smart-enum": "^0.3.8",
     "@reharik/graphql-codegen-smart-enum-type-policies": "^0.1.2"
   },
   "peerDependencies": {

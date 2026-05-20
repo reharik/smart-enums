@@ -102,6 +102,7 @@ Config options for `enums` mode:
 | `serializeAs`               | `'value' \| 'wrapped'` | unset (falls back to library default) | How generated enums serialize via `JSON.stringify`. Set to `'value'` for GraphQL pipelines.                          |
 | `enumClassSuffix`           | `string`               | `''`                                  | Suffix appended to generated enum names (e.g. `'Enum'` → `PaymentStatusEnum`).                                       |
 | `skipEnums`                 | `string[]`             | —                                     | GraphQL enum type names to exclude. Use this for hand-authored enums that you re-export from your contracts package. |
+| `externalEnums`             | `Record<string, string>` | —                                     | Map of GraphQL enum type names to import paths for hand-authored enums. Same as on the enum-definition plugin; each key must also appear in `skipEnums`. Forwarded to `@reharik/graphql-codegen-smart-enum` so `enumRegistry` stays complete for `patchSchemaEnumSerializers`. |
 
 ### Mode: `type-policies`
 
