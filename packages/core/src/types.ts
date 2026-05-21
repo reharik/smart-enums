@@ -144,6 +144,7 @@ export type StandardEnumItem = StandardEnumItemBase & {
   readonly __smart_enum_type: string;
   readonly toPostgres: () => string;
   readonly toJSON: () => string | { __smart_enum_type: string; value: string };
+  readonly equals: (other: unknown) => boolean;
 };
 
 export type EnumInputItem = Partial<{
@@ -323,6 +324,7 @@ export type CoreEnumMethods<TItem extends StandardEnumItem> = {
   tryFromValue(value?: string | null): TItem | undefined;
   fromKey(key: string): TItem;
   tryFromKey(key?: string | null): TItem | undefined;
+  equals(a: unknown, b: unknown): boolean;
   items(): readonly TItem[];
   /** Matches runtime: `items.map(i => i.value)` (see {@link EnumLikeBase}). */
   values(): readonly TItem['value'][];
@@ -342,6 +344,7 @@ export type EnumLikeBase<
   tryFromValue(value?: string | null): TItem | undefined;
   fromKey(key: string): TItem;
   tryFromKey(key?: string | null): TItem | undefined;
+  equals(a: unknown, b: unknown): boolean;
   items(): readonly TItem[];
   values(): readonly TItem['value'][];
   keys(): readonly TItem['key'][];

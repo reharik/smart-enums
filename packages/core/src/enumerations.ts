@@ -16,6 +16,7 @@ import {
   type ObjectEnumInput,
   type PropertyAutoFormatter,
 } from './types.js';
+import { enumItemsEqual } from './utilities/enumItemsEqual.js';
 import { resolveSerializationMode } from './utilities/serializationMode.js';
 
 export type EnumItem<TEnum> = {
@@ -75,6 +76,11 @@ const finalizeEnumItem = <T extends { value: string }>(
 
   Object.defineProperty(item, 'toPostgres', {
     value: () => item.value,
+    enumerable: false,
+  });
+
+  Object.defineProperty(item, 'equals', {
+    value: (other: unknown) => enumItemsEqual(item, other),
     enumerable: false,
   });
 

@@ -40,6 +40,20 @@ describe('Core enum methods', () => {
       expect(TestEnum.tryFromKey('missing')).toBeUndefined();
     });
 
+    it('equals compares items by value within the same enum', () => {
+      const oneAgain = TestEnum.fromValue('ONE');
+
+      expect(TestEnum.one.equals(oneAgain)).toBe(true);
+      expect(oneAgain.equals(TestEnum.one)).toBe(true);
+      expect(TestEnum.equals(TestEnum.one, oneAgain)).toBe(true);
+      expect(TestEnum.one.equals(TestEnum.two)).toBe(false);
+      expect(TestEnum.equals(TestEnum.one, TestEnum.two)).toBe(false);
+      expect(TestEnum.one.equals({ key: 'one', value: 'ONE' })).toBe(false);
+      expect(
+        TestEnum.equals(TestEnum.one, { key: 'one', value: 'ONE' }),
+      ).toBe(false);
+    });
+
     it('items / values / keys expose all enum members', () => {
       const items = TestEnum.items();
       const values = TestEnum.values();
@@ -71,6 +85,15 @@ describe('Core enum methods', () => {
       const byKey: ObjectEnumItem = ObjectEnum.fromKey('second');
       expect(byKey.value).toBe('SECOND');
       expect(byKey.display).toBe('Second item');
+    });
+
+    it('equals works for object input enums', () => {
+      expect(ObjectEnum.first.equals(ObjectEnum.fromValue('FIRST'))).toBe(
+        true,
+      );
+      expect(
+        ObjectEnum.equals(ObjectEnum.first, ObjectEnum.fromKey('second')),
+      ).toBe(false);
     });
 
     it('items / values / keys work for object input', () => {

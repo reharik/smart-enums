@@ -1,4 +1,5 @@
 import type { CoreEnumMethods, StandardEnumItem } from './types.js';
+import { enumItemsEqual } from './utilities/enumItemsEqual.js';
 export const addExtensionMethods = <TItem extends StandardEnumItem>(
   enumItems: readonly TItem[],
 ): CoreEnumMethods<TItem> => {
@@ -24,6 +25,8 @@ export const addExtensionMethods = <TItem extends StandardEnumItem>(
 
     fromKey: key => requireBy('key', key as TItem['key'], 'key'),
     tryFromKey: key => (key ? findBy('key', key as TItem['key']) : undefined),
+
+    equals: enumItemsEqual,
 
     items: () => [...enumItems],
     values: () => enumItems.map(item => item.value),

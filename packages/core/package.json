@@ -1,6 +1,6 @@
 {
   "name": "@reharik/smart-enum",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -43,7 +43,8 @@
     "build": "npm run clean && tsup",
     "prepublishOnly": "npm run build",
     "test": "jest --config jest.config.cjs",
-    "dance": "npm run build && npm run test"
+    "dance": "npm run build && npm run test",
+    "publish:npm": "npm publish --access public --otp=$NPM_OTP"
   },
   "jest-junit": {
     "suiteName": "jest: @reharik/smart-enum",

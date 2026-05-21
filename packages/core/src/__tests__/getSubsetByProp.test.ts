@@ -26,6 +26,7 @@ describe('getSubsetByProp', () => {
 
       expect(Object.keys(mediaOnly).sort()).toEqual(
         [
+          'equals',
           'fromKey',
           'fromValue',
           'items',
