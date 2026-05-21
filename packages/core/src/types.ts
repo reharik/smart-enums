@@ -387,6 +387,14 @@ export type SmartEnumSubsetView<
 > = Pick<TEnum, SmartEnumSubsetKeys<TEnum, ItemUnion, P, V>> &
   CoreEnumMethods<SmartEnumSubsetItemUnion<ItemUnion, P, V>>;
 
+/** Return type of {@link getSubsetByProp} / {@link subsetByProp} for explicit consumer annotations. */
+export type SubsetByPropResult<
+  TEnum extends Record<string, unknown> &
+    SmartEnumLike<SmartEnumMemberUnion<TEnum>>,
+  P extends keyof SmartEnumMemberUnion<TEnum> & string,
+  V extends SmartEnumMemberUnion<TEnum>[P],
+> = SmartEnumSubsetView<TEnum, SmartEnumMemberUnion<TEnum>, P, V>;
+
 export type FieldEnumMapping = Record<string, SmartEnumLike>;
 
 export type ReviveRowOptions = {

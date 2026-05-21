@@ -27,6 +27,10 @@ export type {
   AnyEnumLike,
   EnumLikeBase,
   SmartEnumLike,
+  SmartEnumMemberUnion,
+  SmartEnumSubsetView,
+  SubsetByPropResult,
+  EnumFromNormalizedObject,
   StandardEnumItemBase,
   StandardEnumItem,
 } from './types.js';
