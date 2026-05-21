@@ -48,9 +48,14 @@ describe('Core enum methods', () => {
       expect(TestEnum.equals(TestEnum.one, oneAgain)).toBe(true);
       expect(TestEnum.one.equals(TestEnum.two)).toBe(false);
       expect(TestEnum.equals(TestEnum.one, TestEnum.two)).toBe(false);
-      expect(TestEnum.one.equals({ key: 'one', value: 'ONE' })).toBe(false);
       expect(
-        TestEnum.equals(TestEnum.one, { key: 'one', value: 'ONE' }),
+        TestEnum.one.equals({ key: 'one', value: 'ONE' } as TestEnumItem),
+      ).toBe(false);
+      expect(
+        TestEnum.equals(
+          TestEnum.one,
+          { key: 'one', value: 'ONE' } as TestEnumItem,
+        ),
       ).toBe(false);
     });
 

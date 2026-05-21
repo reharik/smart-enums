@@ -15,6 +15,7 @@ import {
   type NormalizedInputType,
   type ObjectEnumInput,
   type PropertyAutoFormatter,
+  type StandardEnumItem,
 } from './types.js';
 import { enumItemsEqual } from './utilities/enumItemsEqual.js';
 import { resolveSerializationMode } from './utilities/serializationMode.js';
@@ -80,7 +81,7 @@ const finalizeEnumItem = <T extends { value: string }>(
   });
 
   Object.defineProperty(item, 'equals', {
-    value: (other: unknown) => enumItemsEqual(item, other),
+    value: (other: StandardEnumItem) => enumItemsEqual(item, other),
     enumerable: false,
   });
 
