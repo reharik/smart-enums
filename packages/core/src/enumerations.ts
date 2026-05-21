@@ -181,7 +181,9 @@ export function enumeration<const TObj extends ObjectEnumInput>(
 export function enumeration(
   enumType: string,
   props: EnumerationProps<readonly string[] | ObjectEnumInput>,
-) {
+): EnumFromNormalizedObject<
+  NormalizedInputType<readonly string[] | ObjectEnumInput>
+> {
   const normalized = normalizeInput(props.input);
   return buildEnumFromObject(
     enumType,

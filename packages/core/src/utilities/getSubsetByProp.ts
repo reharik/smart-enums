@@ -70,6 +70,22 @@ export const getSubsetByProp = <
   } as SmartEnumSubsetView<TEnum, ItemUnion, P, V>;
 };
 
+type SubsetByPropFn = <const P extends string>(
+  prop: P,
+) => <
+  TEnum extends Record<string, unknown> &
+    SmartEnumLike<SmartEnumMemberUnion<TEnum>>,
+  V extends SmartEnumMemberUnion<TEnum>[P & keyof SmartEnumMemberUnion<TEnum>],
+>(
+  enumInstance: TEnum,
+  value: V,
+) => SmartEnumSubsetView<
+  TEnum,
+  SmartEnumMemberUnion<TEnum>,
+  P & keyof SmartEnumMemberUnion<TEnum>,
+  V
+>;
+
 /**
  * Curried variant of {@link getSubsetByProp}: fix `prop` first, then `(enumInstance, value)`.
  *
@@ -79,8 +95,7 @@ export const getSubsetByProp = <
  * const mediaItemErrors = bySource(AppErrorEnum, 'mediaItem' as const);
  * ```
  */
-export const subsetByProp =
-  <const P extends string>(prop: P) =>
+export const subsetByProp: SubsetByPropFn = <const P extends string>(prop: P) =>
   <
     TEnum extends Record<string, unknown> &
       SmartEnumLike<SmartEnumMemberUnion<TEnum>>,
