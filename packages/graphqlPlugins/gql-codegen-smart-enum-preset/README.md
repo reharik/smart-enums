@@ -2,6 +2,8 @@
 
 A [GraphQL Code Generator](https://the-guild.dev/graphql/codegen) preset that orchestrates end-to-end smart-enum integration. It eliminates the per-enum configuration burden by walking your schema and auto-deriving the `enumValues` map for `typescript-resolvers`, `typescript-operations`, and friends — so adding a new GraphQL enum to your schema requires zero changes to your codegen config.
 
+> 📖 **Docs:** https://reharik.github.io/smart-enums/graphql/preset
+
 ## What it solves
 
 Without the preset, integrating [`@reharik/smart-enum`](https://www.npmjs.com/package/@reharik/smart-enum) end-to-end across a GraphQL stack means maintaining manual `enumValues` mappings in every codegen target:

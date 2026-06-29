@@ -1,6 +1,8 @@
 # @reharik/graphql-codegen-smart-enum
 
-[GraphQL Code Generator](https://the-guild.dev/graphql/codegen) plugin that turns your schema's `enum` types into `[@reharik/smart-enum](https://www.npmjs.com/package/@reharik/smart-enum)` definitions. You define enums in your SDL; codegen produces type-safe smart-enum objects with lookup methods, display strings, and full TypeScript inference — no hand-authored enum files to keep in sync with your schema.
+[GraphQL Code Generator](https://the-guild.dev/graphql/codegen) plugin that turns your schema's `enum` types into [`@reharik/smart-enum`](https://www.npmjs.com/package/@reharik/smart-enum) definitions. You define enums in your SDL; codegen produces type-safe smart-enum objects with lookup methods, display strings, and full TypeScript inference — no hand-authored enum files to keep in sync with your schema.
+
+> 📖 **Docs:** https://reharik.github.io/smart-enums/graphql/codegen-enums
 
 ## What it generates
 
@@ -260,8 +262,8 @@ generates: {
 
 | Package                                                                              | Purpose                                      |
 | ------------------------------------------------------------------------------------ | -------------------------------------------- |
-| `[@reharik/smart-enum](https://www.npmjs.com/package/@reharik/smart-enum)`           | Core smart-enum library (runtime dependency) |
-| `[@reharik/smart-enum-knex](https://www.npmjs.com/package/@reharik/smart-enum-knex)` | Knex query-level enum revival                |
+| [`@reharik/smart-enum`](https://www.npmjs.com/package/@reharik/smart-enum)           | Core smart-enum library (runtime dependency) |
+| [`@reharik/smart-enum-knex`](https://www.npmjs.com/package/@reharik/smart-enum-knex) | Knex query-level enum revival                |
 
 
 ## License

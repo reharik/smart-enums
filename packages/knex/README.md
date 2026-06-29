@@ -1,11 +1,13 @@
-# @@reharik/smart-enum/knex
+# @reharik/smart-enum-knex
 
 Small Knex helpers that wire **explicit** smart-enum row revival into Knex’s `queryContext` and `postProcessResponse`. This package does **not** infer enum types from the database, scan schema, or maintain a registry. You pass a `FieldEnumMapping` per query (or reuse one you already have).
+
+> 📖 **Docs:** https://reharik.github.io/smart-enums/database/knex
 
 ## Install
 
 ```bash
-npm install @@reharik/smart-enum/knex @reharik/smart-enum knex
+npm install @reharik/smart-enum-knex @reharik/smart-enum knex
 ```
 
 `knex` is a **peer dependency**; `@reharik/smart-enum` is required at runtime for `reviveRowFromDatabase`.
@@ -16,7 +18,7 @@ Register a `postProcessResponse` hook once on your Knex config. It reads `smartE
 
 ```typescript
 import knex from 'knex';
-import { createSmartEnumPostProcessResponse } from '@@reharik/smart-enum/knex';
+import { createSmartEnumPostProcessResponse } from '@reharik/smart-enum-knex';
 
 export const db = knex({
   client: 'pg',
@@ -30,7 +32,7 @@ export const db = knex({
 Attach the mapping for **that** query so the hook knows which columns to revive:
 
 ```typescript
-import { withEnumRevival } from '@@reharik/smart-enum/knex';
+import { withEnumRevival } from '@reharik/smart-enum-knex';
 import { enumeration } from '@reharik/smart-enum';
 
 const UserStatus = enumeration('UserStatus', {

@@ -2,6 +2,8 @@
 
 A [GraphQL Code Generator](https://the-guild.dev/graphql/codegen) plugin that generates [Apollo Client `typePolicies`](https://www.apollographql.com/docs/react/caching/cache-configuration/#typepolicy-fields) for automatic smart-enum rehydration. It walks your schema, finds every field on every object type that returns an enum, and emits `read` functions that convert raw cache strings back into live [`@reharik/smart-enum`](https://www.npmjs.com/package/@reharik/smart-enum) instances.
 
+> 📖 **Docs:** https://reharik.github.io/smart-enums/graphql/type-policies
+
 ## The problem
 
 When Apollo Client reads a query result from its normalized cache, enum fields come back as plain strings. Your components receive `'ACTIVE'` instead of `Status.active`, which means no `.display`, no `.key`, no custom fields — just a raw string you have to look up manually everywhere you use it.
