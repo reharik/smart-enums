@@ -33,3 +33,6 @@ packages/core/README.md
 # Build output (rebuilt via `prepare` when installing from git or publishing)
 dist/
 **/dist/
+# VitePress build output
+docs/.vitepress/dist
+docs/.vitepress/cache
