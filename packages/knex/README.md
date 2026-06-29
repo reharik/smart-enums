@@ -1,8 +1,12 @@
 # @reharik/smart-enum-knex
 
-Small Knex helpers that wire **explicit** smart-enum row revival into Knex’s `queryContext` and `postProcessResponse`. This package does **not** infer enum types from the database, scan schema, or maintain a registry. You pass a `FieldEnumMapping` per query (or reuse one you already have).
+Wire smart-enum row revival into Knex so enum columns come back as real members, not bare strings — without a schema scanner, a registry, or magic. You annotate the queries that need it; the conversion happens once, in Knex's response hook.
 
-> 📖 **Docs:** https://reharik.github.io/smart-enums/database/knex
+📖 **Full documentation:** https://reharik.github.io/smart-enums/database/knex
+
+## The problem it removes
+
+A status column gives you back `'ACTIVE'`. From there, every read that wants a label or a safe comparison re-implements the same lookup — scattered across your data layer, and silently working with raw strings wherever someone forgets. This adapter moves that conversion into `postProcessResponse`, so opted-in queries return `Status.active` (with `.display`, `.equals`, and any metadata) and the rest of your Knex code stays exactly as it was.
 
 ## Install
 
@@ -10,51 +14,37 @@ Small Knex helpers that wire **explicit** smart-enum row revival into Knex’s `
 npm install @reharik/smart-enum-knex @reharik/smart-enum knex
 ```
 
-`knex` is a **peer dependency**; `@reharik/smart-enum` is required at runtime for `reviveRowFromDatabase`.
+`knex` is a peer dependency; `@reharik/smart-enum` is the runtime that does the reviving.
 
-## Knex client setup
-
-Register a `postProcessResponse` hook once on your Knex config. It reads `smartEnumFieldMapping` / `smartEnumStrict` from each query’s context (set via `withEnumRevival`).
+## The shape of it
 
 ```typescript
 import knex from 'knex';
-import { createSmartEnumPostProcessResponse } from '@reharik/smart-enum-knex';
+import {
+  createSmartEnumPostProcessResponse,
+  withEnumRevival,
+} from '@reharik/smart-enum-knex';
 
+// Register the hook once on your client:
 export const db = knex({
   client: 'pg',
   connection: process.env.DATABASE_URL,
   postProcessResponse: createSmartEnumPostProcessResponse(),
 });
+
+// Annotate the queries that should revive — explicit, per query:
+const rows = await withEnumRevival(
+  db('users').select('*'),
+  { status: UserStatus },   // column → enum
+  { strict: true },         // unknown stored value throws instead of leaking a string
+);
+// rows[0].status is now UserStatus.active — a real member
 ```
 
-## Per-query mapping
+Queries you don't annotate are untouched, so adoption is one query at a time. Array columns (Postgres `text[]`) revive element by element with the same mapping.
 
-Attach the mapping for **that** query so the hook knows which columns to revive:
+The full API, strict-mode behavior, and how this composes with the core [revival utilities](https://reharik.github.io/smart-enums/database/revival) are in the docs.
 
-```typescript
-import { withEnumRevival } from '@reharik/smart-enum-knex';
-import { enumeration } from '@reharik/smart-enum';
+## License
 
-const UserStatus = enumeration('UserStatus', {
-  input: ['pending', 'active'] as const,
-});
-
-const fieldEnumMapping = { status: UserStatus };
-
-const rows = await withEnumRevival(db('users').select('*'), fieldEnumMapping, {
-  strict: true,
-});
-```
-
-- **`strict: true`**: invalid stored values throw `EnumRevivalError` (from `@reharik/smart-enum`).
-- **No `withEnumRevival`**: `postProcessResponse` leaves results unchanged (no mapping in context).
-
-## API
-
-| Export                                               | Role                                                                              |
-| ---------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `withEnumRevival(query, fieldEnumMapping, options?)` | Merges enum metadata into `query.queryContext(...)`.                              |
-| `createSmartEnumPostProcessResponse()`               | Returns a Knex `postProcessResponse` callback that calls `reviveRowFromDatabase`. |
-| `SmartEnumKnexQueryContext`                          | Shape of the query-context fields this adapter reads.                             |
-
-Enum creation, `prepareForDatabase`, and revival behavior all live in **`@reharik/smart-enum`**; this package only connects them to Knex.
+MIT
