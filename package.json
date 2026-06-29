@@ -11,6 +11,7 @@
     "test": "npm run test -w @reharik/smart-enum && npm run test -w @reharik/smart-enum-knex && npm run test -w @reharik/graphql-codegen-smart-enum && npm run test -w @reharik/graphql-codegen-smart-enum-type-policies && npm run test -w @reharik/graphql-codegen-smart-enum-preset",
     "lint": "eslint packages/core/src packages/knex/src packages/graphqlPlugins/gql-codegen-smart-enum/src packages/graphqlPlugins/gql-codegen-smart-enum/test packages/graphqlPlugins/gql-codegen-smart-enum/examples packages/graphqlPlugins/gql-codegen-smart-enum-type-policies/src packages/graphqlPlugins/gql-codegen-smart-enum-type-policies/test packages/graphqlPlugins/gql-codegen-smart-enum-type-policies/examples",
     "dance": "npm run build && npm run test && npm run lint",
+    "publish:all": "npm run build && for w in @reharik/smart-enum @reharik/smart-enum-knex ...; do npm publish -w $w --access public --otp=$NPM_OTP || true; done",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs"

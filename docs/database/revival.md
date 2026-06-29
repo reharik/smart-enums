@@ -4,6 +4,10 @@ Database columns are plain strings — they don't carry type information. So the
 
 These utilities live in the core package's `@reharik/smart-enum/database` entry point. If you use Knex, the [Knex adapter](/database/knex) wires them into `postProcessResponse` so you don't call them by hand per query.
 
+## Why it's worth the one declaration
+
+It's tempting to skip this and just read strings. But a string column gives you back `'ACTIVE'`, and from there every consumer re-implements the same lookup to get a label or compare safely — scattered, easy to get subtly wrong. Declaring the column→enum mapping once, at the data boundary, means rows arrive as real members: `.display` works, `.equals` works, metadata is attached, and an unexpected stored value can fail loudly (`strict`) instead of leaking a bare string into your domain logic. One declaration at the edge buys correctness everywhere inside it.
+
 ## Outbound: writing
 
 `prepareForDatabase` recursively replaces members with their `.value` strings. Each member also has a `.toPostgres()` method that PostgreSQL drivers honoring the protocol will call automatically.

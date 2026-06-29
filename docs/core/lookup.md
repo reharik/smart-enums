@@ -39,3 +39,36 @@ const authErrors = bySource(AppError, 'auth' as const);
 ```
 
 The subset members are the **same frozen objects** as on the parent enum — identity is preserved, so `apiErrors.notFound === AppError.notFound`. That makes subsets safe to use anywhere the parent member would be.
+
+## Comparing members
+
+Members carry an `.equals()` method that compares by value, and an enum-level `Enum.equals(a, b)` static form:
+
+```typescript
+Status.active.equals(Status.active);        // true
+Status.active.equals(Status.completed);     // false
+Status.equals(Status.active, Status.active); // true (static form)
+```
+
+Within a single module this looks redundant — members are interned, so `Status.active === Status.active` is already `true`. The reason `.equals()` exists is **boundaries**. A member rebuilt from a string is a *different object*:
+
+```typescript
+const fromDb = Status.fromValue(row.status); // freshly constructed
+fromDb === Status.active;        // happens to be true (same intern table)...
+fromDb.equals(Status.active);    // ...but THIS is the comparison to trust
+```
+
+After data has crossed the wire and been revived, or been parsed back from a payload, you may be holding a copy whose object identity differs. `.equals()` compares the underlying value (and even matches a plain `{ key, value }` shape), so it's correct regardless of how the member was produced. The habit: use `===` for members you know are local constants, and `.equals()` for anything that might have come through transport, a cache, or the database.
+
+## Iterating in order
+
+`items()` returns members in definition order, and each member carries its `index`:
+
+```typescript
+Status.items().forEach(s => console.log(s.index, s.display));
+// 0 Pending
+// 1 Active
+// 2 Completed
+```
+
+That ordering is stable and meaningful — it's the order you declared — so it's safe to drive a sorted dropdown or a stepper UI directly from `items()` without a separate sort.

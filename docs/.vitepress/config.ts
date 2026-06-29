@@ -30,6 +30,9 @@ export default defineConfig({
         items: [
           { text: "Introduction", link: "/guide/introduction" },
           { text: "Quick start", link: "/guide/quick-start" },
+          { text: "Coming from TypeScript enums", link: "/guide/coming-from-enums" },
+          { text: "Patterns & recipes", link: "/guide/patterns" },
+          { text: "FAQ", link: "/guide/faq" },
         ],
       },
       {

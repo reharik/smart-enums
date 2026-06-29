@@ -4,6 +4,10 @@
 
 A [GraphQL Code Generator](https://the-guild.dev/graphql/codegen) plugin that turns your schema's `enum` types into [`@reharik/smart-enum`](/core/creating-enums) definitions. You define enums in SDL; codegen produces type-safe smart-enum objects with lookup methods, display strings, and full inference — no hand-authored enum files to keep in sync with the schema.
 
+## Why you want this
+
+If your enums live in a GraphQL schema, hand-writing matching smart-enum definitions is busywork that rots: every new schema value is a second edit somewhere else, and the day someone forgets, your types and your schema disagree and nobody notices until runtime. This plugin makes the schema the single source of truth. Run codegen and the definitions — keys, wire values, display strings from descriptions, deprecation flags — are derived from the SDL you already maintain. Add a value to the schema, regenerate, done. The enums can't drift from the schema because they're produced from it.
+
 ## What it generates
 
 Given this schema:

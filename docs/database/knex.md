@@ -6,6 +6,10 @@ Small Knex helpers that wire **explicit** row revival into Knex's `queryContext`
 
 That explicitness is the design: the adapter connects [the core revival utilities](/database/revival) to Knex's hooks, and nothing more. Enum creation, `prepareForDatabase`, and the revival behavior itself all live in [`@reharik/smart-enum`](/core/creating-enums).
 
+## Why you want this
+
+Without it, every read that touches an enum column ends with the same chore: pull the row, then walk it converting `'ACTIVE'` back into `Status.active` before anyone downstream can use `.display` or `.equals`. Miss one query and that code path silently works with raw strings. This adapter moves that conversion into Knex's response hook, so it happens once, in one place, for every query you opt in — and the rest of your data-access code goes back to looking like ordinary Knex. You annotate the query that needs revival; the plumbing is invisible.
+
 ## Install
 
 ```bash
