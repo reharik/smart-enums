@@ -453,6 +453,11 @@ export type FinalizableEnumItem = {
   deprecated?: boolean;
 };
 
+/**
+ * Exhaustive branch-on-member. One arm required per member of the *statically
+ * known* receiver — miss one and it won't compile. Over a pickEnum view the
+ * arms are exhaustive over just the picked members.
+ */
 export interface SmartEnumMatch {
   readonly key: string;
   match<R>(handlers: {

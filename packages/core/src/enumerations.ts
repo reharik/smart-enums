@@ -38,7 +38,7 @@ function normalizeInput<TInput extends readonly string[] | ObjectEnumInput>(
   return input as NormalizedInputType<TInput>;
 }
 
-const finalizeEnumItem = <T extends { value: string }>(
+const finalizeEnumItem = <T extends { value: string; key: string }>(
   item: T,
   enumType: string,
   enumInstanceId: symbol,
@@ -85,6 +85,18 @@ const finalizeEnumItem = <T extends { value: string }>(
     enumerable: false,
   });
 
+  Object.defineProperty(item, 'match', {
+    value: (handlers: Record<string, (i: unknown) => unknown>) => {
+      const handler = handlers[item.key];
+      if (!handler) {
+        throw new Error(
+          `match: no handler for '${item.key}' on enum '${enumType}'`,
+        );
+      }
+      return handler(item);
+    },
+    enumerable: false,
+  });
   return item as T & FinalizedEnumFields;
 };
 
