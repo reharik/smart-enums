@@ -30,18 +30,11 @@ describe('equals as a type predicate', () => {
       expect(classify(E.c)).toBe('c');
     });
 
-    // NOTE: the task expected a cross-enum comparison
-    // (`someItem.equals(someOtherEnumItem)`) to be a *compile* error. The
-    // current signature `equals<T extends StandardEnumItem>(other: T): this is T`
-    // leaves `T` unconstrained relative to `this`, so cross-enum calls type-check
-    // today (they merely return false at runtime). This documents the actual
-    // behavior; if the intent is to reject at compile time, the signature needs a
-    // constraint tying `other` back to `this`.
-    it('currently type-checks a cross-enum comparison and returns false at runtime', () => {
+    it('rejects a cross-enum comparison at compile time', () => {
       const Other = enumeration('Other', { input: ['x', 'y'] as const });
 
-      // compiles (no @ts-expect-error would fire); guards false at runtime
-      expect(E.a.equals(Other.x)).toBe(false);
+      // @ts-expect-error cross-enum comparison — brand mismatch, caught at compile time
+      E.a.equals(Other.x);
     });
   });
 });

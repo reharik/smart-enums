@@ -5,11 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.5.2] - 2026-07-15
 
 ### Changed
 
+- `isSmartEnum()` now returns a type predicate (`x is SmartEnumLike`) instead of `boolean`, narrowing the value inside a guard. Runtime behavior is unchanged.
+- Enum item `equals()` now returns a type predicate (`this is T`) instead of `boolean`, so exhaustive `if`/`else` chains narrow to `never` without `match`. Runtime behavior is unchanged.
+- Enum item `equals()` now rejects comparisons between members of _different_ enums at compile time. Each enum's members carry a distinct brand (`__smart_enum_type` is now a literal type on `enumeration()`-produced items). A cross-enum comparison was always `false` at runtime; it is now a type error — surfacing bugs that previously compiled silently.
+
 ### Added
+
+- `match()` on enum items — exhaustive branch-on-member that returns a value. The compiler requires one handler per member of the statically-known type; a missing arm is a compile error, and an arm for a member that can't occur is also a compile error. Handlers are keyed by member key and receive the narrowed item. A runtime guard throws on a value with no matching handler (e.g. a mistyped deserialized value).
+- `pickEnum(enum, keys)` — a runtime enum-like view over an explicit list of member keys. Picked members reuse the parent's item references (identity, `equals`, and serialization are preserved), and the view's `fromValue` / `fromKey` / `items` are scoped to the subset. Complements `getSubsetByProp`, which selects by shared property value rather than by key list.
+- `EnumSubset<Members, Keys>` — a type-level member subset. Narrows an enum's member union to the named members, derived from the parent, for typing fields and parameters without declaring a new enum or a runtime view.
+- `SmartEnumMatch`, `PickEnumView`, `EnumMemberKeys`, and `EnumSubset` exported from `types` for consumer annotations and to satisfy declaration-file naming.
 
 ## [0.5.1] - 2026-07-14
 

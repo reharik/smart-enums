@@ -144,7 +144,15 @@ export type StandardEnumItem = StandardEnumItemBase & {
   readonly __smart_enum_type: string;
   readonly toPostgres: () => string;
   readonly toJSON: () => string | { __smart_enum_type: string; value: string };
-  readonly equals: <T extends StandardEnumItem>(other: T) => this is T;
+  readonly equals: <
+    This extends { __smart_enum_type: string },
+    T extends {
+      __smart_enum_type: This['__smart_enum_type'];
+    } & StandardEnumItem,
+  >(
+    this: This,
+    other: T,
+  ) => this is T;
 };
 
 export type EnumInputItem = Partial<{
@@ -250,8 +258,11 @@ export type EnumMemberExtra<
 export type EnumItemFromNormalizedObject<
   TObj extends ObjectEnumInput,
   K extends keyof TObj = keyof TObj,
-> = Omit<StandardEnumItem, 'key' | 'value' | 'display'> &
-  SmartEnumMatch &
+  TName extends string = string,
+> = Omit<
+  StandardEnumItem,
+  'key' | 'value' | 'display' | '__smart_enum_type'
+> & { __smart_enum_type: TName } & SmartEnumMatch &
   EnumMemberExtra<TObj, K> & {
     readonly key: Extract<K, string>;
     readonly value: TObj[K] extends { value?: infer V }
@@ -266,14 +277,19 @@ export type EnumItemFromNormalizedObject<
       : DisplayCaseFromEnumKey<Extract<K, string>>;
   };
 
-export type EnumMemberUnionFromNormalizedObject<TObj extends ObjectEnumInput> =
-  {
-    [K in keyof TObj]: EnumItemFromNormalizedObject<TObj, K>;
-  }[keyof TObj];
+export type EnumMemberUnionFromNormalizedObject<
+  TObj extends ObjectEnumInput,
+  TName extends string = string,
+> = {
+  [K in keyof TObj]: EnumItemFromNormalizedObject<TObj, K, TName>;
+}[keyof TObj];
 
-export type EnumFromNormalizedObject<TObj extends ObjectEnumInput> = {
-  [K in keyof TObj]: EnumItemFromNormalizedObject<TObj, K>;
-} & CoreEnumMethods<EnumMemberUnionFromNormalizedObject<TObj>>;
+export type EnumFromNormalizedObject<
+  TObj extends ObjectEnumInput,
+  TName extends string = string,
+> = {
+  [K in keyof TObj]: EnumItemFromNormalizedObject<TObj, K, TName>;
+} & CoreEnumMethods<EnumMemberUnionFromNormalizedObject<TObj, TName>>;
 
 export type UnionKeys<T> = T extends T ? keyof T : never;
 

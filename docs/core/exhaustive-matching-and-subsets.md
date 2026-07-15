@@ -232,3 +232,13 @@ function label(t: EnumSubset<EntityType, 'comment' | 'mediaItem'>) {
 Each `equals` check peels one member off the union, so the trailing branch reaches
 `never` and `assertUnreachable` compiles — the same exhaustiveness `match` gives you,
 available in an ordinary `if`-chain.
+
+Comparing members of two _different_ enums is a compile error. Each enum's members
+carry their own brand, so a cross-enum comparison doesn't type-check:
+
+```ts
+Status.active.equals(Color.red); // compile error — different enums
+```
+
+That comparison is always `false` at runtime — it was a bug the types couldn't see
+before, and now catch for you. Same-enum comparisons are unaffected.

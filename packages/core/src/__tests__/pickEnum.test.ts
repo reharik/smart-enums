@@ -1,4 +1,4 @@
-import { enumeration, pickEnum } from '../index.js';
+import { enumeration, EnumFromNormalizedObject, pickEnum } from '../index.js';
 
 type Equal<A, B> =
   (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
@@ -10,7 +10,6 @@ describe('pickEnum', () => {
   const EntityType = enumeration('EntityType', {
     input: ['comment', 'mediaItem', 'album'] as const,
   });
-
   describe('runtime', () => {
     it('reuses parent item references (not clones)', () => {
       const view = pickEnum(EntityType, ['comment', 'mediaItem'] as const);

@@ -115,22 +115,25 @@ const formatProperties = (
     } as { value: string; display: string } & Record<string, string>,
   );
 
-function buildEnumFromObject<TObj extends ObjectEnumInput>(
-  enumType: string,
+function buildEnumFromObject<
+  TName extends string,
+  TObj extends ObjectEnumInput,
+>(
+  enumType: TName,
   input: TObj,
   propertyAutoFormatters?: PropertyAutoFormatter[],
   serializeAs?: SerializationMode,
-): EnumFromNormalizedObject<TObj> {
+): EnumFromNormalizedObject<TObj, TName> {
   const formattersWithDefaults: PropertyAutoFormatter[] = [
     { key: 'value', format: constantCase },
     { key: 'display', format: capitalCase },
     ...(propertyAutoFormatters ?? []),
   ];
 
-  type TItem = EnumMemberUnionFromNormalizedObject<TObj>;
+  type TItem = EnumMemberUnionFromNormalizedObject<TObj, TName>;
 
   const rawEnumItems: Partial<{
-    [K in keyof TObj]: EnumItemFromNormalizedObject<TObj, K>;
+    [K in keyof TObj]: EnumItemFromNormalizedObject<TObj, K, TName>;
   }> = {};
 
   const enumInstanceId = Symbol('smart-enum-instance');
@@ -168,7 +171,7 @@ function buildEnumFromObject<TObj extends ObjectEnumInput>(
   const enumObject = {
     ...rawEnumItems,
     ...extensionMethods,
-  } as EnumFromNormalizedObject<TObj>;
+  } as EnumFromNormalizedObject<TObj, TName>;
 
   Object.defineProperty(enumObject, SMART_ENUM, {
     value: true,
@@ -180,21 +183,28 @@ function buildEnumFromObject<TObj extends ObjectEnumInput>(
   return enumObject;
 }
 
-export function enumeration<const TArr extends readonly string[]>(
-  enumType: string,
+export function enumeration<
+  const TArr extends readonly string[],
+  const TName extends string = string,
+>(
+  enumType: TName,
   props: EnumerationProps<TArr>,
-): EnumFromNormalizedObject<NormalizedInputType<TArr>>;
+): EnumFromNormalizedObject<NormalizedInputType<TArr>, TName>;
 
-export function enumeration<const TObj extends ObjectEnumInput>(
-  enumType: string,
+export function enumeration<
+  const TObj extends ObjectEnumInput,
+  const TName extends string = string,
+>(
+  enumType: TName,
   props: EnumerationProps<TObj>,
-): EnumFromNormalizedObject<NormalizedInputType<TObj>>;
+): EnumFromNormalizedObject<NormalizedInputType<TObj>, TName>;
 
-export function enumeration(
-  enumType: string,
+export function enumeration<const TName extends string = string>(
+  enumType: TName,
   props: EnumerationProps<readonly string[] | ObjectEnumInput>,
 ): EnumFromNormalizedObject<
-  NormalizedInputType<readonly string[] | ObjectEnumInput>
+  NormalizedInputType<readonly string[] | ObjectEnumInput>,
+  TName
 > {
   const normalized = normalizeInput(props.input);
   return buildEnumFromObject(
