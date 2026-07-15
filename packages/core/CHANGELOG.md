@@ -9,10 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+### Added
+
+## [0.5.0] - 2026-07-14
+
+### Changed
+
 - **npm package renamed** from `smart-enums` to `@reharik/smart-enum` (import specifiers and subpath exports such as `@reharik/smart-enum/database` replace the old `smart-enums/*` paths). The Knex helper package is published as `@reharik/smart-enum-knex`.
+- `isSmartEnum()` now returns a type predicate (`x is SmartEnumLike`) instead of `boolean`, narrowing the value inside a guard. Runtime behavior is unchanged.
+- Enum item `equals()` now returns a type predicate (`this is T`) instead of `boolean`, so exhaustive `if`/`else` chains narrow to `never` without `match`. Runtime behavior is unchanged.
 
 ### Added
 
+- `match()` on enum items — exhaustive branch-on-member that returns a value. The compiler requires one handler per member of the statically-known type; a missing arm is a compile error. Handlers are keyed by member key and receive the narrowed item. Includes a runtime guard that throws on a value with no matching handler (e.g. a mistyped deserialized value).
+- `pickEnum(enum, keys)` — an enum-like view over an explicit list of member keys. Picked members reuse the parent's item references (identity, `equals`, and serialization are preserved), and the view's `fromValue` / `fromKey` / `items` are scoped to the subset. The picked members form a discriminated union that composes with `match`. Complements `getSubsetByProp`, which selects by shared property value rather than by key list.
+- `SmartEnumMatch`, `PickEnumView`, and `EnumMemberKeys` exported from `types` for consumer annotations.
 - Added `isSmartEnum()` function to check if an object is a full smart enum (as opposed to a single enum item)
 - Added `SMART_ENUM` symbol property to enum objects for runtime detection
 - Database module rebuilt under `src/db`: `reviveRowFromDatabase`, `revivePayloadFromDatabase`, `EnumRevivalError`, and `prepareForDatabase` (serialization only)
