@@ -479,3 +479,8 @@ export type PickEnumView<
   TEnum extends Record<string, unknown>,
   K extends EnumMemberKeys<TEnum>,
 > = Pick<TEnum, K> & CoreEnumMethods<Extract<TEnum[K], StandardEnumItem>>;
+
+export type EnumSubset<
+  TItems extends StandardEnumItem,
+  K extends TItems['key'],
+> = Extract<TItems, { key: K }>;
