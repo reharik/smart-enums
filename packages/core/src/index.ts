@@ -56,6 +56,7 @@ export type {
   SmartEnumLike,
   SmartEnumMemberUnion,
   SmartEnumSubsetView,
+  SmartEnumMatch,
   PickEnumView,
   SubsetByPropResult,
   EnumFromNormalizedObject,
