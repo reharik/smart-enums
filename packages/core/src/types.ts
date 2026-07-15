@@ -144,7 +144,7 @@ export type StandardEnumItem = StandardEnumItemBase & {
   readonly __smart_enum_type: string;
   readonly toPostgres: () => string;
   readonly toJSON: () => string | { __smart_enum_type: string; value: string };
-  readonly equals: (other: StandardEnumItem) => boolean;
+  readonly equals: <T extends StandardEnumItem>(other: T) => this is T;
 };
 
 export type EnumInputItem = Partial<{
