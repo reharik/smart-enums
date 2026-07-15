@@ -251,6 +251,7 @@ export type EnumItemFromNormalizedObject<
   TObj extends ObjectEnumInput,
   K extends keyof TObj = keyof TObj,
 > = Omit<StandardEnumItem, 'key' | 'value' | 'display'> &
+  SmartEnumMatch &
   EnumMemberExtra<TObj, K> & {
     readonly key: Extract<K, string>;
     readonly value: TObj[K] extends { value?: infer V }
@@ -451,3 +452,10 @@ export type FinalizableEnumItem = {
   index: number;
   deprecated?: boolean;
 };
+
+export interface SmartEnumMatch {
+  readonly key: string;
+  match<R>(handlers: {
+    [P in this['key']]: (item: Extract<this, { key: P }>) => R;
+  }): R;
+}

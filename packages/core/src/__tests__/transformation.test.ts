@@ -194,9 +194,9 @@ describe('TRANSFORMATION', () => {
       expect(revived.color).toBe(Color.red); // This is now properly a Color enum
 
       // This demonstrates that the revived value is now properly a Color enum
-      expect((revived.color as Record<string, unknown>).key).toBe('red'); // Can access enum properties
-      expect((revived.color as Record<string, unknown>).value).toBe('RED'); // Can access enum properties
-      expect((revived.color as Record<string, unknown>).display).toBe('Red'); // Can access enum properties
+      expect(revived.color.key).toBe('red'); // Can access enum properties
+      expect(revived.color.value).toBe('RED'); // Can access enum properties
+      expect(revived.color.display).toBe('Red'); // Can access enum properties
 
       // The type system can't catch this because reviveSmartEnums returns 'unknown'
       // But at runtime, we can see that the value is now properly revived
@@ -224,9 +224,7 @@ describe('TRANSFORMATION', () => {
       expect(typeof revived.color).toBe('object'); // Confirmed to be object
 
       // If you need to convert the string back to an enum, you'd need to do it manually:
-      const colorFromString = Color.fromValue(
-        (revived.color as Record<string, unknown>).value as string,
-      );
+      const colorFromString = Color.fromValue(revived.color.value as string);
       expect(colorFromString).toBe(Color.red);
     });
   });
