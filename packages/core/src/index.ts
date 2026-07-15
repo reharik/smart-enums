@@ -21,6 +21,7 @@
 
 export { isSmartEnumItem, isSmartEnum } from './utilities/typeGuards.js';
 export { getSubsetByProp, subsetByProp } from './utilities/getSubsetByProp.js';
+export { pickEnum } from './utilities/pickEnum.js';
 export { enumeration } from './enumerations.js';
 export {
   serializeSmartEnums,
@@ -55,6 +56,7 @@ export type {
   SmartEnumLike,
   SmartEnumMemberUnion,
   SmartEnumSubsetView,
+  PickEnumView,
   SubsetByPropResult,
   EnumFromNormalizedObject,
   FieldEnumMapping,

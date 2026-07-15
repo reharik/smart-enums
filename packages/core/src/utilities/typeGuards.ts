@@ -2,6 +2,7 @@ import {
   SMART_ENUM_ITEM,
   SMART_ENUM,
   SmartEnumItemSerialized,
+  SmartEnumLike,
 } from '../types.js';
 
 /**
@@ -43,7 +44,7 @@ export const isSmartEnumItem = (
  * isSmartEnum(MyEnum.one) === false; // false (this is an item, not the enum)
  * ```
  */
-export const isSmartEnum = (x: unknown): boolean => {
+export const isSmartEnum = (x: unknown): x is SmartEnumLike => {
   return !!x && typeof x === 'object' && Reflect.get(x, SMART_ENUM) === true;
 };
 

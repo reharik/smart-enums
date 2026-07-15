@@ -458,9 +458,24 @@ export type FinalizableEnumItem = {
  * known* receiver — miss one and it won't compile. Over a pickEnum view the
  * arms are exhaustive over just the picked members.
  */
+// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 export interface SmartEnumMatch {
   readonly key: string;
   match<R>(handlers: {
     [P in this['key']]: (item: Extract<this, { key: P }>) => R;
   }): R;
 }
+
+/** Member keys of an enum object (excludes the method keys). */
+export type EnumMemberKeys<TEnum> = {
+  [K in keyof TEnum]: TEnum[K] extends StandardEnumItem ? K : never;
+}[keyof TEnum];
+
+/**
+ * Enum-like view over an explicit list of member keys. Reuses the parent's item
+ * references; methods scope to the picked subset. See {@link pickEnum}.
+ */
+export type PickEnumView<
+  TEnum extends Record<string, unknown>,
+  K extends EnumMemberKeys<TEnum>,
+> = Pick<TEnum, K> & CoreEnumMethods<Extract<TEnum[K], StandardEnumItem>>;
