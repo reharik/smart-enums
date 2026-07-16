@@ -1,20 +1,26 @@
-import {
-  SMART_ENUM_ITEM,
-  SMART_ENUM,
-  SmartEnumItemSerialized,
-  SmartEnumLike,
-} from '../types.js';
+import { SmartEnumItemSerialized, SmartEnumLike } from '../types.js';
 
 /**
- * Runtime type guard to detect Smart Enum items created by this library.
- * Returns true if the value has the SMART_ENUM_ITEM symbol.
+ * Runtime type guard to detect Smart Enum items.
+ *
+ * Detection is **structural** and package-stable: it keys on the string
+ * properties `__smart_enum_brand === true`, string `__smart_enum_type` and
+ * string `value`. It does not read any Symbol, so it recognizes items created
+ * by a *different* copy of `@reharik/smart-enum` (duplicate-package resistant).
+ *
+ * Because detection is structural, a self-describing wire object that carries
+ * the brand — `{ __smart_enum_brand: true, __smart_enum_type, value }` — also
+ * passes. That is intentional: it lets `equals`/`has` treat a revival-boundary
+ * object as the member it represents. A plain serialized shape *without* the
+ * brand (`{ __smart_enum_type, value }`, as emitted by `serializeSmartEnums`)
+ * is still rejected here; use {@link isSerializedSmartEnumItem} for that.
  *
  * @example
  * ```typescript
  * import { Status } from './status';
  * const item = Status.active;
  * isSmartEnumItem(item); // true
- * isSmartEnumItem({ key: 'active', value: 'ACTIVE' }); // false (plain object)
+ * isSmartEnumItem({ key: 'active', value: 'ACTIVE' }); // false (no brand)
  * if (isSmartEnumItem(x)) {
  *   console.log(x.value, x.__smart_enum_type); // narrowed to enum item
  * }
@@ -26,16 +32,24 @@ export const isSmartEnumItem = (
   key: string;
   value: string;
   index?: number;
-  __smart_enum_type?: string;
+  __smart_enum_type: string;
 } => {
   return (
-    !!x && typeof x === 'object' && Reflect.get(x, SMART_ENUM_ITEM) === true
+    !!x &&
+    typeof x === 'object' &&
+    Reflect.get(x, '__smart_enum_brand') === true &&
+    typeof Reflect.get(x, '__smart_enum_type') === 'string' &&
+    typeof Reflect.get(x, 'value') === 'string'
   );
 };
 
 /**
- * Runtime type guard to detect a full Smart Enum object created by this library.
- * Returns true if the object has the SMART_ENUM property.
+ * Runtime type guard to detect a full Smart Enum object.
+ *
+ * Detection is **structural** and package-stable: it keys on the string marker
+ * property `__smart_enum === true` that `enumeration()` stamps on every enum
+ * object. It does not read any Symbol, so it recognizes enum objects created by
+ * a *different* copy of `@reharik/smart-enum` (duplicate-package resistant).
  *
  * @example
  * ```typescript
@@ -45,7 +59,9 @@ export const isSmartEnumItem = (
  * ```
  */
 export const isSmartEnum = (x: unknown): x is SmartEnumLike => {
-  return !!x && typeof x === 'object' && Reflect.get(x, SMART_ENUM) === true;
+  return (
+    !!x && typeof x === 'object' && Reflect.get(x, '__smart_enum') === true
+  );
 };
 
 /**

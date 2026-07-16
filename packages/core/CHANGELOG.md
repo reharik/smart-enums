@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-07-15
+
+### Changed
+
+- Enum item equality (`equals`, `enumItemsEqual`, and the new `has`) is now package-resistant. Equality compares the string identity `__smart_enum_type` + `value` instead of per-instance Symbols, so members compare equal across separate `enumeration()` calls of the same enum and across duplicate copies of `@reharik/smart-enum` — the cases where the previous Symbol-based `equals` silently returned `false` (behaving no better than `===`). Item and enum detection (`isSmartEnumItem`, `isSmartEnum`) is likewise now structural rather than Symbol-based. Consequence: `equals`/`has` against an _unbranded_ serialized object (`{ __smart_enum_type, value }` with no `__smart_enum_brand`) returns `false` — revive it first, or use a branded object. All internal Symbols were removed.
+- `enumeration()` now throws at creation time if the same enum name is registered with _different_ members, because the name is the wire/identity key. Re-registering a name with identical members is allowed (returns compatibly). This can surface as an error at module load for any app that defined two different enums under one name — previously silent, now rejected. Names must be unique within a module instance.
+
 ## [0.5.3] - 2026-07-15
 
 ### Added

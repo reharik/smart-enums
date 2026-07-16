@@ -64,7 +64,9 @@ describe('ENUM FROM OBJECT', () => {
         ];
 
         type TestEnum = Enumeration<typeof TestEnum>;
-        const TestEnum = enumeration('TestEnum', {
+        // Distinct name: different enum shape than the 'TestEnum' above;
+        // names must be unique per module instance.
+        const TestEnum = enumeration('DisplayFormatEnum', {
           input: inputForDisplay,
           propertyAutoFormatters,
         });

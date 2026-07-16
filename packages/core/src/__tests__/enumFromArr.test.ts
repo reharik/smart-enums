@@ -38,7 +38,9 @@ describe('ENUM FROM ARRAY', () => {
         },
       ];
       type TestEnum = Enumeration<typeof TestEnum>;
-      const TestEnum = enumeration('TestEnum', {
+      // Distinct name: this is a different enum shape than the 'TestEnum'
+      // defined above, and names must be unique per module instance.
+      const TestEnum = enumeration('DisplayFormatEnum', {
         input: inputForDisplay,
         propertyAutoFormatters,
       });

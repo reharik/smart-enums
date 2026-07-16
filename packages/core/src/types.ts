@@ -10,11 +10,6 @@ export const notEmpty = <X>(
   return value != null;
 };
 
-// Public symbols used at runtime for detection/identity (not used in type keys)
-export const SMART_ENUM_ITEM = Symbol('smart-enum-item');
-export const SMART_ENUM_ID = Symbol('smart-enum-id');
-export const SMART_ENUM = Symbol('smart-enum');
-
 /**
  * Options for filtering enum items in various methods
  */
@@ -342,6 +337,12 @@ export type CoreEnumMethods<TItem extends StandardEnumItem> = {
   fromKey(key: string): TItem;
   tryFromKey(key?: string | null): TItem | undefined;
   equals(a: TItem, b: TItem): boolean;
+  /**
+   * Narrowing membership predicate. Package-resistant (uses {@link enumItemsEqual}),
+   * so it accepts an unknown/foreign value on purpose — unlike `equals`, it
+   * carries no brand constraint.
+   */
+  has(x: unknown): x is TItem;
   items(): readonly TItem[];
   /** Matches runtime: `items.map(i => i.value)` (see {@link EnumLikeBase}). */
   values(): readonly TItem['value'][];
@@ -362,6 +363,7 @@ export type EnumLikeBase<
   fromKey(key: string): TItem;
   tryFromKey(key?: string | null): TItem | undefined;
   equals(a: TItem, b: TItem): boolean;
+  has(x: unknown): x is TItem;
   items(): readonly TItem[];
   values(): readonly TItem['value'][];
   keys(): readonly TItem['key'][];

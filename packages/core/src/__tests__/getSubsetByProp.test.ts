@@ -29,6 +29,7 @@ describe('getSubsetByProp', () => {
           'equals',
           'fromKey',
           'fromValue',
+          'has',
           'items',
           'keys',
           'mediaItemNotFound',

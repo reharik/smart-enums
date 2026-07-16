@@ -212,7 +212,9 @@ describe('revivePayloadFromDatabase', () => {
   });
 
   describe('array-of-enum support at leaf paths', () => {
-    const Status = enumeration('Status', {
+    // Distinct name: a different 'Status' shape is defined elsewhere in this
+    // file; names must be unique per module instance.
+    const Status = enumeration('StatusLeaf', {
       input: ['active', 'pending'] as const,
     });
 
@@ -252,7 +254,7 @@ describe('revivePayloadFromDatabase', () => {
 describe('enumeration item toPostgres', () => {
   describe('When toPostgres is called', () => {
     it('should return the same string as .value', () => {
-      const Status = enumeration('Status', {
+      const Status = enumeration('StatusOnOff', {
         input: ['on', 'off'] as const,
       });
       expect(Status.on.toPostgres()).toBe(Status.on.value);

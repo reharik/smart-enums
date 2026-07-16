@@ -2,9 +2,6 @@ import { capitalCase, constantCase } from 'case-anything';
 
 import { addExtensionMethods } from './extensionMethods.js';
 import {
-  SMART_ENUM,
-  SMART_ENUM_ID,
-  SMART_ENUM_ITEM,
   SerializationMode,
   type EnumFromNormalizedObject,
   type EnumItemFromNormalizedObject,
@@ -26,6 +23,47 @@ export type EnumItem<TEnum> = {
     : never;
 }[keyof TEnum];
 
+/**
+ * Creation-time name-uniqueness guard.
+ *
+ * Enum names are the wire/identity key: equality keys on `__smart_enum_type`
+ * (see {@link enumItemsEqual}) and revival looks enums up by name (see
+ * `reviveSmartEnums`). Two *different* enums sharing a name would make both
+ * ambiguous, so we reject that collision here — a name may only be reused if the
+ * new definition has the *same* members (that is harmless: members compare equal
+ * across instances under the string-based identity).
+ *
+ * The signature is the sorted set of `key=value` pairs; extras/formatters/
+ * `serializeAs` don't affect wire identity and are intentionally ignored.
+ *
+ * Limitation: this registry is module-scoped, so it only catches collisions
+ * within a single library instance — duplicate copies of `@reharik/smart-enum`
+ * each keep their own registry. That is acceptable: it catches the likely
+ * accidental case (defining conflicting enums in one app) and documents the
+ * invariant the string-based identity relies on.
+ */
+const registeredEnumSignatures = new Map<string, string>();
+
+const registerEnumName = (
+  enumType: string,
+  items: readonly { key: string; value: string }[],
+): void => {
+  const signature = items
+    .map(item => `${item.key}=${item.value}`)
+    .sort()
+    .join('|');
+
+  const existing = registeredEnumSignatures.get(enumType);
+  if (existing !== undefined && existing !== signature) {
+    throw new Error(
+      `Enum name '${enumType}' is already defined with different members; ` +
+        `enum names must be unique because they are the wire/identity key ` +
+        `(equality and revival key on __smart_enum_type + value).`,
+    );
+  }
+  registeredEnumSignatures.set(enumType, signature);
+};
+
 function normalizeInput<TInput extends readonly string[] | ObjectEnumInput>(
   input: TInput,
 ): NormalizedInputType<TInput> {
@@ -41,19 +79,11 @@ function normalizeInput<TInput extends readonly string[] | ObjectEnumInput>(
 const finalizeEnumItem = <T extends { value: string; key: string }>(
   item: T,
   enumType: string,
-  enumInstanceId: symbol,
   serializeAs: SerializationMode | undefined,
 ): T & FinalizedEnumFields => {
-  Object.defineProperty(item, SMART_ENUM_ITEM, {
-    value: true,
-    enumerable: false,
-  });
-
-  Object.defineProperty(item, SMART_ENUM_ID, {
-    value: enumInstanceId,
-    enumerable: false,
-  });
-
+  // `__smart_enum_brand` is the package-stable detection marker read by
+  // `isSmartEnumItem`; combined with the string `__smart_enum_type` + `value`
+  // below it fully identifies an item across enum instances and package copies.
   Object.defineProperty(item, '__smart_enum_brand', {
     value: true,
     enumerable: false,
@@ -136,7 +166,6 @@ function buildEnumFromObject<
     [K in keyof TObj]: EnumItemFromNormalizedObject<TObj, K, TName>;
   }> = {};
 
-  const enumInstanceId = Symbol('smart-enum-instance');
   let index = 0;
 
   for (const key in input) {
@@ -154,7 +183,6 @@ function buildEnumFromObject<
       const enumItem = finalizeEnumItem(
         enumItemBase,
         enumType,
-        enumInstanceId,
         serializeAs,
       ) as unknown as TItem;
 
@@ -163,6 +191,11 @@ function buildEnumFromObject<
       index++;
     }
   }
+
+  registerEnumName(
+    enumType,
+    Object.values(rawEnumItems) as FinalizableEnumItem[],
+  );
 
   const extensionMethods = addExtensionMethods<TItem>(
     Object.values(rawEnumItems) as TItem[],
@@ -173,7 +206,9 @@ function buildEnumFromObject<
     ...extensionMethods,
   } as EnumFromNormalizedObject<TObj, TName>;
 
-  Object.defineProperty(enumObject, SMART_ENUM, {
+  // `__smart_enum` is the package-stable marker read by `isSmartEnum`
+  // (replaces the former module-level Symbol so detection survives across copies).
+  Object.defineProperty(enumObject, '__smart_enum', {
     value: true,
     enumerable: false,
   });

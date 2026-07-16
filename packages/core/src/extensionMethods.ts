@@ -28,6 +28,9 @@ export const addExtensionMethods = <TItem extends StandardEnumItem>(
 
     equals: enumItemsEqual,
 
+    has: (x: unknown): x is TItem =>
+      enumItems.some(item => enumItemsEqual(item, x)),
+
     items: () => [...enumItems],
     values: () => enumItems.map(item => item.value),
     keys: () => enumItems.map(item => item.key),
