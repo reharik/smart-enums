@@ -1,4 +1,11 @@
 import { Enumeration, enumeration, pickEnum } from '../index.js';
+import type { SmartEnumItem } from '../types.js';
+
+type Equal<A, B> =
+  (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
+    ? true
+    : false;
+type Expect<T extends true> = T;
 
 describe('match', () => {
   const Media = enumeration('MediaEvent', {
@@ -110,6 +117,23 @@ describe('match', () => {
       });
 
       expect(true).toBe(true);
+    });
+
+    it('gives each handler a compact, named SmartEnumItem argument', () => {
+      // The item each arm receives is a named `SmartEnumItem<...>` reference, not
+      // an expanded intersection of anonymous fields. This is what keeps a
+      // non-exhaustive `.match()` error readable: the missing-arm diagnostic
+      // reads `Property 'album' is missing ...` over short, named handler types
+      // instead of burying it under full field dumps.
+      type CommentArg = Extract<MediaItem, { key: 'comment' }>;
+      type _compactArg = Expect<
+        Equal<
+          CommentArg,
+          SmartEnumItem<'MediaEvent', 'comment', 'COMMENT', 'Comment'>
+        >
+      >;
+      const _keep: _compactArg = true;
+      expect(_keep).toBe(true);
     });
 
     it('over a pickEnum view requires exactly the picked arms (pick ∘ match)', () => {

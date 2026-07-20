@@ -150,6 +150,58 @@ export type StandardEnumItem = StandardEnumItemBase & {
   ) => this is T;
 };
 
+/**
+ * Display-friendly, fully-typed enum member. Structurally equivalent to
+ * {@link StandardEnumItem} (plus {@link SmartEnumMatch}), but expressed as a
+ * *generic interface* so editors show a single named line on hover — e.g.
+ * `SmartEnumItem<"EventType", "commentPosted", "COMMENT_POSTED", "Comment Posted">`
+ * — with the enum name first, instead of expanding every field. This is the
+ * shape every `enumeration()` member resolves to (see
+ * {@link EnumItemFromNormalizedObject}); custom extra fields are intersected on
+ * top, keeping the name visible.
+ *
+ * Being an interface (nominal) rather than a type alias is deliberate: TS keeps
+ * interface references folded on hover across TS versions, where the previous
+ * intersection-of-aliases was free to expand into noise.
+ */
+// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+export interface SmartEnumItem<
+  TName extends string = string,
+  TKey extends string = string,
+  TValue extends string = string,
+  TDisplay extends string = string,
+> extends SmartEnumMatch {
+  readonly __smart_enum_brand: true;
+  readonly __smart_enum_type: TName;
+  readonly key: TKey;
+  readonly value: TValue;
+  readonly display: TDisplay;
+  readonly index: number;
+  readonly deprecated?: boolean;
+  readonly toPostgres: () => string;
+  readonly toJSON: () => string | { __smart_enum_type: string; value: string };
+  readonly equals: <
+    This extends { __smart_enum_type: string },
+    T extends {
+      __smart_enum_type: This['__smart_enum_type'];
+    } & StandardEnumItem,
+  >(
+    this: This,
+    other: T,
+  ) => this is T;
+}
+
+/**
+ * Attaches per-member extra fields to a {@link SmartEnumItem} without hiding its
+ * name. When there are no extras the base interface is returned untouched (so
+ * hover shows a bare `SmartEnumItem<...>`); otherwise the extras are materialized
+ * to a plain object literal and intersected — `SmartEnumItem<...> & { weight: 5 }`.
+ * The conditional is what lets the surrounding alias name resolve away on hover.
+ */
+export type WithExtra<TBase, TExtra> = keyof TExtra extends never
+  ? TBase
+  : TBase & { [P in keyof TExtra]: TExtra[P] };
+
 export type EnumInputItem = Partial<{
   key: string;
   value: string;
@@ -250,27 +302,44 @@ export type EnumMemberExtra<
   K extends keyof TObj,
 > = Omit<TObj[K], BuiltInOverrideKeys>;
 
+/** `value` literal for member `K`: explicit `value` if given, else `ConstantCase<K>`. */
+export type ItemValueFromNormalizedObject<
+  TObj extends ObjectEnumInput,
+  K extends keyof TObj,
+> = TObj[K] extends { value?: infer V }
+  ? [Extract<V, string>] extends [never]
+    ? ConstantCase<Extract<K, string>>
+    : Extract<V, string>
+  : ConstantCase<Extract<K, string>>;
+
+/** `display` literal for member `K`: explicit `display` if given, else derived from the key. */
+export type ItemDisplayFromNormalizedObject<
+  TObj extends ObjectEnumInput,
+  K extends keyof TObj,
+> = TObj[K] extends { display?: infer D }
+  ? [Extract<D, string>] extends [never]
+    ? DisplayCaseFromEnumKey<Extract<K, string>>
+    : Extract<D, string>
+  : DisplayCaseFromEnumKey<Extract<K, string>>;
+
+/**
+ * The type of a single enum member. Resolves to a named {@link SmartEnumItem}
+ * reference (plus any custom fields via {@link WithExtra}), so hover shows the
+ * enum name and member literals on one line instead of the full field dump.
+ */
 export type EnumItemFromNormalizedObject<
   TObj extends ObjectEnumInput,
   K extends keyof TObj = keyof TObj,
   TName extends string = string,
-> = Omit<
-  StandardEnumItem,
-  'key' | 'value' | 'display' | '__smart_enum_type'
-> & { __smart_enum_type: TName } & SmartEnumMatch &
-  EnumMemberExtra<TObj, K> & {
-    readonly key: Extract<K, string>;
-    readonly value: TObj[K] extends { value?: infer V }
-      ? [Extract<V, string>] extends [never]
-        ? ConstantCase<Extract<K, string>>
-        : Extract<V, string>
-      : ConstantCase<Extract<K, string>>;
-    readonly display: TObj[K] extends { display?: infer D }
-      ? [Extract<D, string>] extends [never]
-        ? DisplayCaseFromEnumKey<Extract<K, string>>
-        : Extract<D, string>
-      : DisplayCaseFromEnumKey<Extract<K, string>>;
-  };
+> = WithExtra<
+  SmartEnumItem<
+    TName,
+    Extract<K, string>,
+    ItemValueFromNormalizedObject<TObj, K>,
+    ItemDisplayFromNormalizedObject<TObj, K>
+  >,
+  EnumMemberExtra<TObj, K>
+>;
 
 export type EnumMemberUnionFromNormalizedObject<
   TObj extends ObjectEnumInput,
@@ -498,7 +567,47 @@ export type PickEnumView<
   K extends EnumMemberKeys<TEnum>,
 > = Pick<TEnum, K> & CoreEnumMethods<Extract<TEnum[K], StandardEnumItem>>;
 
+/**
+ * Enum-like view over an enum with an explicit list of member keys *removed*.
+ * Reuses the parent's item references; methods scope to the remaining members.
+ * The inverse of {@link PickEnumView}. See {@link omitEnum}.
+ */
+export type OmitEnumView<
+  TEnum extends Record<string, unknown>,
+  K extends EnumMemberKeys<TEnum>,
+> = Pick<TEnum, Exclude<EnumMemberKeys<TEnum>, K>> &
+  CoreEnumMethods<
+    Extract<TEnum[Exclude<EnumMemberKeys<TEnum>, K>], StandardEnumItem>
+  >;
+
+/**
+ * Selector accepted by {@link EnumSubset}: either a bare member-key union
+ * (kept, i.e. include) or an explicit `{ include }` / `{ exclude }` object.
+ */
+export type EnumSubsetSelector<TItems extends StandardEnumItem> =
+  | TItems['key']
+  | { include: TItems['key'] }
+  | { exclude: TItems['key'] };
+
+/**
+ * Narrows a member-item union to a subset of its keys.
+ *
+ * The selector may be:
+ *  - a bare key union — `EnumSubset<Items, 'a' | 'b'>` keeps `a` and `b`;
+ *  - `{ include: K }` — same as the bare form, but explicit;
+ *  - `{ exclude: K }` — keeps every member *except* `K`.
+ *
+ * @example
+ * ```ts
+ * type Items = SmartEnumMemberUnion<typeof EntityType>;
+ * type Targets = EnumSubset<Items, { exclude: 'album' }>; // comment | mediaItem
+ * ```
+ */
 export type EnumSubset<
   TItems extends StandardEnumItem,
-  K extends TItems['key'],
-> = Extract<TItems, { key: K }>;
+  Sel extends EnumSubsetSelector<TItems>,
+> = Sel extends { exclude: infer K }
+  ? Exclude<TItems, { key: K }>
+  : Sel extends { include: infer K }
+    ? Extract<TItems, { key: K }>
+    : Extract<TItems, { key: Sel }>;

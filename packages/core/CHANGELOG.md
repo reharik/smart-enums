@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-07-20
+
+### Added
+
+- `omitEnum(enum, keys)` — a runtime enum-like view of every member _except_ the named ones; the inverse of `pickEnum`. Like `pickEnum` it reuses the parent's item instances (identity, `equals`, and serialization carry over) and preserves declaration order. Use it when dropping one or two members is shorter than listing all the ones you keep.
+- `EnumSubset` now accepts an object selector in addition to a bare key union: `{ include: K }` (same members as the bare form) and `{ exclude: K }` (every member _except_ `K`). `{ exclude }` is the type-level twin of `omitEnum`, so adding a member to the enum widens the subset automatically. Keys are still validated — a typo in an `include`/`exclude` list is a compile error.
+- Exported the `SmartEnumItem<Name, Key, Value, Display>` type (the shape every enum member now resolves to).
+
+### Changed
+
+- Enum member types now resolve to a named `SmartEnumItem<…>` interface reference instead of an anonymous intersection of object types. Editors show a single named line on hover — e.g. `SmartEnumItem<"EventType", "commentPosted", "COMMENT_POSTED", "Comment Posted">`, with the enum name first — instead of expanding every field, and a non-exhaustive `.match()` error now names the missing branch over short, named handler types instead of burying it under full field dumps. The structural shape is unchanged, so this is a display/diagnostics improvement only — no runtime or type-compatibility change.
+
 ## [0.6.0] - 2026-07-15
 
 ### Changed

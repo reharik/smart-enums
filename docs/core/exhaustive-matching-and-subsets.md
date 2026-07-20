@@ -137,6 +137,23 @@ t.match({
 type Oops = EnumSubset<EntityType, 'commnet'>;   // compile error — not a member key
 ```
 
+#### Selecting by include or exclude
+
+The second argument is a **selector**. A bare key union is the common form — it
+_includes_ those members — but you can also pass an explicit `{ include }`, or, to
+keep everything _but_ a few, `{ exclude }`:
+
+```ts
+type ReactionTarget = EnumSubset<EntityType, 'comment' | 'mediaItem'>; // bare = include
+type Same = EnumSubset<EntityType, { include: 'comment' | 'mediaItem' }>;
+type NonAlbum = EnumSubset<EntityType, { exclude: 'album' }>; // everything except album
+```
+
+`{ exclude }` is the type-level twin of `omitEnum` below: you name the members to
+drop and the rest follow the parent, so adding a member to the enum widens the
+subset automatically instead of quietly leaving it behind. Keys are checked either
+way — a typo in an `include` or `exclude` list is the same compile error as above.
+
 For most subset needs — typing DTO fields, restricting a parameter, branching with
 `match` — `EnumSubset` is the entire answer. The values flowing through are already
 the parent's members, so a member type is exactly what fits them.
@@ -199,6 +216,27 @@ default; the container is a cheap upgrade when a runtime need actually shows up.
 Both build runtime subset views. `getSubsetByProp` selects members that _share a
 property value_; `pickEnum` selects an _explicit list of members_. Reach for
 `pickEnum` when the subset is hand-picked rather than defined by a common property.
+
+### Runtime inverse: `omitEnum`
+
+`omitEnum` is `pickEnum` turned around: it builds the same enum-like view, but from
+every member _except_ the ones you name. Reach for it when dropping one or two
+members is shorter than listing all the ones you keep. Like `pickEnum`, it reuses
+the parent's instances — so identity, `equals`, and serialization carry over — and
+it preserves the parent's declaration order.
+
+```ts
+const NonAlbum = omitEnum(EntityType, ['album'] as const);
+
+NonAlbum.comment === EntityType.comment; // true — same reference
+NonAlbum.items(); // every member except album
+NonAlbum.fromValue('ALBUM'); // throws — outside the subset
+```
+
+The same `as const` rule applies — without it the key list widens to `string[]` and
+the view stops restricting. `omitEnum` is to `pickEnum` what
+`EnumSubset<…, { exclude }>` is to `EnumSubset<…, { include }>`: the complement, for
+when the short list is the one you're removing.
 
 ## Narrowing guards
 
