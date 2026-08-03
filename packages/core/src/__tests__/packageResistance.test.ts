@@ -14,6 +14,15 @@ import { enumItemsEqual } from '../utilities/enumItemsEqual.js';
 // swc emits CommonJS for tests, so `require` exists at runtime; no @types/node.
 declare const require: (id: string) => unknown;
 
+const loadCopy = (): typeof import('../index.js') => {
+  let mod: typeof import('../index.js') | undefined;
+  jest.isolateModules(() => {
+    mod = require('../index.js') as typeof import('../index.js');
+  });
+  if (!mod) throw new Error('failed to load isolated copy');
+  return mod;
+};
+
 describe('package-resistant equality and detection', () => {
   describe('Mode A: two enumeration() calls of the same enum (one library copy)', () => {
     const A = enumeration('EntityType', {
@@ -52,15 +61,6 @@ describe('package-resistant equality and detection', () => {
   });
 
   describe('Mode B: two independent copies of the library', () => {
-    const loadCopy = (): typeof import('../index.js') => {
-      let mod: typeof import('../index.js') | undefined;
-      jest.isolateModules(() => {
-        mod = require('../index.js') as typeof import('../index.js');
-      });
-      if (!mod) throw new Error('failed to load isolated copy');
-      return mod;
-    };
-
     const copy1 = loadCopy();
     const copy2 = loadCopy();
 
@@ -154,9 +154,9 @@ describe('package-resistant equality and detection', () => {
   describe('creation-time name-uniqueness guard', () => {
     it('throws when a name is reused with different members', () => {
       enumeration('DupDifferent', { input: { a: {} } });
-      expect(() =>
-        enumeration('DupDifferent', { input: { b: {} } }),
-      ).toThrow(/already defined with different members/);
+      expect(() => enumeration('DupDifferent', { input: { b: {} } })).toThrow(
+        /already defined with different members/,
+      );
     });
 
     it('allows re-registering the same name with identical members', () => {

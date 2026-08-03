@@ -7,10 +7,6 @@ const Status = enumeration('Status', {
   input: ['pending', 'active'] as const,
 });
 
-const Priority = enumeration('Priority', {
-  input: ['low', 'high'] as const,
-});
-
 describe('patchSchemaEnumSerializers - nested types', () => {
   describe('outbound: serialize on nested object fields', () => {
     it('should serialize enum on a nested object field returned by a resolver', async () => {

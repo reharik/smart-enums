@@ -1,5 +1,9 @@
 import { Enumeration, enumeration } from '../index.js';
 
+const assertUnreachable = (x: never): never => {
+  throw new Error(`unexpected ${String(x)}`);
+};
+
 describe('equals as a type predicate', () => {
   const E = enumeration('E', { input: ['a', 'b', 'c'] as const });
   type EItem = Enumeration<typeof E>;
@@ -13,10 +17,6 @@ describe('equals as a type predicate', () => {
 
   describe('type-level', () => {
     it('narrows an if-chain of .equals so the trailing else reaches never', () => {
-      const assertUnreachable = (x: never): never => {
-        throw new Error(`unexpected ${String(x)}`);
-      };
-
       const classify = (item: EItem): string => {
         if (item.equals(E.a)) return 'a';
         if (item.equals(E.b)) return 'b';

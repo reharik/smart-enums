@@ -38,6 +38,11 @@ const parsePath = (pathStr: string): PathSeg[] => {
   return segs;
 };
 
+const describeKeys = (host: PlainObject): string => {
+  const keys = Object.keys(host);
+  return keys.length > 0 ? keys.join(', ') : '(none)';
+};
+
 const reviveLeaf = (
   host: PlainObject,
   key: string,
@@ -45,6 +50,20 @@ const reviveLeaf = (
   strict: boolean,
   pathLabel: string,
 ): void => {
+  // A mapped path whose leaf property is absent is a programmer error, the same
+  // way a missing intermediate segment already is — see walkPath below.
+  if (!Object.hasOwn(host, key)) {
+    if (strict) {
+      throw new EnumRevivalError(
+        `Cannot revive path "${pathLabel}": property "${key}" is not present. ` +
+          `Available properties: ${describeKeys(host)}`,
+        pathLabel,
+        undefined,
+      );
+    }
+    return;
+  }
+
   const raw = host[key];
 
   if (typeof raw === 'string') {
@@ -155,7 +174,7 @@ export const revivePayloadFromDatabase = <T>(
   payload: T,
   options: RevivePayloadOptions,
 ): T => {
-  const { pathEnumMapping, strict = false } = options;
+  const { pathEnumMapping, strict = true } = options;
   const root = structuredClone(payload);
 
   for (const [pathStr, smartEnum] of Object.entries(pathEnumMapping)) {

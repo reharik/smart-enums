@@ -1,13 +1,22 @@
 import type { ReviveRowOptions } from '../types.js';
 
+import { assertMappedFieldsPresent } from './assertMappedFieldsPresent.js';
 import { EnumRevivalError } from './enumRevivalError.js';
 
 export const reviveRowFromDatabase = <T extends Record<string, unknown>>(
   row: T,
   options: ReviveRowOptions,
 ): T => {
-  const { fieldEnumMapping, strict = false } = options;
+  const {
+    fieldEnumMapping,
+    strict = true,
+    validateMappedFields = true,
+  } = options;
   const out = { ...row } as Record<string, unknown>;
+
+  if (strict && validateMappedFields) {
+    assertMappedFieldsPresent(out, fieldEnumMapping);
+  }
 
   for (const [field, smartEnum] of Object.entries(fieldEnumMapping)) {
     if (!Object.hasOwn(out, field)) {

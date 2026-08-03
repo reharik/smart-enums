@@ -632,7 +632,7 @@ describe('SmartEnum plugin', () => {
         expect(output).toContain(
           "import { SortDirection } from '../hand-authored/sort';",
         );
-        expect(output).not.toContain("import { enumeration");
+        expect(output).not.toContain('import { enumeration');
         expect(output).toContain(
           'export const enumRegistry = { PaymentStatus, SortDirection } as const;',
         );

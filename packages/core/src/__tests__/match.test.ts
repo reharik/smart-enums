@@ -7,21 +7,21 @@ type Equal<A, B> =
     : false;
 type Expect<T extends true> = T;
 
-describe('match', () => {
-  const Media = enumeration('MediaEvent', {
-    input: ['comment', 'mediaItem', 'album'] as const,
-  });
-  type MediaItem = Enumeration<typeof Media>;
+const Media = enumeration('MediaEvent', {
+  input: ['comment', 'mediaItem', 'album'] as const,
+});
+type MediaItem = Enumeration<typeof Media>;
 
+const dispatch = (item: MediaItem) =>
+  item.match({
+    comment: () => 'C',
+    mediaItem: () => 'M',
+    album: () => 'A',
+  });
+
+describe('match', () => {
   describe('runtime', () => {
     it('dispatches to the correct arm by key', () => {
-      const dispatch = (item: MediaItem) =>
-        item.match({
-          comment: () => 'C',
-          mediaItem: () => 'M',
-          album: () => 'A',
-        });
-
       expect(dispatch(Media.comment)).toBe('C');
       expect(dispatch(Media.mediaItem)).toBe('M');
       expect(dispatch(Media.album)).toBe('A');
@@ -49,6 +49,9 @@ describe('match', () => {
 
     it('returns a promise when the matched arm is async', async () => {
       const result = Media.comment.match({
+        // An await-free async arm is the point: `match` must hand back the
+        // promise the handler returns rather than unwrapping it.
+        // eslint-disable-next-line @typescript-eslint/require-await
         comment: async () => 42,
       });
 
@@ -56,7 +59,7 @@ describe('match', () => {
       await expect(result).resolves.toBe(42);
     });
 
-    it("throws when called on an item whose key has no handler (wire-lie guard)", () => {
+    it('throws when called on an item whose key has no handler (wire-lie guard)', () => {
       // Force a handler set missing the 'album' arm onto an album item — the
       // shape a deserialized/forged item would produce at a trust boundary.
       const handlers = {

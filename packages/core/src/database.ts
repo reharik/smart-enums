@@ -23,6 +23,7 @@ export {
   reviveRowFromDatabase,
   revivePayloadFromDatabase,
   EnumRevivalError,
+  assertMappedFieldsPresent,
 } from './db/index.js';
 export type { Logger } from './utilities/logger.js';
 export type {

@@ -52,10 +52,10 @@ describe('Core enum methods', () => {
         TestEnum.one.equals({ key: 'one', value: 'ONE' } as TestEnumItem),
       ).toBe(false);
       expect(
-        TestEnum.equals(
-          TestEnum.one,
-          { key: 'one', value: 'ONE' } as TestEnumItem,
-        ),
+        TestEnum.equals(TestEnum.one, {
+          key: 'one',
+          value: 'ONE',
+        } as TestEnumItem),
       ).toBe(false);
     });
 
@@ -93,9 +93,7 @@ describe('Core enum methods', () => {
     });
 
     it('equals works for object input enums', () => {
-      expect(ObjectEnum.first.equals(ObjectEnum.fromValue('FIRST'))).toBe(
-        true,
-      );
+      expect(ObjectEnum.first.equals(ObjectEnum.fromValue('FIRST'))).toBe(true);
       expect(
         ObjectEnum.equals(ObjectEnum.first, ObjectEnum.fromKey('second')),
       ).toBe(false);

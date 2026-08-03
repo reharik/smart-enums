@@ -7,6 +7,7 @@ import {
   SmartEnumMemberUnion,
   StandardEnumItem,
 } from '../types.js';
+
 import { isSmartEnumItem } from './typeGuards.js';
 
 const RESERVED_ENUM_MEMBER_KEYS = new Set([

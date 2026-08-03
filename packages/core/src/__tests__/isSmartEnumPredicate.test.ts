@@ -1,5 +1,15 @@
 import { enumeration, isSmartEnum } from '../index.js';
 
+const use = (x: unknown): string | undefined => {
+  if (isSmartEnum(x)) {
+    // narrowed to SmartEnumLike — these members are callable
+    const count = x.items().length;
+    const item = x.fromValue('ONE');
+    return `${count}:${item.value}`;
+  }
+  return undefined;
+};
+
 describe('isSmartEnum as a type predicate', () => {
   const E = enumeration('E', { input: ['one', 'two'] as const });
 
@@ -19,16 +29,6 @@ describe('isSmartEnum as a type predicate', () => {
 
   describe('type-level', () => {
     it('narrows x to SmartEnumLike inside the guard', () => {
-      const use = (x: unknown): string | undefined => {
-        if (isSmartEnum(x)) {
-          // narrowed to SmartEnumLike — these members are callable
-          const count = x.items().length;
-          const item = x.fromValue('ONE');
-          return `${count}:${item.value}`;
-        }
-        return undefined;
-      };
-
       expect(use(E)).toBe('2:ONE');
       expect(use(42)).toBeUndefined();
     });

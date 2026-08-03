@@ -81,6 +81,7 @@ describe('pickEnum', () => {
         Equal<typeof EntityType.comment extends Picked ? true : false, true>
       >;
 
+      expect(view.keys()).toEqual(['comment', 'mediaItem']);
       expect(true).toBe(true as AlbumExcluded);
       expect(true).toBe(true as CommentIncluded);
     });
@@ -93,6 +94,7 @@ describe('pickEnum', () => {
       type KeyIsLiteral = Expect<Equal<CommentItem['key'], 'comment'>>;
       type ValueIsLiteral = Expect<Equal<CommentItem['value'], 'COMMENT'>>;
 
+      expect(view.keys()).toEqual(['comment', 'mediaItem']);
       expect(true).toBe(true as KeyIsLiteral);
       expect(true).toBe(true as ValueIsLiteral);
     });
@@ -110,10 +112,12 @@ describe('pickEnum', () => {
 
       const label = (item: Picked): string => {
         switch (item.key) {
-          case 'comment':
+          case 'comment': {
             return 'c';
-          case 'mediaItem':
+          }
+          case 'mediaItem': {
             return 'm';
+          }
           default: {
             // reached only if the union were wider than the picked arms
             const unreachable: never = item;
@@ -185,6 +189,7 @@ describe('omitEnum', () => {
         Equal<typeof EntityType.comment extends Kept ? true : false, true>
       >;
 
+      expect(view.keys()).toEqual(['comment', 'mediaItem']);
       expect(true).toBe(true as AlbumExcluded);
       expect(true).toBe(true as CommentIncluded);
     });

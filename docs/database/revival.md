@@ -30,7 +30,6 @@ import { reviveRowFromDatabase } from '@reharik/smart-enum/database';
 
 const revived = reviveRowFromDatabase(row, {
   fieldEnumMapping: { status: Status, priority: Priority },
-  strict: true, // throw on unknown values instead of keeping the raw string
 });
 ```
 
@@ -53,7 +52,51 @@ The `items[].kind` syntax revives `kind` on every element of the `items` array.
 
 ## Strict mode
 
-`strict: true` throws `EnumRevivalError` when a mapped string matches no member. Without it, unrecognized values are left as-is. Use strict mode when stored data should always be valid and a mismatch means corruption you want surfaced; leave it off when you're migrating and expect transitional values.
+**`strict` defaults to `true`.** It enforces the mapping/data contract in both directions, and both checks throw `EnumRevivalError`:
+
+| Check | Fires when | The bug it catches |
+| --- | --- | --- |
+| **Value** | A mapped string matches no member | Corrupt or transitional data in a column |
+| **Field** | A mapping key names a field the row does not have | A typo, or a column the query never selected |
+
+`strict: false` disables both.
+
+### The field check
+
+This is the one that pays for itself. A mapping key that matches nothing used to be a silent no-op:
+
+```typescript
+// row has `operations: string[]`
+reviveRowFromDatabase(row, {
+  fieldEnumMapping: { operation: Operation }, // singular — typo
+});
+```
+
+Nothing was revived, nothing complained, and `row.operations` stayed an array of raw strings while remaining *typed* as members. The failure surfaced far downstream — `.value` returning `undefined`, or every element collapsing into one key when used to build a map.
+
+Now it throws, and the message lists the row's actual fields, because this whole class of bug is near-miss names:
+
+```
+EnumRevivalError: Cannot revive field "operation": not present on the row.
+Available fields: id, operations, status
+```
+
+Seeing `operations` next to `operation` is the fix.
+
+The same check applies to `revivePayloadFromDatabase`, at every path segment including the leaf — a mapped path the payload doesn't have throws rather than quietly doing nothing.
+
+### It is a runtime check, not a static one
+
+Two limits follow from that, both worth knowing:
+
+- **Empty result sets can't be validated.** With zero rows there is no shape to check the mapping against, so a typo stays invisible until a query returns data.
+- **It sees the row you actually got.** If a query selects a subset of columns, a mapping key naming an unselected column throws — correctly, since reviving it was never going to work. Reuse one mapping across queries with different projections only under `strict: false`.
+
+For the Knex adapter, mapping keys are additionally [constrained to the query's row type at compile time](/database/knex#compile-time-key-checking), which catches the typo before it runs. The runtime check is the backstop for untyped queries and for `.select<T>()` assertions that don't match the database.
+
+### Turning it off
+
+Use `strict: false` when you're migrating and expect transitional values, or when one mapping is deliberately shared across queries that select different columns. It disables the value check too — there is no way to keep one and drop the other.
 
 ## Array columns
 
@@ -62,7 +105,6 @@ For columns holding arrays of enum values (e.g. Postgres `text[]`), pass the col
 ```typescript
 const revived = reviveRowFromDatabase(row, {
   fieldEnumMapping: { operations: Operation }, // operations is a text[] column
-  strict: true,
 });
 // revived.operations === [Operation.view, Operation.download]
 ```

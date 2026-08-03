@@ -34,6 +34,30 @@ The options list, wire value, label, valid-set, and ordering are all the same ob
 - **Survives the boundary** — members serialize to self-describing JSON and revive into the *same* instances across a network, a database, or a full GraphQL stack. A value that left as `Status.active` comes back knowing it is.
 - **Tiny and lock-in-free** — ~600 bytes full, ~149 for just `enumeration` via [entry points](https://reharik.github.io/smart-enums/core/guards-and-entry-points); output is plain frozen objects and ordinary JSON.
 
+## Strict revival
+
+Reading enums back out of a database means declaring which columns map to which enums. That mapping is the contract, and `strict` — **on by default** — enforces it in both directions:
+
+```typescript
+reviveRowFromDatabase(row, {
+  fieldEnumMapping: { operations: Operation },
+});
+```
+
+- **The data side** — a stored string that matches no member throws `EnumRevivalError`, instead of leaking a bare string into your domain logic.
+- **The mapping side** — a key naming a field the row doesn't have throws too. A typo like `{ operation: Operation }` against an `operations` column used to be a silent no-op: nothing revived, no warning, and the column arrived as raw strings while still *typed* as members. That failure surfaces far from its cause — `.value` returning `undefined`, or every element collapsing into one key when used to build a map.
+
+The error lists the row's actual fields, because the whole class of bug is near-miss names:
+
+```
+EnumRevivalError: Cannot revive field "operation": not present on the row.
+Available fields: id, operations, status
+```
+
+With the [Knex adapter](https://reharik.github.io/smart-enums/database/knex), mapping keys are also constrained to the query's row type, so TypeScript catches the typo first — and suggests the field you meant. The runtime check backstops untyped queries and `.select<T>()` assertions that don't match the database.
+
+Pass `strict: false` to disable both checks — when you're migrating and expect transitional values, or when one mapping is deliberately shared across queries that select different columns.
+
 ## Install
 
 ```bash

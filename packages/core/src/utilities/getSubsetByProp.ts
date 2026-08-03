@@ -95,7 +95,8 @@ type SubsetByPropFn = <const P extends string>(
  * const mediaItemErrors = bySource(AppErrorEnum, 'mediaItem' as const);
  * ```
  */
-export const subsetByProp: SubsetByPropFn = <const P extends string>(prop: P) =>
+export const subsetByProp: SubsetByPropFn =
+  <const P extends string>(prop: P) =>
   <
     TEnum extends Record<string, unknown> &
       SmartEnumLike<SmartEnumMemberUnion<TEnum>>,

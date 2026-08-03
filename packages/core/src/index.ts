@@ -39,6 +39,7 @@ export {
   reviveRowFromDatabase,
   revivePayloadFromDatabase,
   EnumRevivalError,
+  assertMappedFieldsPresent,
 } from './db/index.js';
 // Logger functions are internal-only, not exposed publicly
 export type { Logger } from './utilities/logger.js';

@@ -26,10 +26,10 @@ export type TypePoliciesPluginConfig = SharedPluginConfig & {
 
 type EnumFieldKind = 'scalar' | 'list';
 
-interface ResolvedEnumField {
+type ResolvedEnumField = {
   enumType: GraphQLEnumType;
   kind: EnumFieldKind;
-}
+};
 
 const AUTO_HEADER_LINES = [
   '/**',
@@ -65,11 +65,11 @@ const validateTypePoliciesConfig = (config: TypePoliciesPluginConfig): void => {
  *   [Status!]     → { list }
  *   [Status!]!    → { list }
  *
- * Returns null for any non-enum type (String, Int, object types, etc).
+ * Returns undefined for any non-enum type (String, Int, object types, etc).
  */
 const resolveEnumField = (
   fieldType: GraphQLOutputType,
-): ResolvedEnumField | null => {
+): ResolvedEnumField | undefined => {
   // Strip outer NonNull
   const outerInner = isNonNullType(fieldType) ? fieldType.ofType : fieldType;
 
@@ -81,14 +81,14 @@ const resolveEnumField = (
     if (isEnumType(namedInner)) {
       return { enumType: namedInner, kind: 'list' };
     }
-    return null;
+    return undefined;
   }
 
   if (isEnumType(outerInner)) {
     return { enumType: outerInner, kind: 'scalar' };
   }
 
-  return null;
+  return undefined;
 };
 
 export const plugin: PluginFunction<TypePoliciesPluginConfig> = (
@@ -134,7 +134,10 @@ export const plugin: PluginFunction<TypePoliciesPluginConfig> = (
     for (const fieldName of sortedFieldNames) {
       const field = fieldMap[fieldName];
       const resolved = resolveEnumField(field.type);
-      if (resolved !== null && allowedEnumNames.has(resolved.enumType.name)) {
+      if (
+        resolved !== undefined &&
+        allowedEnumNames.has(resolved.enumType.name)
+      ) {
         enumFields.push({
           fieldName,
           enumTypeName: resolved.enumType.name,

@@ -104,6 +104,107 @@ describe('reviveRowFromDatabase', () => {
     });
   });
 
+  describe('When strict is omitted', () => {
+    it('should default to strict and throw on an unknown value', () => {
+      const row = { status: 'NOPE' };
+      expect(() =>
+        reviveRowFromDatabase(row, {
+          fieldEnumMapping: { status: UserStatus },
+        }),
+      ).toThrow(EnumRevivalError);
+    });
+  });
+
+  describe('When a mapping key names a field the row does not have', () => {
+    it('should throw under strict, naming the field', () => {
+      const row = { operations: ['VIEW'] };
+      expect(() =>
+        reviveRowFromDatabase(row, {
+          fieldEnumMapping: { operation: UserStatus },
+          strict: true,
+        }),
+      ).toThrow(/Cannot revive field "operation": not present on the row/);
+    });
+
+    it('should list the available fields so a near-miss name is obvious', () => {
+      const row = { id: 1, operations: ['VIEW'] };
+      expect(() =>
+        reviveRowFromDatabase(row, {
+          fieldEnumMapping: { operation: UserStatus },
+        }),
+      ).toThrow(/Available fields: id, operations/);
+    });
+
+    it('should report "(none)" when the row has no fields at all', () => {
+      expect(() =>
+        reviveRowFromDatabase({}, { fieldEnumMapping: { status: UserStatus } }),
+      ).toThrow(/Available fields: \(none\)/);
+    });
+
+    it('should expose the missing field on the error', () => {
+      expect.assertions(2);
+      try {
+        reviveRowFromDatabase(
+          { operations: ['VIEW'] },
+          { fieldEnumMapping: { operation: UserStatus } },
+        );
+      } catch (error) {
+        expect((error as EnumRevivalError).path).toBe('operation');
+        expect((error as EnumRevivalError).value).toBeUndefined();
+      }
+    });
+
+    it('should stay a silent no-op when strict is false', () => {
+      const row = { operations: ['VIEW'] };
+      const out = reviveRowFromDatabase(row, {
+        fieldEnumMapping: { operation: UserStatus },
+        strict: false,
+      });
+      expect(out).toEqual({ operations: ['VIEW'] });
+    });
+
+    it('should not fire for a present field holding null', () => {
+      // null, not undefined: a nullable column is what a driver actually returns.
+      // eslint-disable-next-line unicorn/no-null
+      const row = { status: null as unknown as string };
+      const out = reviveRowFromDatabase(row, {
+        fieldEnumMapping: { status: UserStatus },
+      });
+      expect(out.status).toBeNull();
+    });
+
+    it('should not fire for a present field explicitly set to undefined', () => {
+      const row = { status: undefined as unknown as string };
+      const out = reviveRowFromDatabase(row, {
+        fieldEnumMapping: { status: UserStatus },
+      });
+      expect(out.status).toBeUndefined();
+    });
+
+    it('should skip the check when validateMappedFields is false', () => {
+      const row = { operations: ['VIEW'] };
+      const out = reviveRowFromDatabase(row, {
+        fieldEnumMapping: { operation: UserStatus },
+        strict: true,
+        validateMappedFields: false,
+      });
+      expect(out).toEqual({ operations: ['VIEW'] });
+    });
+
+    it('should still check values when validateMappedFields is false', () => {
+      expect(() =>
+        reviveRowFromDatabase(
+          { status: 'NOPE' },
+          {
+            fieldEnumMapping: { status: UserStatus },
+            strict: true,
+            validateMappedFields: false,
+          },
+        ),
+      ).toThrow(/unknown enum value "NOPE"/);
+    });
+  });
+
   describe('array-of-enum support', () => {
     const Status = enumeration('Status', {
       input: ['active', 'pending', 'closed'] as const,
@@ -121,6 +222,7 @@ describe('reviveRowFromDatabase', () => {
       const row = { id: '1', statuses: ['ACTIVE', 'BOGUS'] };
       const result = reviveRowFromDatabase(row, {
         fieldEnumMapping: { statuses: Status },
+        strict: false,
       });
       expect(result.statuses).toEqual([Status.active, 'BOGUS']);
     });
@@ -144,11 +246,14 @@ describe('reviveRowFromDatabase', () => {
     });
 
     it('should leave non-string array elements alone', () => {
+      // null, not undefined: a nullable element is what a driver actually returns.
+      /* eslint-disable unicorn/no-null */
       const row = { id: '1', mixed: ['ACTIVE', null, 42] };
       const result = reviveRowFromDatabase(row, {
         fieldEnumMapping: { mixed: Status },
       });
       expect(result.mixed).toEqual([Status.active, null, 42]);
+      /* eslint-enable unicorn/no-null */
     });
 
     it('should still handle scalar string fields alongside array fields', () => {
@@ -206,6 +311,66 @@ describe('revivePayloadFromDatabase', () => {
         revivePayloadFromDatabase(payload, {
           pathEnumMapping: { 'profile.status': UserStatus },
           strict: true,
+        }),
+      ).toThrow(EnumRevivalError);
+    });
+  });
+
+  describe('When a mapped path names a leaf property the payload lacks', () => {
+    it('should throw under strict, naming the property', () => {
+      const payload = { profile: { statuses: ['ACTIVE'] } };
+      expect(() =>
+        revivePayloadFromDatabase(payload, {
+          pathEnumMapping: { 'profile.status': UserStatus },
+          strict: true,
+        }),
+      ).toThrow(/property "status" is not present/);
+    });
+
+    it('should list the available properties', () => {
+      const payload = { profile: { statuses: ['ACTIVE'], id: 1 } };
+      expect(() =>
+        revivePayloadFromDatabase(payload, {
+          pathEnumMapping: { 'profile.status': UserStatus },
+        }),
+      ).toThrow(/Available properties: statuses, id/);
+    });
+
+    it('should stay a silent no-op when strict is false', () => {
+      const payload = { profile: { statuses: ['ACTIVE'] } };
+      const out = revivePayloadFromDatabase(payload, {
+        pathEnumMapping: { 'profile.status': UserStatus },
+        strict: false,
+      });
+      expect(out).toEqual({ profile: { statuses: ['ACTIVE'] } });
+    });
+
+    it('should fire per element for an items[].field path', () => {
+      const payload = { items: [{ kind: 'A' }, { kindd: 'B' }] };
+      expect(() =>
+        revivePayloadFromDatabase(payload, {
+          pathEnumMapping: { 'items[].kind': Kind },
+        }),
+      ).toThrow(/property "kind" is not present/);
+    });
+
+    it('should not fire for a present leaf holding null', () => {
+      // null, not undefined: a nullable column is what a driver actually returns.
+      // eslint-disable-next-line unicorn/no-null
+      const payload = { profile: { status: null } };
+      const out = revivePayloadFromDatabase(payload, {
+        pathEnumMapping: { 'profile.status': UserStatus },
+      });
+      expect(out.profile.status).toBeNull();
+    });
+  });
+
+  describe('When strict is omitted', () => {
+    it('should default to strict and throw on an unknown value', () => {
+      const payload = { profile: { status: 'BAD' } };
+      expect(() =>
+        revivePayloadFromDatabase(payload, {
+          pathEnumMapping: { 'profile.status': UserStatus },
         }),
       ).toThrow(EnumRevivalError);
     });

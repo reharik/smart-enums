@@ -1,4 +1,5 @@
 import { buildSchema, isEnumType } from 'graphql';
+
 import { enumeration } from '../index.js';
 import { patchSchemaEnumSerializers } from '../utilities/patchSchemaEnumSerializers.js';
 

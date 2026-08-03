@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-08-03
+
+### Changed
+
+- **BREAKING: `strict` now defaults to `true`** on `reviveRowFromDatabase` and `revivePayloadFromDatabase`. Any call that omitted the option was previously silently permissive and now throws `EnumRevivalError` on a value that matches no member. Pass `strict: false` to keep the old behavior.
+- **BREAKING: under `strict`, a mapping key that names a field the row does not have now throws** instead of being skipped. Previously `{ operation: Operation }` against a row with `operations` was a silent no-op: the column arrived as a raw string, typed as a member, and the failure surfaced far downstream — `.value` returning `undefined`, or every element collapsing into one key when used to build a map. The message lists the row's actual fields, since this class of bug is near-miss names:
+
+  ```
+  EnumRevivalError: Cannot revive field "operation": not present on the row.
+  Available fields: id, operations, status
+  ```
+
+  `revivePayloadFromDatabase` applies the same check at leaf paths; it already threw for mismatched intermediate segments.
+
+  This is a runtime check against real data, so it cannot fire for a query that returns zero rows, and it cannot tell a typo from a column the query didn't select. A mapping reused across queries with different projections needs `strict: false`.
+
+### Added
+
+- `assertMappedFieldsPresent(row, fieldEnumMapping)` — the field-presence check on its own, for callers validating a mapping once against a representative row rather than per row.
+- `ReviveRowOptions.validateMappedFields` (default `true`) — skips the field-presence check while leaving value checking on. For batch callers that have already validated the mapping against the first row.
+
 ## [0.7.0] - 2026-07-20
 
 ### Added

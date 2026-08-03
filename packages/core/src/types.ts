@@ -487,13 +487,36 @@ export type FieldEnumMapping = Record<string, SmartEnumLike>;
 
 export type ReviveRowOptions = {
   fieldEnumMapping: FieldEnumMapping;
+  /**
+   * Enforce the mapping/data contract in both directions. Defaults to `true`.
+   *
+   * - A mapped string that matches no member throws (data side).
+   * - A mapping key naming a field the row does not have throws (mapping side).
+   *
+   * `false` disables both: unknown values and unmatched keys are left alone.
+   */
   strict?: boolean;
+  /**
+   * Skip the mapped-field-presence check while leaving value checking on.
+   * Defaults to `true`. Batch callers set this to `false` for rows after the
+   * first, having already validated the mapping once against the first row.
+   */
+  validateMappedFields?: boolean;
 };
 
 export type PathEnumMapping = Record<string, SmartEnumLike>;
 
 export type RevivePayloadOptions = {
   pathEnumMapping: PathEnumMapping;
+  /**
+   * Enforce the mapping/data contract in both directions. Defaults to `true`.
+   *
+   * - A mapped string that matches no member throws (data side).
+   * - A mapped path that the payload does not have throws (mapping side), at
+   *   any segment including the leaf.
+   *
+   * `false` disables both.
+   */
   strict?: boolean;
 };
 
