@@ -33,6 +33,7 @@ describe('getSubsetByProp', () => {
           'items',
           'keys',
           'mediaItemNotFound',
+          'switchOn',
           'tryFromKey',
           'tryFromValue',
           'values',

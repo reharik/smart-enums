@@ -400,8 +400,53 @@ export type PropertyAutoFormatter = {
   format: (k: string) => string;
 };
 
+/**
+ * Keys of `T` whose value is a member of THIS enum (`TItem`). Drives `prop`
+ * completion for {@link CoreEnumMethods.switchOn} — tying it to `TItem` (rather
+ * than accepting any smart-enum member) is what makes handing one enum's
+ * `switchOn` a prop holding a *different* enum's member a compile error.
+ */
+export type EnumPropsOf<T, TItem> = {
+  [K in keyof T]-?: T[K] extends TItem ? K : never;
+}[keyof T] &
+  string;
+
+/** The member keys actually present at `T[P]` — i.e. the required arm set for {@link CoreEnumMethods.switchOn}. */
+export type SwitchKeys<T, P extends string> = T[P & keyof T] extends {
+  key: infer KK extends string;
+}
+  ? KK
+  : never;
+
+/**
+ * Narrowed variant of `T` for one {@link CoreEnumMethods.switchOn} arm; falls
+ * back to `T` when there is nothing to narrow (single-shape objects, or a base
+ * interface whose `prop` is typed as the full member union). The fallback is
+ * load-bearing: without it those callers' arms silently type as `never`.
+ */
+export type SwitchArm<T, P extends string, K> = [
+  Extract<T, Record<P, { key: K }>>,
+] extends [never]
+  ? T
+  : Extract<T, Record<P, { key: K }>>;
+
 export type CoreEnumMethods<TItem extends StandardEnumItem> = {
-  fromValue(value: string): TItem;
+  /**
+   * Look up a member by its wire `value`. Passing a string *literal* returns
+   * that exact member's type (`Kind.fromValue('COMMENT')` is typed as the
+   * `comment` member, not the union); passing a widened `string` returns the
+   * full member union, so revival and wire-boundary call sites are unaffected.
+   *
+   * @param value The member's wire value.
+   * @returns The member whose `value` matches — the exact member type when
+   *   `value` is a literal, otherwise the full member union.
+   * @throws If no member has that value.
+   */
+  fromValue<V extends string>(
+    value: V,
+  ): [Extract<TItem, { value: V }>] extends [never]
+    ? TItem
+    : Extract<TItem, { value: V }>;
   tryFromValue(value?: string | null): TItem | undefined;
   fromKey(key: string): TItem;
   tryFromKey(key?: string | null): TItem | undefined;
@@ -417,6 +462,37 @@ export type CoreEnumMethods<TItem extends StandardEnumItem> = {
   values(): readonly TItem['value'][];
   /** Matches runtime: `items.map(i => i.key)` (see {@link EnumLikeBase}). */
   keys(): readonly TItem['key'][];
+  /**
+   * Exhaustive branch on the **object holding a member** — narrows `obj` itself.
+   *
+   * Whatever you hand it comes back narrowed: pass the object, and each arm receives
+   * that object's variant. Reach for this where you wanted `switch (obj.kind)` and
+   * TypeScript refused to narrow — an enum member can never be a discriminant,
+   * because TS only narrows on unit types.
+   *
+   * Branching on a member you already hold? Use {@link SmartEnumMatch.match | match} instead.
+   *
+   * @param obj The object whose variant you want narrowed.
+   * @param prop The property holding the member. Completion lists only the keys that
+   *   hold a member of this enum.
+   * @param handlers One arm per member key present in the union. A missing arm is a
+   *   compile error; an extra arm is a compile error.
+   * @returns Whatever the matching arm returns.
+   * @throws If `prop` does not hold a smart-enum member, or no arm matches.
+   * @example
+   * ```ts
+   * Channel.switchOn(notification, 'kind', {
+   *   email: v => sendEmail(v.to),
+   *   push:  v => sendPush(v.device),
+   *   sms:   v => sendSms(v.number),
+   * });
+   * ```
+   */
+  switchOn<T extends object, const P extends EnumPropsOf<T, TItem>, R>(
+    obj: T,
+    prop: P,
+    handlers: { [K in SwitchKeys<T, P>]: (v: SwitchArm<T, P, K>) => R },
+  ): R;
 };
 
 /**
@@ -567,10 +643,26 @@ export type FinalizableEnumItem = {
  * Exhaustive branch-on-member. One arm required per member of the *statically
  * known* receiver — miss one and it won't compile. Over a pickEnum view the
  * arms are exhaustive over just the picked members.
+ *
+ * Narrowing the object that *holds* this member, rather than the member itself?
+ * Use {@link CoreEnumMethods.switchOn | switchOn}.
  */
 // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 export interface SmartEnumMatch {
   readonly key: string;
+  /**
+   * Exhaustive branch on the **member you already hold** — one arm per member
+   * key of the statically known receiver, each receiving the member narrowed to
+   * that key. A missing arm is a compile error.
+   *
+   * Narrowing the object that *holds* this member, rather than the member itself?
+   * Use {@link CoreEnumMethods.switchOn | switchOn}.
+   *
+   * @param handlers One arm per member key of this item's static type.
+   * @returns Whatever the matching arm returns.
+   * @throws If this item's key has no arm (possible only past a type lie, e.g.
+   *   a forged wire object).
+   */
   match<R>(handlers: {
     [P in this['key']]: (item: Extract<this, { key: P }>) => R;
   }): R;

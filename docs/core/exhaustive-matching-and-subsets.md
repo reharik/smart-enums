@@ -1,8 +1,8 @@
 # Matching, subsets, and guards
 
 Three capabilities that build on smart-enum's core promise — that each member is a
-real, distinct value the compiler understands: exhaustive `match`, member subsets,
-and narrowing type guards.
+real, distinct value the compiler understands: exhaustive branching (`match` and
+`switchOn`), member subsets, and narrowing type guards.
 
 ## `match` — exhaustive branch on a member
 
@@ -70,6 +70,81 @@ The return type unifies across arms. Arms returning different types widen the
 result to their union; `async` arms make `match` return a `Promise`, which you
 `await` once around the whole expression.
 
+## `switchOn` — exhaustive branch on the object holding a member
+
+`match` branches on a member you already hold. Its sibling `switchOn` branches on
+the **object that holds** a member — and narrows that object, not just the member.
+
+The gap it fills is a TypeScript rule you have probably already collided with:
+TypeScript narrows a parent object through a discriminant property only when that
+property is a _unit type_ (a string/number/boolean literal, an enum literal, or a
+`unique symbol`). A smart-enum member is an object type, so it can never be a
+discriminant. `switch (event.targetType)` and
+`if (event.targetType === EntityType.comment)` narrow the _property_, but never the
+_containing object_ — the other fields of `event` stay un-narrowed. `switchOn` is
+the branch you wanted to write:
+
+```ts
+interface CommentEvent {
+  targetType: typeof EntityType.comment;
+  commentId: string;
+}
+interface MediaItemEvent {
+  targetType: typeof EntityType.mediaItem;
+  mediaItemId: string;
+}
+type TargetEvent = CommentEvent | MediaItemEvent;
+
+declare const event: TargetEvent;
+
+const id = EntityType.switchOn(event, 'targetType', {
+  comment: v => v.commentId, // v is CommentEvent here
+  mediaItem: v => v.mediaItemId, // v is MediaItemEvent here
+});
+```
+
+Whatever you hand it comes back narrowed: you pass the object, and each arm
+receives that object's variant — `v.commentId` compiles in the `comment` arm
+because `v` _is_ a `CommentEvent` there, not just "a `TargetEvent` whose
+`targetType` happens to be comment."
+
+### It lives on the container
+
+Where `match` is a method on each **member**, `switchOn` is a method on the **enum
+object** (`EntityType.switchOn(...)`) — it has to be, since you're not holding a
+member to call anything on; you're holding the object that contains one. The rule
+of thumb: hold the member → `match`; hold the thing containing a member →
+`switchOn`.
+
+### The prop is checked, not trusted
+
+The `prop` argument only accepts properties that hold a member of _this_ enum.
+Completion lists exactly those keys, a property holding a plain string is a compile
+error, and — the trap this guards against — a property holding a **different
+enum's** member is a compile error too. `Channel.switchOn(event, 'targetType', …)`
+does not silently dispatch `EntityType` members through `Channel`'s arms; it
+doesn't compile.
+
+### Same exhaustiveness rules as `match`
+
+Arms are keyed by member key, and the set must match the members present at that
+property _exactly_: a missing arm is a missing-property error, an arm for a member
+that can't occur there is an excess-property error. Over a subset — a field typed
+with only two variants, or a `pickEnum`/`omitEnum`/`getSubsetByProp` view's
+`switchOn` — the required arms are exactly the subset's members, nothing more.
+
+When the object isn't a union at all (a single shape whose property holds the full
+member union), every arm simply receives the object as-is — the branching still
+works; there is just nothing further to narrow.
+
+### The runtime guard
+
+Like `match`, `switchOn` keeps a runtime check for the case types can't cover: it
+throws a `TypeError` if `prop` doesn't actually hold a smart-enum member, and
+throws if a member arrives whose key has no arm (the deserialized-value-that-lied
+case). Dispatch is package-resistant — a member created by a duplicate copy of the
+library still routes to the right arm.
+
 ## Subsetting
 
 Often you want a value restricted to _some_ of an enum's members — a field that only
@@ -92,9 +167,9 @@ union. Subsets follow the same split:
 - **Calling `fromValue`, iterating, validating raw input** → you want a **container**
   value → `pickEnum`.
 
-`match` is on members; `fromValue` is on the container. When an error says a method
-"does not exist," you're almost always holding the container where you wanted a
-member, or the reverse.
+`match` is on members; `fromValue` and `switchOn` are on the container. When an
+error says a method "does not exist," you're almost always holding the container
+where you wanted a member, or the reverse.
 :::
 
 ### Type-level: `EnumSubset`
@@ -280,3 +355,45 @@ Status.active.equals(Color.red); // compile error — different enums
 
 That comparison is always `false` at runtime — it was a bug the types couldn't see
 before, and now catch for you. Same-enum comparisons are unaffected.
+
+### `isTagged` / `taggedBy` — narrow the containing object in an `if`
+
+`equals` narrows a member; `isTagged` narrows the **object holding** one — the
+`if`-shaped counterpart to `switchOn`, for the sites where a full arms-object is
+more ceremony than you want. It narrows in _both_ branches: the true branch gets
+the matching variant, and the false branch peels that variant off the union, so an
+exhaustive `if` chain ends in `assertUnreachable` and compiles:
+
+```ts
+import { isTagged } from '@reharik/smart-enum';
+
+const recipientId = (event: TargetEvent): string => {
+  if (isTagged(event, 'targetType', EntityType.comment)) return event.commentId;
+  if (isTagged(event, 'targetType', EntityType.mediaItem))
+    return event.mediaItemId;
+  return assertUnreachable(event); // compiles — nothing left
+};
+```
+
+The same checks as `switchOn` apply to the arguments: the property must hold a
+member of the enum, and testing against a _different_ enum's member is a compile
+error rather than a silent always-`false`.
+
+Where `has` narrows the **value you pass to it** (`Status.has(x)` tells you `x` is
+a member), `isTagged` narrows the object _around_ a member you can already name.
+
+When one discriminant property is tested all over a module, `taggedBy` fixes the
+property once and returns the guard:
+
+```ts
+const byTarget = taggedBy('targetType');
+
+if (byTarget(event, EntityType.comment)) {
+  event.commentId; // event is CommentEvent
+}
+```
+
+Both are built on `sameMember(a, b)` — also exported — the package-resistant
+"same logical member" comparison (it keys on the enum name plus wire value, so
+members from a duplicate copy of the library still match, where `===` would not).
+It returns `false`, never a throw, for anything that isn't a member.

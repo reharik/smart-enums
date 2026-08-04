@@ -20,6 +20,7 @@
  */
 
 export { isSmartEnumItem, isSmartEnum } from './utilities/typeGuards.js';
+export { sameMember, isTagged, taggedBy } from './utilities/tagged.js';
 export { getSubsetByProp, subsetByProp } from './utilities/getSubsetByProp.js';
 export { pickEnum, omitEnum } from './utilities/pickEnum.js';
 export { enumeration } from './enumerations.js';

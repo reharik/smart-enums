@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-08-04
+
+### Added
+
+- `switchOn(obj, prop, handlers)` on every enum object — and on `pickEnum` / `omitEnum` / `getSubsetByProp` views, scoped to the subset. An exhaustive branch on the **object holding a member** that narrows the object itself: TypeScript only narrows a parent through unit-type discriminants, so an enum member can never drive `switch` narrowing — `switchOn` closes that gap. `prop` completion lists only properties holding _this_ enum's members; a prop holding a different enum's member is a compile error, and missing or extra arms are compile errors. At runtime it throws `TypeError` if `prop` does not hold a smart-enum member and `Error` if no arm matches (the same wire-lie guard `match` has). Dispatch is package-resistant: a member from a duplicate copy of the library still routes correctly.
+- `isTagged(obj, prop, member)` and curried `taggedBy(prop)` — type guards that narrow the **containing object**, in both the true _and_ false branches, so an exhaustive `if` chain can end in `assertNever` and compile. The `if`-shaped counterpart of `switchOn`; where `has` narrows the value you pass to it, these narrow the object holding it. Comparison is package-resistant.
+- `sameMember(a, b)` — the underlying package-resistant "same logical member" comparison (keys on `__smart_enum_type` + `value`), exported for direct use. `false`, never a throw, for non-members.
+
+### Changed
+
+- `fromValue` now preserves string literals: `Kind.fromValue('COMMENT')` is typed as the exact member rather than the member union. A widened `string` still returns the full union, so revival and wire-boundary call sites are unaffected. Type-level only — the runtime lookup is unchanged.
+
 ## [0.8.0] - 2026-08-03
 
 ### Changed

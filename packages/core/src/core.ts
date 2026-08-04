@@ -19,6 +19,7 @@ export { enumeration } from './enumerations.js';
 export { getSubsetByProp, subsetByProp } from './utilities/getSubsetByProp.js';
 export { pickEnum } from './utilities/pickEnum.js';
 export { isSmartEnumItem, isSmartEnum } from './utilities/typeGuards.js';
+export { sameMember, isTagged, taggedBy } from './utilities/tagged.js';
 export { reviveEnumField } from './utilities/transformation.js';
 export type {
   Enumeration,
