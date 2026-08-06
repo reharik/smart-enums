@@ -6,7 +6,7 @@ Every enum object carries these methods. Return types are fully narrowed to the 
 
 | Method | Description |
 | --- | --- |
-| `fromValue(value)` | Find by wire value. **Throws** if not found. |
+| `fromValue(value)` | Find by wire value. **Throws** if not found. Returns the exact member when given a string literal. |
 | `tryFromValue(value)` | Find by wire value. Returns `undefined` if not found. |
 | `fromKey(key)` | Find by key. **Throws** if not found. |
 | `tryFromKey(key)` | Find by key. Returns `undefined` if not found. |
@@ -15,6 +15,53 @@ Every enum object carries these methods. Return types are fully narrowed to the 
 | `keys()` | All keys as an array. |
 
 The `from*` variants throw on a miss; the `tryFrom*` variants return `undefined`. Reach for `tryFromValue` when the input is untrusted (a query param, a form value) and `fromValue` when a miss is a programming error you want surfaced loudly.
+
+## Precise lookup by literal value
+
+`fromValue` returns the **exact** member type when the argument is a string literal, and the full member union when it's a widened `string`:
+
+```typescript
+EntityType.fromValue('COMMENT');
+// -> SmartEnumItem<"EntityType", "comment", "COMMENT", "Comment">
+
+declare const raw: string;
+EntityType.fromValue(raw);
+// -> the full EntityType member union
+```
+
+Deserialization paths are unaffected. Values arriving from a database row, a GraphQL response, or `JSON.parse` are typed `string`, so revival code keeps the behaviour it has always had — no call site needs to change.
+
+### Why the precision matters
+
+At a wire or persistence boundary the discriminant travels as a string, so the natural shape tags variants with a member's `.value` rather than the member itself:
+
+```typescript
+interface WireComment   { entityType: typeof EntityType.comment.value;   commentId: string }
+interface WireMediaItem { entityType: typeof EntityType.mediaItem.value; mediaItemId: string }
+type WireRef = WireComment | WireMediaItem;
+```
+
+Because `.value` is a string literal, this narrows natively — `switch`, `if`, exhaustiveness, all of it. And `fromValue` gets you back to the member without losing precision:
+
+```typescript
+switch (ref.entityType) {
+  case EntityType.comment.value: {
+    const member = EntityType.fromValue(ref.entityType);
+    //    ^ SmartEnumItem<"EntityType", "comment", "COMMENT", "Comment">
+    return `${member.display}: ${ref.commentId}`;
+  }
+  case EntityType.mediaItem.value:
+    return `${EntityType.fromValue(ref.entityType).display}: ${ref.mediaItemId}`;
+  default: {
+    const exhaustive: never = ref;
+    return exhaustive;
+  }
+}
+```
+
+Writing the field type as `typeof EntityType.comment.value` rather than `'COMMENT'` keeps it visibly enum-derived, and a typo or a member from the wrong enum is a compile error.
+
+When the object carries the **member** rather than its value, you can't narrow with `switch` at all — see [Branching & narrowing](./branching.md).
 
 ## Subsetting by a custom field
 
@@ -29,6 +76,14 @@ apiErrors.notFound;       // same object as AppError.notFound
 apiErrors.items();        // only api-source members
 apiErrors.fromValue('500'); // works, scoped to the subset
 // apiErrors.unauthorized → not present (its source is 'auth')
+```
+
+Scoping applies to types as well as runtime — on a subset view, `fromValue` returns only the subset's members:
+
+```typescript
+const Content = pickEnum(EntityType, ['comment', 'mediaItem'] as const);
+Content.fromValue('COMMENT');   // -> the comment member
+Content.fromValue(raw);         // -> comment | mediaItem, not the full enum
 ```
 
 There's a curried form for when you want to fix the property and vary the value:

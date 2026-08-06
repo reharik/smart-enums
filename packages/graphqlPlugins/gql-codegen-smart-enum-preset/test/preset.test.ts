@@ -98,6 +98,36 @@ describe('smart-enum preset', () => {
         /serializeAs must be 'value' or 'wrapped'/,
       );
     });
+
+    it("should throw when externalEnums is missing in 'external-defines' mode", () => {
+      const options = buildOptions({
+        presetConfig: { mode: 'external-defines' },
+      });
+      expect(() => preset.buildGeneratesSection(options as never)).toThrow(
+        /externalEnums must be a non-empty object in 'external-defines' mode/,
+      );
+    });
+
+    it("should throw when externalEnums is empty in 'external-defines' mode", () => {
+      const options = buildOptions({
+        presetConfig: { mode: 'external-defines', externalEnums: {} },
+      });
+      expect(() => preset.buildGeneratesSection(options as never)).toThrow(
+        /externalEnums must be a non-empty object in 'external-defines' mode/,
+      );
+    });
+
+    it("should throw when externalEnums is not a plain object in 'external-defines' mode", () => {
+      const options = buildOptions({
+        presetConfig: {
+          mode: 'external-defines',
+          externalEnums: ['PaymentStatus'],
+        },
+      });
+      expect(() => preset.buildGeneratesSection(options as never)).toThrow(
+        /externalEnums must be a non-empty object in 'external-defines' mode/,
+      );
+    });
   });
 
   describe("'enums' mode", () => {
@@ -153,6 +183,102 @@ describe('smart-enum preset', () => {
       expect(config).not.toHaveProperty('serializeAs');
       expect(config).not.toHaveProperty('skipEnums');
       expect(config).not.toHaveProperty('externalEnums');
+    });
+  });
+
+  describe("'external-defines' mode", () => {
+    const externalEnums = { PaymentStatus: '../enums/paymentStatus' };
+
+    it('should produce a single output configured to run the enum-definition plugin', () => {
+      const options = buildOptions({
+        presetConfig: { mode: 'external-defines', externalEnums },
+      });
+
+      const result = preset.buildGeneratesSection(options as never);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]?.plugins).toEqual([{ [smartEnumPluginName]: {} }]);
+
+      const map = result[0]?.pluginMap as
+        | Record<string, { plugin?: unknown }>
+        | undefined;
+      expect(typeof map?.[smartEnumPluginName]?.plugin).toBe('function');
+    });
+
+    it("should set emit: 'externalDefines' and forward externalEnums and serializeAs", () => {
+      const options = buildOptions({
+        presetConfig: {
+          mode: 'external-defines',
+          externalEnums,
+          serializeAs: 'value',
+        },
+      });
+
+      const result = preset.buildGeneratesSection(options as never);
+      const config = result[0]?.config as Record<string, unknown>;
+
+      expect(config.emit).toBe('externalDefines');
+      expect(config.externalEnums).toEqual(externalEnums);
+      expect(config.serializeAs).toBe('value');
+    });
+
+    it('should not include serializeAs when unset', () => {
+      const options = buildOptions({
+        presetConfig: { mode: 'external-defines', externalEnums },
+      });
+
+      const result = preset.buildGeneratesSection(options as never);
+      const config = result[0]?.config as Record<string, unknown>;
+
+      expect(config).not.toHaveProperty('serializeAs');
+    });
+
+    it("should win over a consumer-supplied emit in the output-level config", () => {
+      const options = buildOptions({
+        config: { emit: 'enums' },
+        presetConfig: { mode: 'external-defines', externalEnums },
+      });
+
+      const result = preset.buildGeneratesSection(options as never);
+      const config = result[0]?.config as Record<string, unknown>;
+
+      expect(config.emit).toBe('externalDefines');
+    });
+
+    it('should produce a defines-only output that imports no user module', () => {
+      const options = buildOptions({
+        presetConfig: { mode: 'external-defines', externalEnums },
+      });
+
+      const result = preset.buildGeneratesSection(options as never);
+      const map = result[0]?.pluginMap as Record<
+        string,
+        {
+          plugin: (
+            schema: unknown,
+            documents: unknown,
+            config: unknown,
+          ) => string;
+        }
+      >;
+
+      const output = map[smartEnumPluginName]!.plugin(
+        testSchema,
+        [],
+        result[0]?.config,
+      );
+
+      expect(output).toContain('export const paymentStatusKeys = [');
+      expect(output).toContain('export const definePaymentStatus = <');
+      expect(output).not.toContain('enumRegistry');
+      // no generated enum bodies — those belong to the 'enums' target
+      expect(output).not.toContain('Enumeration<');
+      expect(output).not.toContain('Input =');
+
+      const importSpecifiers = [...output.matchAll(/from\s+'([^']+)'/g)].map(
+        match => match[1],
+      );
+      expect(importSpecifiers).toEqual(['@reharik/smart-enum']);
     });
   });
 

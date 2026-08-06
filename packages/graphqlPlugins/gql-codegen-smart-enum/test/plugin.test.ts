@@ -584,15 +584,27 @@ describe('SmartEnum plugin', () => {
       });
     });
 
-    describe('When externalEnums lists a type that is not skipped', () => {
-      it('should throw with a clear message', () => {
-        const schema = buildSchema(`enum Status { OPEN }`);
+    describe('When externalEnums lists a type that is not in skipEnums', () => {
+      it('should imply skip: import and register it without generating it', async () => {
+        const schema = buildSchema(`
+          enum Status { OPEN }
+          enum CustomEnum { A, B }
+        `);
 
-        expect(() =>
+        const output = await normalizeOutput(
           plugin(schema, [], {
-            externalEnums: { Status: '../somewhere' },
+            externalEnums: { CustomEnum: '../hand-authored/customEnum' },
           }),
-        ).toThrow(/externalEnums.*also.*skipEnums/i);
+        );
+
+        expect(output).toContain(
+          "import { CustomEnum } from '../hand-authored/customEnum';",
+        );
+        expect(output).not.toContain('customEnumInput');
+        expect(output).not.toContain('export const CustomEnum');
+        expect(output).toMatch(
+          /export const enumRegistry = \{[^}]*CustomEnum[^}]*Status[^}]*\}/s,
+        );
       });
     });
 
@@ -637,6 +649,151 @@ describe('SmartEnum plugin', () => {
           'export const enumRegistry = { PaymentStatus, SortDirection } as const;',
         );
       });
+    });
+  });
+
+  describe('emit: externalDefines', () => {
+    const definesSchema = buildSchema(`
+      enum EntityType { ALBUM AUTHORIZATION COMMENT MEDIA_ITEM REACTION USER }
+      enum Status { OPEN, CLOSED }
+    `);
+
+    it('should emit exactly the checked-in fixture for the sample enum', async () => {
+      const schema = buildSchema(
+        'enum EntityType { ALBUM AUTHORIZATION COMMENT MEDIA_ITEM REACTION USER }',
+      );
+
+      const output = await normalizeOutput(
+        plugin(schema, [], {
+          emit: 'externalDefines',
+          externalEnums: { EntityType: '../consumer/entityType' },
+        }),
+      );
+
+      const fixture = readFileSync(
+        path.resolve(process.cwd(), 'test/fixtures/entityTypeDefines.ts'),
+        'utf8',
+      );
+      expect(output).toBe(fixture);
+    });
+
+    it('should emit the key list in schema order with camelCase derivation', async () => {
+      const output = await normalizeOutput(
+        plugin(definesSchema, [], {
+          emit: 'externalDefines',
+          externalEnums: { EntityType: '../consumer/entityType' },
+        }),
+      );
+
+      expect(output).toContain(
+        [
+          'export const entityTypeKeys = [',
+          "  'album',",
+          "  'authorization',",
+          "  'comment',",
+          "  'mediaItem',",
+          "  'reaction',",
+          "  'user',",
+          '] as const;',
+        ].join('\n'),
+      );
+      expect(output).toContain(
+        'export type EntityTypeKeys = (typeof entityTypeKeys)[number];',
+      );
+    });
+
+    it('should emit a define factory that pins the input to the schema keys', async () => {
+      const output = await normalizeOutput(
+        plugin(definesSchema, [], {
+          emit: 'externalDefines',
+          externalEnums: { EntityType: '../consumer/entityType' },
+        }),
+      );
+
+      expect(output).toContain(
+        [
+          'export const defineEntityType = <',
+          '  const X extends Record<EntityTypeKeys, Record<string, unknown>>,',
+          '>(',
+          '  input: Exact<X, EntityTypeKeys>,',
+          ") => enumeration('EntityType', { input: input as X });",
+        ].join('\n'),
+      );
+    });
+
+    it('should not import any user module', async () => {
+      const output = await normalizeOutput(
+        plugin(definesSchema, [], {
+          emit: 'externalDefines',
+          externalEnums: {
+            EntityType: '../consumer/entityType',
+            Status: '../consumer/status',
+          },
+        }),
+      );
+
+      const importSpecifiers = [...output.matchAll(/from\s+'([^']+)'/g)].map(
+        match => match[1],
+      );
+      expect(importSpecifiers).toEqual(['@reharik/smart-enum']);
+    });
+
+    it('should emit the Exact helper once for multiple enums', async () => {
+      const output = await normalizeOutput(
+        plugin(definesSchema, [], {
+          emit: 'externalDefines',
+          externalEnums: {
+            EntityType: '../consumer/entityType',
+            Status: '../consumer/status',
+          },
+        }),
+      );
+
+      const exactCount =
+        output.split('type Exact<X, K extends string>').length - 1;
+      expect(exactCount).toBe(1);
+      expect(output).toContain('export const defineEntityType');
+      expect(output).toContain('export const defineStatus');
+    });
+
+    it('should not emit anything for enums listed only in skipEnums', async () => {
+      const output = await normalizeOutput(
+        plugin(definesSchema, [], {
+          emit: 'externalDefines',
+          skipEnums: ['Status'],
+          externalEnums: { EntityType: '../consumer/entityType' },
+        }),
+      );
+
+      expect(output).not.toContain('Status');
+    });
+
+    it('should return empty output when no externalEnums are configured', async () => {
+      const output = await normalizeOutput(
+        plugin(definesSchema, [], { emit: 'externalDefines' }),
+      );
+
+      expect(output).toBe('');
+    });
+
+    it('should pass serializeAs through to the emitted factory', async () => {
+      const output = await normalizeOutput(
+        plugin(definesSchema, [], {
+          emit: 'externalDefines',
+          serializeAs: 'value',
+          externalEnums: { EntityType: '../consumer/entityType' },
+        }),
+      );
+
+      expect(output).toContain(
+        ") => enumeration('EntityType', { input: input as X, serializeAs: 'value' });",
+      );
+    });
+
+    it('should reject invalid emit values', () => {
+      expect(() =>
+        plugin(definesSchema, [], { emit: 'bogus' as 'enums' }),
+      ).toThrow(/emit must be 'enums' or 'externalDefines'/);
     });
   });
 });

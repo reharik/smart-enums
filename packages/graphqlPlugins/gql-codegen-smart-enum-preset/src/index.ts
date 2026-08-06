@@ -19,8 +19,20 @@ const TYPE_POLICIES_PLUGIN = '@reharik/graphql-codegen-smart-enum-type-policies'
  *   consumer-supplied plugin list (e.g. typescript-operations,
  *   typescript-resolvers). The preset does not pick the plugins — the consumer
  *   does. The preset merges its enumValues map into the consumer's config.
+ *
+ * - `external-defines`: emit schema key lists and `define<EnumName>` factories
+ *   for each `externalEnums` entry, so hand-authored enums can't drift from
+ *   the SDL. Runs the @reharik/graphql-codegen-smart-enum plugin with
+ *   `emit: 'externalDefines'`. Must target a DIFFERENT file than the `enums`
+ *   mode output: the enums output imports the hand-authored enum (for
+ *   enumRegistry) and the hand-authored enum imports the defines output, so a
+ *   single file would form an import cycle that crashes at runtime.
  */
-export type PresetMode = 'enums' | 'type-policies' | 'with-enum-values';
+export type PresetMode =
+  | 'enums'
+  | 'type-policies'
+  | 'with-enum-values'
+  | 'external-defines';
 
 export type SmartEnumPresetConfig = {
   mode: PresetMode;
@@ -52,13 +64,22 @@ export type SmartEnumPresetConfig = {
   emitDescriptionsAsDisplay?: boolean;
 
   /**
-   * Only used in `enums` mode. Passed through to the enum-definition plugin.
+   * Used in `enums` and `external-defines` modes. Passed through to the
+   * enum-definition plugin. In `external-defines` mode it must match the
+   * value used by the `enums` mode target so both outputs serialize alike.
    */
   serializeAs?: 'value' | 'wrapped';
 
   /**
-   * Only used in `enums` mode. Passed through to the enum-definition plugin
-   * (`externalEnums` on `@reharik/graphql-codegen-smart-enum`).
+   * Map of GraphQL enum type name → import path for hand-authored enums.
+   *
+   * In `enums` mode: forwarded so `enumRegistry` stays complete. Listing a
+   * name here implies it is skipped from generation; it no longer needs to
+   * appear in `skipEnums` (though it may, for backward compatibility).
+   *
+   * In `external-defines` mode: required and non-empty — these are the enums
+   * the defines output emits factories for. Must match the `enums` mode
+   * target's map; hoist it to a shared constant.
    */
   externalEnums?: Record<string, string>;
 };
@@ -69,11 +90,27 @@ const validateConfig = (config: SmartEnumPresetConfig): void => {
   if (
     config.mode !== 'enums' &&
     config.mode !== 'type-policies' &&
-    config.mode !== 'with-enum-values'
+    config.mode !== 'with-enum-values' &&
+    config.mode !== 'external-defines'
   ) {
     throw new TypeError(
-      `${PRESET_PREFIX} presetConfig.mode must be one of 'enums', 'type-policies', or 'with-enum-values'. Got: ${String(config.mode)}`,
+      `${PRESET_PREFIX} presetConfig.mode must be one of 'enums', 'type-policies', 'with-enum-values', or 'external-defines'. Got: ${String(config.mode)}`,
     );
+  }
+
+  if (config.mode === 'external-defines') {
+    const externalEnums = config.externalEnums;
+    if (
+      externalEnums === undefined ||
+      typeof externalEnums !== 'object' ||
+      externalEnums === null ||
+      Array.isArray(externalEnums) ||
+      Object.keys(externalEnums).length === 0
+    ) {
+      throw new TypeError(
+        `${PRESET_PREFIX} presetConfig.externalEnums must be a non-empty object in 'external-defines' mode — a defines output with no external enums would be empty, which is almost certainly a config mistake. Use the same map as your 'enums' mode target.`,
+      );
+    }
   }
 
   if (config.mode === 'type-policies' || config.mode === 'with-enum-values') {
@@ -221,7 +258,29 @@ export const preset: Types.OutputPreset<SmartEnumPresetConfig> = {
       ];
     }
 
-    if (presetConfig.mode === 'type-policies') {
+    if (presetConfig.mode === 'external-defines') {
+    return [
+      {
+        ...options,
+        filename: options.baseOutputDir,
+        plugins: [{ [SMART_ENUM_PLUGIN]: {} }],
+        pluginMap: {
+          ...options.pluginMap,
+          [SMART_ENUM_PLUGIN]: smartEnumCodegen,
+        },
+        config: {
+          ...options.config,
+          emit: 'externalDefines',
+          externalEnums: presetConfig.externalEnums,
+          ...(presetConfig.serializeAs !== undefined
+            ? { serializeAs: presetConfig.serializeAs }
+            : {}),
+        },
+      },
+    ];
+  }
+
+  if (presetConfig.mode === 'type-policies') {
       return [
         {
           ...options,

@@ -25,11 +25,23 @@ export type SmartEnumPluginConfig = SharedPluginConfig & {
   emitDescriptionsAsDisplay?: boolean;
   serializeAs?: 'value' | 'wrapped';
   /**
-   * Map of GraphQL enum type name → relative import path. Each key must appear
-   * in `skipEnums` and must exist in the schema. Imports populate `enumRegistry`
-   * for `patchSchemaEnumSerializers` without re-exporting the symbols.
+   * Map of GraphQL enum type name → relative import path. Each name must exist
+   * in the schema. Listing a name here implies it is skipped from generation;
+   * it does not also need to appear in `skipEnums` (though it may). Imports
+   * populate `enumRegistry` for `patchSchemaEnumSerializers` without
+   * re-exporting the symbols.
    */
   externalEnums?: Record<string, string>;
+  /**
+   * Which output to produce.
+   *
+   * - 'enums' (default): generated enums, external-enum imports, `enumRegistry`.
+   * - 'externalDefines': schema key lists and `define<Name>` factories for each
+   *   `externalEnums` entry. This output imports only `@reharik/smart-enum`,
+   *   never user code, so hand-written enums can import their factory from it
+   *   without creating an import cycle with the 'enums' output.
+   */
+  emit?: 'enums' | 'externalDefines';
 };
 
 const PLUGIN_PREFIX = '[graphql-codegen-smart-enum]';
@@ -57,7 +69,6 @@ const validateExternalEnumsConfig = (
   }
 
   const keys = Object.keys(externalEnums);
-  const skipSet = new Set(config.skipEnums ?? []);
 
   for (const key of keys) {
     if (typeof key !== 'string' || key.length === 0) {
@@ -78,15 +89,6 @@ const validateExternalEnumsConfig = (
         `${PLUGIN_PREFIX} Config \`externalEnums['${key}']\` must be a non-empty import path string.`,
       );
     }
-  }
-
-  const notInSkipEnums = keys.filter(name => !skipSet.has(name));
-  if (notInSkipEnums.length > 0) {
-    throw new TypeError(
-      `${PLUGIN_PREFIX} Config \`externalEnums\` must only reference enums that also appear in \`skipEnums\`. Missing from \`skipEnums\`: ${notInSkipEnums
-        .map(n => `'${n}'`)
-        .join(', ')}.`,
-    );
   }
 
   const allEnumNames = new Set(
@@ -135,6 +137,16 @@ const validateConfig = (config: SmartEnumPluginConfig): void => {
   ) {
     throw new TypeError(
       `[graphql-codegen-smart-enum] config.serializeAs must be 'value' or 'wrapped'`,
+    );
+  }
+
+  if (
+    config.emit !== undefined &&
+    config.emit !== 'enums' &&
+    config.emit !== 'externalDefines'
+  ) {
+    throw new TypeError(
+      `[graphql-codegen-smart-enum] config.emit must be 'enums' or 'externalDefines'`,
     );
   }
 };
@@ -427,6 +439,106 @@ const formatRegistryProperty = (
     ? tsIdentifier
     : `${graphqlTypeName}: ${tsIdentifier}`;
 
+const HEADER_LINES: readonly string[] = [
+  '/**',
+  ' * -----------------------------------------------------------------------------',
+  ' * THIS FILE IS AUTO-GENERATED. DO NOT EDIT MANUALLY.',
+  ' * Any manual changes will be overwritten by GraphQL Code Generator.',
+  ' * -----------------------------------------------------------------------------',
+  ' */',
+];
+
+const EXACT_HELPER_LINES: readonly string[] = [
+  '/** any key not in the schema resolves to `never`, so unknown keys are rejected */',
+  'type Exact<X, K extends string> = X & Record<Exclude<keyof X, K>, never>;',
+];
+
+const buildDefineBlock = (
+  enumType: GraphQLEnumType,
+  serializeAs?: 'value' | 'wrapped',
+): string[] => {
+  const enumName = enumType.name;
+  const enumValues = enumType.getValues();
+  assertNoCamelCaseCollisions(
+    enumName,
+    enumValues.map(enumValue => enumValue.name),
+  );
+
+  const keys = enumValues.map(enumValue => camelCase(enumValue.name));
+  const keysConstName = `${lcFirst(enumName)}Keys`;
+  const keysTypeName = `${enumName}Keys`;
+  const factoryName = `define${enumName}`;
+  const exampleKey = keys[0] ?? 'someKey';
+
+  return [
+    `export const ${keysConstName} = [`,
+    ...keys.map(key => `  ${quoteLiteral(key)},`),
+    '] as const;',
+    `export type ${keysTypeName} = (typeof ${keysConstName})[number];`,
+    '',
+    '/**',
+    ` * Define the ${enumName} smart enum.`,
+    ' *',
+    ' * One entry per schema value. A missing key or a key not in the schema is a',
+    ' * compile error, so this enum cannot drift from the SDL. Values and display',
+    ' * strings are derived from the key; unlike generated enums, schema',
+    ' * descriptions are NOT applied as display strings. Pass `display` in an',
+    ' * entry to use them, or `value` to override the wire value.',
+    ' *',
+    ' * @param input Per-member extras, keyed by schema value.',
+    ' * @example',
+    ' * ```ts',
+    ` * export const ${enumName} = ${factoryName}({`,
+    ` *   ${exampleKey}: { some: 'extra' },`,
+    ' *   // ...one entry per schema value',
+    ' * });',
+    ' * ```',
+    ' */',
+    `export const ${factoryName} = <`,
+    `  const X extends Record<${keysTypeName}, Record<string, unknown>>,`,
+    '>(',
+    `  input: Exact<X, ${keysTypeName}>,`,
+    `) => enumeration('${escapeString(enumName)}', { input: input as X${
+      serializeAs ? `, serializeAs: '${serializeAs}'` : ''
+    } });`,
+  ];
+};
+
+const buildExternalDefinesOutput = (
+  schema: GraphQLSchema,
+  config: SmartEnumPluginConfig,
+): string => {
+  const externalEnumTypeNames = Object.keys(config.externalEnums ?? {}).sort(
+    (a, b) => a.localeCompare(b),
+  );
+
+  if (externalEnumTypeNames.length === 0) {
+    return '';
+  }
+
+  const enumTypeByName = new Map(
+    getEnumTypes(schema).map(enumType => [enumType.name, enumType]),
+  );
+
+  const lines: string[] = [
+    ...HEADER_LINES,
+    '',
+    "import { enumeration } from '@reharik/smart-enum';",
+    '',
+    ...EXACT_HELPER_LINES,
+  ];
+
+  for (const enumName of externalEnumTypeNames) {
+    lines.push(
+      '',
+      ...buildDefineBlock(enumTypeByName.get(enumName)!, config.serializeAs),
+    );
+  }
+
+  lines.push('');
+  return lines.join('\n');
+};
+
 export const plugin: PluginFunction<SmartEnumPluginConfig> = (
   schema,
   _documents,
@@ -435,18 +547,23 @@ export const plugin: PluginFunction<SmartEnumPluginConfig> = (
   validateConfig(config);
   validateExternalEnumsConfig(schema, config);
 
+  if (config.emit === 'externalDefines') {
+    return buildExternalDefinesOutput(schema, config);
+  }
+
   const enumClassSuffix = config.enumClassSuffix ?? DEFAULT_ENUM_CLASS_SUFFIX;
   const emitDescriptionsAsDisplay = config.emitDescriptionsAsDisplay ?? true;
-
-  const enumTypes = filterSkippedEnumTypes(
-    getEnumTypes(schema),
-    config.skipEnums,
-  );
 
   const externalEnumTypeNames =
     config.externalEnums === undefined
       ? []
       : Object.keys(config.externalEnums).sort((a, b) => a.localeCompare(b));
+
+  // externalEnums implies skip: those enums are hand-written elsewhere.
+  const enumTypes = filterSkippedEnumTypes(getEnumTypes(schema), [
+    ...(config.skipEnums ?? []),
+    ...externalEnumTypeNames,
+  ]);
 
   const externalRegistryEntries = externalEnumTypeNames.map(typeName => ({
     graphqlTypeName: typeName,
@@ -504,14 +621,7 @@ export const plugin: PluginFunction<SmartEnumPluginConfig> = (
       ? "import { enumeration, type Enumeration } from '@reharik/smart-enum';"
       : '';
 
-  const lines: string[] = [
-    '/**',
-    ' * -----------------------------------------------------------------------------',
-    ' * THIS FILE IS AUTO-GENERATED. DO NOT EDIT MANUALLY.',
-    ' * Any manual changes will be overwritten by GraphQL Code Generator.',
-    ' * -----------------------------------------------------------------------------',
-    ' */',
-  ];
+  const lines: string[] = [...HEADER_LINES];
 
   const appendBlock = (chunk: readonly string[]): void => {
     if (chunk.length === 0) {
