@@ -109,15 +109,15 @@ export default config;
 | --- | --- | --- | --- |
 | `emitDescriptionsAsDisplay` | `boolean` | `true` | Use GraphQL enum value descriptions as the `display` field. When `false`, only enums with deprecated values or `@enumMeta` directives get object input. |
 | `enumClassSuffix` | `string` | `''` | Suffix appended to generated enum names (e.g. `'Enum'` → `PaymentStatusEnum`). |
-| `skipEnums` | `string[]` | — | GraphQL enum type names to exclude entirely: no generated enum, no registry entry. Use for backend-only enums. |
+| `skipEnums` | `string[]` | — | GraphQL enum type names to exclude entirely: no generated enum, no registry entry, no factory. Use for backend-only enums. |
 | `externalEnums` | `Record<string, string>` | — | Map of GraphQL enum type names to import paths for hand-authored enums. Listing a name here implies it is skipped from generation. See [Hand-authored enums](#hand-authored-enums). |
-| `emit` | `'enums' \| 'externalDefines'` | `'enums'` | Which output to produce. `'enums'` is the full generated output; `'externalDefines'` emits key lists and `define<Name>` factories for `externalEnums` entries. See [Keeping hand-authored enums in sync](#keeping-hand-authored-enums-in-sync). |
+| `emit` | `'enums' \| 'externalDefines'` | `'enums'` | Which output to produce. `'enums'` is the full generated output; `'externalDefines'` emits key lists and `define<Name>` factories. See [Keeping them in sync](#keeping-them-in-sync). |
 
 ## Hand-authored enums
 
 Sometimes you want to hand-author an enum — to add custom methods, derive props at runtime, or wrap a third-party value object. But the generated `enumRegistry` barrel **still needs to include them**, otherwise the server-side [`patchSchemaEnumSerializers`](/graphql/overview#server-side-resolvers-returning-members) can't find them when GraphQL calls `parseValue` on a request argument — and the resolver receives a raw string instead of a member.
 
-`externalEnums` bridges the gap. Listing a name there keeps it out of generation (no need to repeat it in `skipEnums`, though that still works) while keeping it in the registry:
+`externalEnums` bridges the gap. Listing a name there keeps it out of generation while keeping it in the registry:
 
 ```yaml
 config:
@@ -143,15 +143,24 @@ export const enumRegistry = {
 
 The registry key is always the GraphQL type name. The plugin does **not** re-export hand-authored enums as named exports — consumers keep importing them from their original location.
 
-## Keeping hand-authored enums in sync
+::: tip `externalEnums` implies skip
+You don't need to repeat these names in `skipEnums`. Earlier versions required it; that requirement is gone, and listing them in both still works.
 
-A hand-authored enum can silently drift from the SDL: the schema gains a value and nothing notices. Point a second `generates` entry at the same plugin with `emit: 'externalDefines'` to close the gap:
+`skipEnums` alone means something different: **emit nothing at all** — no generated enum, no registry entry, no factory. That's for enums the client never sees.
+:::
+
+### Keeping them in sync
+
+A hand-authored enum has no link back to the schema. Add a value to the SDL and your enum silently doesn't have it; remove one and a stale member lingers. Nothing fails until it does, at runtime, somewhere else.
+
+Add a **second** `generates` entry with `emit: 'externalDefines'` to close that:
 
 ```typescript
 generates: {
   './src/generated/graphql-smart-enums.ts': {
     plugins: ['@reharik/graphql-codegen-smart-enum'],
     config: {
+      serializeAs: 'value',
       externalEnums: { EntityType: '../hand-authored/entityType' },
     },
   },
@@ -159,29 +168,88 @@ generates: {
     plugins: ['@reharik/graphql-codegen-smart-enum'],
     config: {
       emit: 'externalDefines',
+      serializeAs: 'value',
       externalEnums: { EntityType: '../hand-authored/entityType' },
     },
   },
 }
 ```
 
-For each `externalEnums` entry the `externalDefines` output contains the schema's key list and a typed `define<Name>` factory. The hand-written enum calls the factory instead of `enumeration()` directly:
+Using the [preset](/graphql/preset), the same thing in YAML — a shared anchor keeps the two entries from disagreeing:
+
+```yaml
+generates:
+  ./src/enums/graphqlSmartEnums.ts:
+    preset: '@reharik/graphql-codegen-smart-enum-preset'
+    presetConfig:
+      mode: enums
+      serializeAs: value
+      externalEnums: &externalEnums
+        EntityType: './entityType'
+
+  ./src/enums/graphqlSmartEnumDefines.ts:
+    preset: '@reharik/graphql-codegen-smart-enum-preset'
+    presetConfig:
+      mode: external-defines
+      serializeAs: value
+      externalEnums: *externalEnums
+```
+
+::: warning Two things that will bite you
+**The outputs must be separate files.** The enums output imports your hand-authored enum (for `enumRegistry`), and your enum imports the defines output. One file means a cycle — and it fails at **runtime** with a TDZ `ReferenceError` on the factory, not at build time.
+
+**Repeat `serializeAs`.** It's forwarded into the `enumeration()` call inside each factory. Omit it on the defines entry and every enum you move onto a factory silently changes serialization mode.
+:::
+
+### Using a factory
+
+For each `externalEnums` entry the defines output contains the schema's key list and a typed `define<Name>` factory. The hand-written enum calls it instead of `enumeration()`:
 
 ```typescript
 import { defineEntityType } from '../generated/entity-type-defines';
 
 export const EntityType = defineEntityType({
-  album: { table: 'albums', soft: true },
+  album:   { table: 'albums',   soft: true },
   comment: { table: 'comments', soft: true },
   // ...one entry per schema value
 });
 ```
 
-A missing key or a key not in the schema is now a compile error, and per-member extras keep their literal types without `as const`. Wire values and displays are derived from the key; pass `value` or `display` in an entry to override.
+You no longer pass the enum name — the factory knows it. Extras keep their literal types without `as const`, so `EntityType.album.table` is typed `'albums'`, not `string`.
 
-Note the display asymmetry, and that it is deliberate: generated enums use SDL descriptions as `display` (under the default `emitDescriptionsAsDisplay: true`), but the defines factories do **not** forward descriptions. A hand-authored enum owns its content — the factory pins the key set, and `display` stays a type-level literal derived from the key, so hover types never disagree with runtime values. If an enum relied on descriptions-as-display before you externalized it, pass `display` explicitly in the entries that need it.
+Now the two can't drift:
 
-The `externalDefines` output imports only `@reharik/smart-enum` — never user code — so the hand-written enum can import from it without creating a cycle with the main generated file (which imports the hand-written enum for `enumRegistry`).
+- SDL gains a value → missing key, compile error
+- SDL loses a value → unknown key, compile error
+
+Both point at your enum file, naming the key.
+
+Adding the `generates` entry changes no behaviour on its own — it emits factories nothing uses yet. Switch enums onto them one at a time as you get to each. There's no cutover.
+
+### Values and display strings
+
+Wire values are derived from the key (`mediaItem` → `MEDIA_ITEM`), matching what codegen would have emitted. Pass `value` in an entry to override:
+
+```typescript
+export const EntityType = defineEntityType({
+  album:   { value: 'ALBUM_V2' },
+  comment: {},
+});
+```
+
+::: warning Descriptions are not applied to hand-authored enums
+`emitDescriptionsAsDisplay` affects generated enums only. A hand-authored enum's `display` is always derived from its key, even with the flag on.
+
+This is deliberate: a hand-authored enum owns its content, the factory only pins the key set, and `display` stays a type-level literal so hover types never disagree with runtime values.
+
+It matters when you externalize an enum that was previously *generated* — its display strings change from SDL descriptions to key-derived. Pass `display` explicitly in those entries to keep them identical. Enums that were hand-authored all along are unaffected.
+:::
+
+### What you still get
+
+Factory-defined enums are ordinary smart enums. `fromValue`, [`match` and `switchOn`](/core/branching), [subsets](/core/lookup), serialization, `enumRegistry` — all unchanged.
+
+The defines output imports only `@reharik/smart-enum`, never user code, which is what makes the no-cycle guarantee hold.
 
 ## Local development
 
