@@ -111,7 +111,7 @@ export default config;
 | `enumClassSuffix` | `string` | `''` | Suffix appended to generated enum names (e.g. `'Enum'` → `PaymentStatusEnum`). |
 | `skipEnums` | `string[]` | — | GraphQL enum type names to exclude entirely: no generated enum, no registry entry, no factory. Use for backend-only enums. |
 | `externalEnums` | `Record<string, string>` | — | Map of GraphQL enum type names to import paths for hand-authored enums. Listing a name here implies it is skipped from generation. See [Hand-authored enums](#hand-authored-enums). |
-| `emit` | `'enums' \| 'externalDefines'` | `'enums'` | Which output to produce. `'enums'` is the full generated output; `'externalDefines'` emits key lists and `define<Name>` factories. See [Keeping them in sync](#keeping-them-in-sync). |
+| `emit` | `'enums' \| 'externalDefines'` | `'enums'` | Which output to produce. `'enums'` is the full generated output; `'externalDefines'` emits key lists and `define<Name>Input` definers. See [Keeping them in sync](#keeping-them-in-sync). |
 
 ## Hand-authored enums
 
@@ -196,26 +196,44 @@ generates:
 ```
 
 ::: warning Two things that will bite you
-**The outputs must be separate files.** The enums output imports your hand-authored enum (for `enumRegistry`), and your enum imports the defines output. One file means a cycle — and it fails at **runtime** with a TDZ `ReferenceError` on the factory, not at build time.
+**The outputs must be separate files.** The enums output imports your hand-authored enum (for `enumRegistry`), and your enum imports the defines output. One file means a cycle — and it fails at **runtime** with a TDZ `ReferenceError`, not at build time. Worse, *where* it fails depends on module load order: whichever side of the cycle evaluates first throws on the other's uninitialized const (the definer, or your enum inside `enumRegistry`) — so it can pass in one entrypoint and crash in another. Keeping the defines output in its own file makes the graph acyclic: generated → your enum → defines, no back edge.
 
-**Repeat `serializeAs`.** It's forwarded into the `enumeration()` call inside each factory. Omit it on the defines entry and every enum you move onto a factory silently changes serialization mode.
+**Keep `serializeAs` aligned.** The definer doesn't build the enum, so it can't apply serialization for you — you pass `serializeAs` in your own `enumeration()` call. Configure it on the defines entry too and the emitted usage example shows the exact call to copy; omit it in your enum and it silently serializes differently than the generated ones.
 :::
 
-### Using a factory
+### Using an input definer
 
-For each `externalEnums` entry the defines output contains the schema's key list and a typed `define<Name>` factory. The hand-written enum calls it instead of `enumeration()`:
+For each `externalEnums` entry the defines output contains the schema's key list and a typed `define<Name>Input` function. It doesn't build the enum — it takes your input object, pins it to the schema's key set, and returns it unchanged. You then declare the enum from it exactly like every other smart enum:
 
 ```typescript
-import { defineEntityType } from '../generated/entity-type-defines';
+import { enumeration, type Enumeration } from '@reharik/smart-enum';
 
-export const EntityType = defineEntityType({
+import { defineEntityTypeInput } from '../generated/entity-type-defines';
+
+const input = defineEntityTypeInput({
   album:   { table: 'albums',   soft: true },
   comment: { table: 'comments', soft: true },
   // ...one entry per schema value
 });
+
+export type EntityType = Enumeration<typeof EntityType>;
+export const EntityType = enumeration<typeof input>('EntityType', {
+  input,
+  serializeAs: 'value',
+});
 ```
 
-You no longer pass the enum name — the factory knows it. Extras keep their literal types without `as const`, so `EntityType.album.table` is typed `'albums'`, not `string`.
+The string you pass to `enumeration()` must be the GraphQL type name — registry patching matches on it. Each definer's JSDoc includes a copy-paste example with the right name (and your configured `serializeAs`) already filled in.
+
+Extras keep their literal types without `as const`, so `EntityType.album.table` is typed `'albums'`, not `string`.
+
+::: details Why doesn't the definer just return the enum?
+An earlier design had `defineEntityType(input)` return `enumeration(...)` directly. That shape breaks TypeScript **declaration emit**: the function's inferred return type is built from smart-enum's internal conditional types applied to an unresolved generic, and a consuming package compiled with `declaration: true` (or `composite`) forces `tsc` to structurally expand them — including character-by-character template-literal recursion — which can exhaust the heap and crash the build. Returning the plain input type makes the definer's declaration trivial, and your `enumeration<typeof input>(...)` call works on concrete types, which resolve cheaply like any hand-written enum.
+:::
+
+::: details Why one definer per enum instead of a single generic?
+A shared `defineEnumInput(keys, input)` would work — pass the key list as an argument and both type parameters infer. But the definer is an identity function; the *only* per-enum things about it are exactly the things worth having per enum: the pinned key set (so you can't accidentally pair an input with the wrong enum's keys — with a shared generic, two enums with identical key sets would pin interchangeably without an error), and the JSDoc example carrying the correct GraphQL type name and `serializeAs` for that enum. Since the file is generated, the repetition costs nothing to maintain.
+:::
 
 Now the two can't drift:
 
@@ -224,14 +242,14 @@ Now the two can't drift:
 
 Both point at your enum file, naming the key.
 
-Adding the `generates` entry changes no behaviour on its own — it emits factories nothing uses yet. Switch enums onto them one at a time as you get to each. There's no cutover.
+Adding the `generates` entry changes no behaviour on its own — it emits definers nothing uses yet. Switch enums onto them one at a time as you get to each. There's no cutover.
 
 ### Values and display strings
 
 Wire values are derived from the key (`mediaItem` → `MEDIA_ITEM`), matching what codegen would have emitted. Pass `value` in an entry to override:
 
 ```typescript
-export const EntityType = defineEntityType({
+const input = defineEntityTypeInput({
   album:   { value: 'ALBUM_V2' },
   comment: {},
 });
@@ -240,16 +258,16 @@ export const EntityType = defineEntityType({
 ::: warning Descriptions are not applied to hand-authored enums
 `emitDescriptionsAsDisplay` affects generated enums only. A hand-authored enum's `display` is always derived from its key, even with the flag on.
 
-This is deliberate: a hand-authored enum owns its content, the factory only pins the key set, and `display` stays a type-level literal so hover types never disagree with runtime values.
+This is deliberate: a hand-authored enum owns its content, the definer only pins the key set, and `display` stays a type-level literal so hover types never disagree with runtime values.
 
 It matters when you externalize an enum that was previously *generated* — its display strings change from SDL descriptions to key-derived. Pass `display` explicitly in those entries to keep them identical. Enums that were hand-authored all along are unaffected.
 :::
 
 ### What you still get
 
-Factory-defined enums are ordinary smart enums. `fromValue`, [`match` and `switchOn`](/core/branching), [subsets](/core/lookup), serialization, `enumRegistry` — all unchanged.
+Enums built from pinned inputs are ordinary smart enums. `fromValue`, [`match` and `switchOn`](/core/branching), [subsets](/core/lookup), serialization, `enumRegistry` — all unchanged.
 
-The defines output imports only `@reharik/smart-enum`, never user code, which is what makes the no-cycle guarantee hold.
+The defines output imports nothing at all — not even `@reharik/smart-enum` — which is what makes the no-cycle guarantee hold and keeps declaration emit in consuming packages cheap.
 
 ## Local development
 

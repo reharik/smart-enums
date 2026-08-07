@@ -702,7 +702,7 @@ describe('SmartEnum plugin', () => {
       );
     });
 
-    it('should emit a define factory that pins the input to the schema keys', async () => {
+    it('should emit an input definer that pins the input to the schema keys', async () => {
       const output = await normalizeOutput(
         plugin(definesSchema, [], {
           emit: 'externalDefines',
@@ -712,16 +712,21 @@ describe('SmartEnum plugin', () => {
 
       expect(output).toContain(
         [
-          'export const defineEntityType = <',
+          'export const defineEntityTypeInput = <',
           '  const X extends Record<EntityTypeKeys, Record<string, unknown>>,',
           '>(',
           '  input: Exact<X, EntityTypeKeys>,',
-          ") => enumeration('EntityType', { input: input as X });",
+          '): X => input;',
         ].join('\n'),
       );
     });
 
-    it('should not import any user module', async () => {
+    it('should import nothing at all', async () => {
+      // The plain-X return type plus zero imports is what keeps declaration
+      // emit cheap in consuming packages (a generic returning enumeration(...)
+      // forces tsc to expand smart-enum's internal conditional types, which
+      // OOMs) and what makes the file safe to import from a hand-written enum
+      // without a cycle.
       const output = await normalizeOutput(
         plugin(definesSchema, [], {
           emit: 'externalDefines',
@@ -732,10 +737,10 @@ describe('SmartEnum plugin', () => {
         }),
       );
 
-      const importSpecifiers = [...output.matchAll(/from\s+'([^']+)'/g)].map(
-        match => match[1],
-      );
-      expect(importSpecifiers).toEqual(['@reharik/smart-enum']);
+      const realImports = [
+        ...output.matchAll(/^import .+ from '([^']+)';$/gm),
+      ].map(match => match[1]);
+      expect(realImports).toEqual([]);
     });
 
     it('should emit the Exact helper once for multiple enums', async () => {
@@ -752,8 +757,8 @@ describe('SmartEnum plugin', () => {
       const exactCount =
         output.split('type Exact<X, K extends string>').length - 1;
       expect(exactCount).toBe(1);
-      expect(output).toContain('export const defineEntityType');
-      expect(output).toContain('export const defineStatus');
+      expect(output).toContain('export const defineEntityTypeInput');
+      expect(output).toContain('export const defineStatusInput');
     });
 
     it('should not emit anything for enums listed only in skipEnums', async () => {
@@ -776,7 +781,10 @@ describe('SmartEnum plugin', () => {
       expect(output).toBe('');
     });
 
-    it('should pass serializeAs through to the emitted factory', async () => {
+    it('should include serializeAs in the emitted usage example', async () => {
+      // The definer returns the input, so serializeAs has nowhere to live at
+      // runtime — it surfaces in the @example so consumers copy the right
+      // enumeration() call for their pipeline.
       const output = await normalizeOutput(
         plugin(definesSchema, [], {
           emit: 'externalDefines',
@@ -785,9 +793,18 @@ describe('SmartEnum plugin', () => {
         }),
       );
 
-      expect(output).toContain(
-        ") => enumeration('EntityType', { input: input as X, serializeAs: 'value' });",
+      expect(output).toContain(" *   serializeAs: 'value',");
+    });
+
+    it('should omit serializeAs from the usage example when not configured', async () => {
+      const output = await normalizeOutput(
+        plugin(definesSchema, [], {
+          emit: 'externalDefines',
+          externalEnums: { EntityType: '../consumer/entityType' },
+        }),
       );
+
+      expect(output).not.toContain('serializeAs');
     });
 
     it('should reject invalid emit values', () => {

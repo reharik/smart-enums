@@ -269,16 +269,16 @@ describe('smart-enum preset', () => {
       );
 
       expect(output).toContain('export const paymentStatusKeys = [');
-      expect(output).toContain('export const definePaymentStatus = <');
+      expect(output).toContain('export const definePaymentStatusInput = <');
       expect(output).not.toContain('enumRegistry');
       // no generated enum bodies — those belong to the 'enums' target
-      expect(output).not.toContain('Enumeration<');
-      expect(output).not.toContain('Input =');
+      // (the @example JSDoc mentions enumeration(); only real code lines count)
+      expect(output).not.toMatch(/^export const PaymentStatus = enumeration/m);
 
-      const importSpecifiers = [...output.matchAll(/from\s+'([^']+)'/g)].map(
-        match => match[1],
-      );
-      expect(importSpecifiers).toEqual(['@reharik/smart-enum']);
+      const realImports = [
+        ...output.matchAll(/^import .+ from '([^']+)';$/gm),
+      ].map(match => match[1]);
+      expect(realImports).toEqual([]);
     });
   });
 

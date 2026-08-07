@@ -92,7 +92,7 @@ generates:
 
 ### Mode: `external-defines`
 
-Emits schema key lists and a typed `define<EnumName>` factory for every `externalEnums` entry, so hand-authored enums can't drift from the SDL: a missing key or a key not in the schema becomes a compile error. Runs the [enum-definition plugin](/graphql/codegen-enums) with `emit: 'externalDefines'` under the hood.
+Emits a schema key list and a typed `define<EnumName>Input` function for every `externalEnums` entry, so hand-authored enums can't drift from the SDL: a missing key or a key not in the schema becomes a compile error. The definer doesn't build the enum — it pins your input object to the schema's key set and returns it unchanged; you declare the enum from it with the ordinary `enumeration()` pattern. Runs the [enum-definition plugin](/graphql/codegen-enums) with `emit: 'externalDefines'` under the hood.
 
 Using it means **two** `generates` targets — the regular `enums` target plus an `external-defines` target — and both need the same `externalEnums` map. Nothing can validate that the two entries agree (codegen builds each `generates` target independently), so hoist the map to a shared constant in a `codegen.ts` config — that constant is the only thing keeping them in sync:
 
@@ -127,30 +127,39 @@ const config: CodegenConfig = {
 export default config;
 ```
 
-Your hand-authored enum then calls the emitted factory instead of `enumeration()` directly:
+Your hand-authored enum pins its input through the emitted definer, then declares the enum like any other:
 
 ```typescript
 // src/enums/paymentStatus.ts (hand-authored)
-import { definePaymentStatus } from './graphqlSmartEnumDefines';
+import { enumeration, type Enumeration } from '@reharik/smart-enum';
 
-export const PaymentStatus = definePaymentStatus({
+import { definePaymentStatusInput } from './graphqlSmartEnumDefines';
+
+const input = definePaymentStatusInput({
   pending: { icon: 'clock' },
   paid: { icon: 'check' },
   voided: { icon: 'ban' },
   // add a schema value and forget to regenerate? compile error.
 });
+
+export type PaymentStatus = Enumeration<typeof PaymentStatus>;
+export const PaymentStatus = enumeration<typeof input>('PaymentStatus', {
+  input,
+});
 ```
+
+Each definer's JSDoc carries a copy-paste example with the right GraphQL type name (and your configured `serializeAs`) already filled in. The definer returns the plain input type on purpose — an earlier shape that returned the built enum forced consuming packages with `declaration: true` to expand smart-enum's internal conditional types over an unresolved generic, which can OOM `tsc`; see [why the definer doesn't return the enum](/graphql/codegen-enums#using-an-input-definer).
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `externalEnums` | `Record<string, string>` | **required, non-empty** | The hand-authored enums to emit factories for. Must be the same map as the `enums` mode target — share the constant. |
-| `serializeAs` | `'value' \| 'wrapped'` | unset (library default) | Baked into the emitted factories. Must match the `enums` mode target. |
+| `externalEnums` | `Record<string, string>` | **required, non-empty** | The hand-authored enums to emit definers for. Must be the same map as the `enums` mode target — share the constant. |
+| `serializeAs` | `'value' \| 'wrapped'` | unset (library default) | Shown in each definer's emitted usage example; you pass it in your own `enumeration()` call. Must match the `enums` mode target. |
 
 ::: warning The two targets must be separate files
-The `enums` output imports your hand-authored enum (to build `enumRegistry`), and your hand-authored enum imports the defines output. If both outputs land in one file, the imports form a cycle — generated → hand-authored → generated — which is **not** a build error: it crashes at runtime with a TDZ `ReferenceError` on the factory const. The defines output imports only `@reharik/smart-enum`, never user code, which is what keeps the two-file arrangement cycle-free.
+The `enums` output imports your hand-authored enum (to build `enumRegistry`), and your hand-authored enum imports the defines output. If both outputs land in one file, the imports form a cycle — generated → hand-authored → generated — which is **not** a build error: it crashes at runtime with a TDZ `ReferenceError`, and *which* const it throws on depends on module load order, so it can work from one entrypoint and crash from another. The defines output imports nothing at all — not even `@reharik/smart-enum` — which is what keeps the two-file arrangement cycle-free.
 :::
 
-**Display strings are derived from the key, not from schema descriptions.** The generated `enums` output uses SDL descriptions as `display` (when `emitDescriptionsAsDisplay` is on, the default); the defines factories deliberately do not. A hand-authored enum owns its own content — the factory guards the *key set*, and `display` stays a precise, type-level literal derived from the key. If an enum relied on descriptions-as-display before you externalized it, pass `display` explicitly in the corresponding entries.
+**Display strings are derived from the key, not from schema descriptions.** The generated `enums` output uses SDL descriptions as `display` (when `emitDescriptionsAsDisplay` is on, the default); the defines output deliberately does not forward them. A hand-authored enum owns its own content — the definer guards the *key set*, and `display` stays a precise, type-level literal derived from the key. If an enum relied on descriptions-as-display before you externalized it, pass `display` explicitly in the corresponding entries.
 
 `skipEnums` keeps its standalone meaning here as everywhere: an enum listed **only** in `skipEnums` (not in `externalEnums`) gets nothing emitted at all — the right treatment for backend-only enums.
 
@@ -289,11 +298,18 @@ When you want to hand-author an enum — custom methods, runtime-derived props, 
 
 ```typescript
 // src/enums/viewerOperations.ts (hand-authored)
-import { defineViewerOperation } from './graphqlSmartEnumDefines';
+import { enumeration, type Enumeration } from '@reharik/smart-enum';
 
-export const ViewerOperation = defineViewerOperation({
+import { defineViewerOperationInput } from './graphqlSmartEnumDefines';
+
+const input = defineViewerOperationInput({
   view: { /* per-member extras */ },
   edit: { /* ... */ },
+});
+
+export type ViewerOperation = Enumeration<typeof ViewerOperation>;
+export const ViewerOperation = enumeration<typeof input>('ViewerOperation', {
+  input,
 });
 
 // src/index.ts (your contracts barrel)

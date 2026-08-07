@@ -2,17 +2,20 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
+import { enumeration } from '@reharik/smart-enum';
 
 import {
-  defineEntityType,
+  defineEntityTypeInput,
   entityTypeKeys,
 } from './fixtures/entityTypeDefines.js';
 
 describe('externalDefines consumer round-trip', () => {
-  describe('When a hand-written enum is defined through the emitted factory', () => {
-    // Imports resolve and the factory runs at module scope without a TDZ
-    // crash because the defines output imports no user code.
-    const EntityType = defineEntityType({
+  describe('When a hand-written enum is built from the pinned input', () => {
+    // This mirrors the documented consumer pattern: the emitted function pins
+    // the input's key set, then the enum is declared like any other smart
+    // enum. Imports resolve and everything runs at module scope without a TDZ
+    // crash because the defines output imports no code at all.
+    const input = defineEntityTypeInput({
       album: { table: 'albums', soft: true },
       authorization: { table: 'auth', soft: false },
       comment: { table: 'comments', soft: true },
@@ -20,6 +23,7 @@ describe('externalDefines consumer round-trip', () => {
       reaction: { table: 'reactions', soft: true },
       user: { table: 'users', soft: false },
     });
+    const EntityType = enumeration<typeof input>('EntityType', { input });
 
     it('should expose the schema key list in schema order', () => {
       expect(entityTypeKeys).toEqual([
@@ -30,6 +34,10 @@ describe('externalDefines consumer round-trip', () => {
         'reaction',
         'user',
       ]);
+    });
+
+    it('should return the input unchanged', () => {
+      expect(input.album).toEqual({ table: 'albums', soft: true });
     });
 
     it('should derive wire values and displays from the key', () => {
@@ -51,7 +59,7 @@ describe('externalDefines consumer round-trip', () => {
   });
 
   describe('When inspecting the emitted defines module source', () => {
-    it('should import nothing but @reharik/smart-enum', () => {
+    it('should import nothing at all', () => {
       const source = readFileSync(
         path.resolve(process.cwd(), 'test/fixtures/entityTypeDefines.ts'),
         'utf8',
@@ -61,6 +69,13 @@ describe('externalDefines consumer round-trip', () => {
         match => match[1],
       );
 
+      // The @example JSDoc mentions '@reharik/smart-enum'; only real import
+      // statements count.
+      const realImports = [
+        ...source.matchAll(/^import .+ from '([^']+)';$/gm),
+      ].map(match => match[1]);
+
+      expect(realImports).toEqual([]);
       expect(importSpecifiers).toEqual(['@reharik/smart-enum']);
     });
   });

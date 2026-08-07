@@ -4,12 +4,14 @@
  * for everything below is silent, so each case is pinned with either
  * `@ts-expect-error` or a `never` probe.
  */
+import { enumeration } from '@reharik/smart-enum';
+
 import {
-  defineEntityType,
+  defineEntityTypeInput,
   type EntityTypeKeys,
 } from './fixtures/entityTypeDefines.js';
 
-export const EntityType = defineEntityType({
+const input = defineEntityTypeInput({
   album: { table: 'albums', soft: true },
   authorization: { table: 'auth', soft: false },
   comment: { table: 'comments', soft: true },
@@ -17,6 +19,12 @@ export const EntityType = defineEntityType({
   reaction: { table: 'reactions', soft: true },
   user: { table: 'users', soft: false },
 });
+export const EntityType = enumeration<typeof input>('EntityType', { input });
+
+// -- the pinned input keeps its literal types without `as const` --------------
+
+declare const excessInputTable: Exclude<typeof input.album.table, 'albums'>;
+export const inputTableIsLiteral: never = excessInputTable;
 
 // -- member types carry the derived value/display and literal extras ----------
 
@@ -48,7 +56,7 @@ export const softIsLiteral: never = excessSoft;
 // -- missing key is a compile error -------------------------------------------
 
 // @ts-expect-error `mediaItem` is missing
-export const MissingKey = defineEntityType({
+export const missingKeyInput = defineEntityTypeInput({
   album: { table: 'albums' },
   authorization: { table: 'auth' },
   comment: { table: 'comments' },
@@ -58,7 +66,7 @@ export const MissingKey = defineEntityType({
 
 // -- unknown key is a compile error (the case a naive constraint misses) ------
 
-export const UnknownKey = defineEntityType({
+export const unknownKeyInput = defineEntityTypeInput({
   album: { table: 'albums' },
   authorization: { table: 'auth' },
   comment: { table: 'comments' },
@@ -71,13 +79,16 @@ export const UnknownKey = defineEntityType({
 
 // -- explicit `value` override wins over the derived value --------------------
 
-export const Overridden = defineEntityType({
+const overriddenInput = defineEntityTypeInput({
   album: { value: 'OVERRIDE' },
   authorization: {},
   comment: {},
   mediaItem: {},
   reaction: {},
   user: {},
+});
+export const Overridden = enumeration<typeof overriddenInput>('EntityType', {
+  input: overriddenInput,
 });
 declare const excessOverride: Exclude<
   typeof Overridden.album.value,

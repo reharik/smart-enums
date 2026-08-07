@@ -36,10 +36,12 @@ export type SmartEnumPluginConfig = SharedPluginConfig & {
    * Which output to produce.
    *
    * - 'enums' (default): generated enums, external-enum imports, `enumRegistry`.
-   * - 'externalDefines': schema key lists and `define<Name>` factories for each
-   *   `externalEnums` entry. This output imports only `@reharik/smart-enum`,
-   *   never user code, so hand-written enums can import their factory from it
-   *   without creating an import cycle with the 'enums' output.
+   * - 'externalDefines': schema key lists and `define<Name>Input` functions for
+   *   each `externalEnums` entry. Each function pins a hand-written enum's
+   *   input object to the schema's key set and returns it unchanged, typed as
+   *   the plain input type — cheap for declaration emit, and the output
+   *   imports nothing at all, so hand-written enums can import from it without
+   *   creating an import cycle with the 'enums' output.
    */
   emit?: 'enums' | 'externalDefines';
 };
@@ -467,7 +469,7 @@ const buildDefineBlock = (
   const keys = enumValues.map(enumValue => camelCase(enumValue.name));
   const keysConstName = `${lcFirst(enumName)}Keys`;
   const keysTypeName = `${enumName}Keys`;
-  const factoryName = `define${enumName}`;
+  const factoryName = `define${enumName}Input`;
   const exampleKey = keys[0] ?? 'someKey';
 
   return [
@@ -477,7 +479,7 @@ const buildDefineBlock = (
     `export type ${keysTypeName} = (typeof ${keysConstName})[number];`,
     '',
     '/**',
-    ` * Define the ${enumName} smart enum.`,
+    ` * Pin the ${enumName} input to the schema's value set.`,
     ' *',
     ' * One entry per schema value. A missing key or a key not in the schema is a',
     ' * compile error, so this enum cannot drift from the SDL. Values and display',
@@ -485,12 +487,24 @@ const buildDefineBlock = (
     ' * descriptions are NOT applied as display strings. Pass `display` in an',
     ' * entry to use them, or `value` to override the wire value.',
     ' *',
+    ' * Returns the input unchanged (typed): build the enum from it exactly like',
+    ' * any other smart enum. The return type is the plain input type so that',
+    ' * declaration emit in consuming packages stays cheap.',
+    ' *',
     ' * @param input Per-member extras, keyed by schema value.',
     ' * @example',
     ' * ```ts',
-    ` * export const ${enumName} = ${factoryName}({`,
+    " * import { enumeration, type Enumeration } from '@reharik/smart-enum';",
+    ' *',
+    ` * const input = ${factoryName}({`,
     ` *   ${exampleKey}: { some: 'extra' },`,
     ' *   // ...one entry per schema value',
+    ' * });',
+    ' *',
+    ` * export type ${enumName} = Enumeration<typeof ${enumName}>;`,
+    ` * export const ${enumName} = enumeration<typeof input>('${escapeString(enumName)}', {`,
+    ' *   input,',
+    ...(serializeAs ? [` *   serializeAs: '${serializeAs}',`] : []),
     ' * });',
     ' * ```',
     ' */',
@@ -498,9 +512,7 @@ const buildDefineBlock = (
     `  const X extends Record<${keysTypeName}, Record<string, unknown>>,`,
     '>(',
     `  input: Exact<X, ${keysTypeName}>,`,
-    `) => enumeration('${escapeString(enumName)}', { input: input as X${
-      serializeAs ? `, serializeAs: '${serializeAs}'` : ''
-    } });`,
+    '): X => input;',
   ];
 };
 
@@ -520,13 +532,7 @@ const buildExternalDefinesOutput = (
     getEnumTypes(schema).map(enumType => [enumType.name, enumType]),
   );
 
-  const lines: string[] = [
-    ...HEADER_LINES,
-    '',
-    "import { enumeration } from '@reharik/smart-enum';",
-    '',
-    ...EXACT_HELPER_LINES,
-  ];
+  const lines: string[] = [...HEADER_LINES, '', ...EXACT_HELPER_LINES];
 
   for (const enumName of externalEnumTypeNames) {
     lines.push(
