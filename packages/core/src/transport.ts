@@ -23,6 +23,7 @@ export {
   serializeForTransport,
   initializeSmartEnumMappings,
   getGlobalEnumRegistry,
+  resetSmartEnumMappings,
 } from './utilities/transport/index.js';
 
 // Re-export core types plus transport-specific types

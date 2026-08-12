@@ -32,7 +32,7 @@ generates:
       # your existing config, untouched — the preset adds enumValues automatically
 ```
 
-Four modes cover the stack: `enums` (generate the definitions + registry), `external-defines` (drift-proof factories for hand-authored enums), `type-policies` (Apollo rehydration), and `with-enum-values` (the auto-derived map for resolver/operation types). A complete contracts + server + client setup, every option, and the hand-authored-enum path are in the [docs](https://reharik.github.io/smart-enums/graphql/preset).
+Three modes cover the stack: `enums` (generate the definitions — plus drift-proof input definers and an auto-emitted registry file when some enums are hand-authored), `type-policies` (Apollo rehydration), and `with-enum-values` (the auto-derived map for resolver/operation types). A complete contracts + server + client setup, every option, and the hand-authored-enum path are in the [docs](https://reharik.github.io/smart-enums/graphql/preset).
 
 ## Related packages
 

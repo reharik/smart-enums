@@ -110,14 +110,15 @@ export default config;
 | `emitDescriptionsAsDisplay` | `boolean` | `true` | Use GraphQL enum value descriptions as the `display` field. When `false`, only enums with deprecated values or `@enumMeta` directives get object input. |
 | `enumClassSuffix` | `string` | `''` | Suffix appended to generated enum names (e.g. `'Enum'` → `PaymentStatusEnum`). |
 | `skipEnums` | `string[]` | — | GraphQL enum type names to exclude entirely: no generated enum, no registry entry, no factory. Use for backend-only enums. |
-| `externalEnums` | `Record<string, string>` | — | Map of GraphQL enum type names to import paths for hand-authored enums. Listing a name here implies it is skipped from generation. See [Hand-authored enums](#hand-authored-enums). |
-| `emit` | `'enums' \| 'externalDefines'` | `'enums'` | Which output to produce. `'enums'` is the full generated output; `'externalDefines'` emits key lists and `define<Name>Input` definers. See [Keeping them in sync](#keeping-them-in-sync). |
+| `externalEnums` | `Record<string, string>` | — | Map of GraphQL enum type names to import paths (relative to the output file) for hand-authored enums. Listing a name here implies it is skipped from generation, adds a `define<Name>Input` definer to the enums output, and moves `enumRegistry` to the `enumRegistry` emit. See [Hand-authored enums](#hand-authored-enums). |
+| `emit` | `'enums' \| 'enumRegistry'` | `'enums'` | Which output to produce. `'enums'` is the generated enums (plus definers when `externalEnums` is set); `'enumRegistry'` is the registry barrel in its own file. See [The registry file](#the-registry-file). |
+| `enumsImportPath` | `string` | — | Required for `emit: 'enumRegistry'`: import path of the enums output relative to the registry file (e.g. `'./graphqlSmartEnums'`). |
 
 ## Hand-authored enums
 
 Sometimes you want to hand-author an enum — to add custom methods, derive props at runtime, or wrap a third-party value object. But the generated `enumRegistry` barrel **still needs to include them**, otherwise the server-side [`patchSchemaEnumSerializers`](/graphql/overview#server-side-resolvers-returning-members) can't find them when GraphQL calls `parseValue` on a request argument — and the resolver receives a raw string instead of a member.
 
-`externalEnums` bridges the gap. Listing a name there keeps it out of generation while keeping it in the registry:
+`externalEnums` bridges the gap. Listing a name there does three things:
 
 ```yaml
 config:
@@ -126,22 +127,13 @@ config:
     ViewerOperation: '../hand-authored/viewerOperations'
 ```
 
-The plugin emits imports for each hand-authored enum and includes them in the registry:
+1. **Skips it from generation** — you own the definition.
+2. **Emits a `define<Name>Input` definer** into the enums output, so your hand-authored version [can't drift from the schema](#keeping-them-in-sync).
+3. **Moves `enumRegistry` out of the enums output** — it now comes from a second `generates` entry with [`emit: 'enumRegistry'`](#the-registry-file) (the [preset](/graphql/preset) emits that file automatically).
 
-```typescript
-import { ReactionEmoji } from '../hand-authored/reactions';
-import { ViewerOperation } from '../hand-authored/viewerOperations';
+The third one is a hard requirement, not a preference. The registry must import your hand-authored enums, and your codebase freely imports generated enums from the enums file — including from modules that end up in a hand-authored enum's import closure (an error-catalog module using a generated `ErrorCategory`, say). If the registry lived in the enums file, those two edges would form an import cycle that crashes at **runtime** with a TDZ `ReferenceError` — and *where* it crashes depends on module load order, so it can work from one entrypoint and fail from another. With `externalEnums` set, the enums output therefore imports no user code at all, ever.
 
-// ... generated enums ...
-
-export const enumRegistry = {
-  // ... generated enums ...
-  ReactionEmoji,
-  ViewerOperation,
-} as const;
-```
-
-The registry key is always the GraphQL type name. The plugin does **not** re-export hand-authored enums as named exports — consumers keep importing them from their original location.
+The registry key is always the GraphQL type name. The registry does **not** re-export hand-authored enums as named exports — consumers keep importing them from their original location.
 
 ::: tip `externalEnums` implies skip
 You don't need to repeat these names in `skipEnums`. Earlier versions required it; that requirement is gone, and listing them in both still works.
@@ -153,7 +145,22 @@ You don't need to repeat these names in `skipEnums`. Earlier versions required i
 
 A hand-authored enum has no link back to the schema. Add a value to the SDL and your enum silently doesn't have it; remove one and a stale member lingers. Nothing fails until it does, at runtime, somewhere else.
 
-Add a **second** `generates` entry with `emit: 'externalDefines'` to close that:
+The definers close that gap, and with `externalEnums` set they're emitted automatically — no extra config. Using the [preset](/graphql/preset), the whole layout is **one** `generates` entry; the registry file is emitted as a sibling automatically:
+
+```yaml
+generates:
+  ./src/enums/graphqlSmartEnums.ts:
+    preset: '@reharik/graphql-codegen-smart-enum-preset'
+    presetConfig:
+      mode: enums
+      serializeAs: value
+      externalEnums:
+        EntityType: './entityType'
+# → emits ./src/enums/graphqlSmartEnums.ts          (enums + definers)
+#   and   ./src/enums/graphqlSmartEnumsRegistry.ts  (enumRegistry)
+```
+
+Using the plugin directly (no preset), a plugin can only emit one file, so the registry is an explicit second entry:
 
 ```typescript
 generates: {
@@ -164,51 +171,29 @@ generates: {
       externalEnums: { EntityType: '../hand-authored/entityType' },
     },
   },
-  './src/generated/entity-type-defines.ts': {
+  './src/generated/graphql-smart-enums-registry.ts': {
     plugins: ['@reharik/graphql-codegen-smart-enum'],
     config: {
-      emit: 'externalDefines',
-      serializeAs: 'value',
+      emit: 'enumRegistry',
+      enumsImportPath: './graphql-smart-enums',
       externalEnums: { EntityType: '../hand-authored/entityType' },
     },
   },
 }
 ```
 
-Using the [preset](/graphql/preset), the same thing in YAML — a shared anchor keeps the two entries from disagreeing:
-
-```yaml
-generates:
-  ./src/enums/graphqlSmartEnums.ts:
-    preset: '@reharik/graphql-codegen-smart-enum-preset'
-    presetConfig:
-      mode: enums
-      serializeAs: value
-      externalEnums: &externalEnums
-        EntityType: './entityType'
-
-  ./src/enums/graphqlSmartEnumDefines.ts:
-    preset: '@reharik/graphql-codegen-smart-enum-preset'
-    presetConfig:
-      mode: external-defines
-      serializeAs: value
-      externalEnums: *externalEnums
-```
-
-::: warning Two things that will bite you
-**The outputs must be separate files.** The enums output imports your hand-authored enum (for `enumRegistry`), and your enum imports the defines output. One file means a cycle — and it fails at **runtime** with a TDZ `ReferenceError`, not at build time. Worse, *where* it fails depends on module load order: whichever side of the cycle evaluates first throws on the other's uninitialized const (the definer, or your enum inside `enumRegistry`) — so it can pass in one entrypoint and crash in another. Keeping the defines output in its own file makes the graph acyclic: generated → your enum → defines, no back edge.
-
-**Keep `serializeAs` aligned.** The definer doesn't build the enum, so it can't apply serialization for you — you pass `serializeAs` in your own `enumeration()` call. Configure it on the defines entry too and the emitted usage example shows the exact call to copy; omit it in your enum and it silently serializes differently than the generated ones.
+::: warning Keep `serializeAs` aligned
+The definer doesn't build the enum, so it can't apply serialization for you — you pass `serializeAs` in your own `enumeration()` call. Configure it on the codegen entry too and each definer's emitted usage example shows the exact call to copy; omit it in your enum and it silently serializes differently than the generated ones.
 :::
 
 ### Using an input definer
 
-For each `externalEnums` entry the defines output contains the schema's key list and a typed `define<Name>Input` function. It doesn't build the enum — it takes your input object, pins it to the schema's key set, and returns it unchanged. You then declare the enum from it exactly like every other smart enum:
+For each `externalEnums` entry the enums output contains the schema's key list and a typed `define<Name>Input` function. It doesn't build the enum — it takes your input object, pins it to the schema's key set, and returns it unchanged. You then declare the enum from it exactly like every other smart enum:
 
 ```typescript
 import { enumeration, type Enumeration } from '@reharik/smart-enum';
 
-import { defineEntityTypeInput } from '../generated/entity-type-defines';
+import { defineEntityTypeInput } from '../generated/graphql-smart-enums';
 
 const input = defineEntityTypeInput({
   album:   { table: 'albums',   soft: true },
@@ -242,7 +227,25 @@ Now the two can't drift:
 
 Both point at your enum file, naming the key.
 
-Adding the `generates` entry changes no behaviour on its own — it emits definers nothing uses yet. Switch enums onto them one at a time as you get to each. There's no cutover.
+The definers themselves change no behaviour until an enum calls one — switch enums onto them as you get to each. The one-time change is the registry: the **first** `externalEnums` entry moves `enumRegistry` into its own file, so the bootstrap imports (see [The registry file](#the-registry-file)) update once, then never again.
+
+### The registry file
+
+With `externalEnums` set, `enumRegistry` comes from the `emit: 'enumRegistry'` output (the preset emits it automatically as `<name>Registry.ts` next to the enums file):
+
+```typescript
+// graphqlSmartEnumsRegistry.ts (generated)
+import { ErrorCategory, SortDirection } from './graphqlSmartEnums';
+import { EntityType } from '../hand-authored/entityType';
+
+export const enumRegistry = { EntityType, ErrorCategory, SortDirection } as const;
+```
+
+This is the only generated file that imports user code, and it must stay a **pure sink**: the only things importing it should be bootstrap code — `patchSchemaEnumSerializers` on the server, the Apollo type-policies setup on the client (directly, or via one `export * from './enums/graphqlSmartEnumsRegistry'` line in your contracts barrel).
+
+::: warning Never import the registry from code an enum can reach
+Files inside your contracts package should import each other **relatively**, never through the package's own barrel. If a module in a hand-authored enum's import closure imports the barrel (and the barrel re-exports the registry), the cycle this layout exists to prevent comes right back — as a load-order-dependent TDZ `ReferenceError` at runtime.
+:::
 
 ### Values and display strings
 
@@ -267,7 +270,7 @@ It matters when you externalize an enum that was previously *generated* — its 
 
 Enums built from pinned inputs are ordinary smart enums. `fromValue`, [`match` and `switchOn`](/core/branching), [subsets](/core/lookup), serialization, `enumRegistry` — all unchanged.
 
-The defines output imports nothing at all — not even `@reharik/smart-enum` — which is what makes the no-cycle guarantee hold and keeps declaration emit in consuming packages cheap.
+And the layout guarantee: with `externalEnums` set, the enums output never imports user code, the registry output is the only file that does, and it's a sink — so the module graph is acyclic by construction, and the definers' plain-input return type keeps declaration emit in consuming packages cheap.
 
 ## Local development
 

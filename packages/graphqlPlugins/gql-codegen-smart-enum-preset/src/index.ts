@@ -9,8 +9,15 @@ const TYPE_POLICIES_PLUGIN = '@reharik/graphql-codegen-smart-enum-type-policies'
 /**
  * Modes the preset can operate in.
  *
- * - `enums`: emit smart-enum definitions and the enumRegistry barrel.
- *   Runs the @reharik/graphql-codegen-smart-enum plugin.
+ * - `enums`: emit smart-enum definitions (and, when `externalEnums` is set,
+ *   `define<Name>Input` functions that pin hand-authored enums to the schema).
+ *   Runs the @reharik/graphql-codegen-smart-enum plugin. Without
+ *   `externalEnums`, the single output also contains `enumRegistry`. WITH
+ *   `externalEnums`, the preset emits a SECOND file — a sibling named
+ *   `<name>Registry.<ext>` — holding `enumRegistry`, because the registry
+ *   imports the hand-authored enums and must not live in (or be re-exported
+ *   from) the widely-imported enums file, or the module graph gains a
+ *   load-order-dependent cycle that TDZ-crashes at runtime.
  *
  * - `type-policies`: emit Apollo typePolicies for client-side enum rehydration.
  *   Runs the @reharik/graphql-codegen-smart-enum-type-policies plugin.
@@ -19,20 +26,8 @@ const TYPE_POLICIES_PLUGIN = '@reharik/graphql-codegen-smart-enum-type-policies'
  *   consumer-supplied plugin list (e.g. typescript-operations,
  *   typescript-resolvers). The preset does not pick the plugins — the consumer
  *   does. The preset merges its enumValues map into the consumer's config.
- *
- * - `external-defines`: emit schema key lists and `define<EnumName>` factories
- *   for each `externalEnums` entry, so hand-authored enums can't drift from
- *   the SDL. Runs the @reharik/graphql-codegen-smart-enum plugin with
- *   `emit: 'externalDefines'`. Must target a DIFFERENT file than the `enums`
- *   mode output: the enums output imports the hand-authored enum (for
- *   enumRegistry) and the hand-authored enum imports the defines output, so a
- *   single file would form an import cycle that crashes at runtime.
  */
-export type PresetMode =
-  | 'enums'
-  | 'type-policies'
-  | 'with-enum-values'
-  | 'external-defines';
+export type PresetMode = 'enums' | 'type-policies' | 'with-enum-values';
 
 export type SmartEnumPresetConfig = {
   mode: PresetMode;
@@ -64,22 +59,24 @@ export type SmartEnumPresetConfig = {
   emitDescriptionsAsDisplay?: boolean;
 
   /**
-   * Used in `enums` and `external-defines` modes. Passed through to the
-   * enum-definition plugin. In `external-defines` mode it must match the
-   * value used by the `enums` mode target so both outputs serialize alike.
+   * Only used in `enums` mode. Passed through to the enum-definition plugin;
+   * also shown in each emitted `define<Name>Input` usage example so
+   * hand-authored enums copy the matching `enumeration()` call.
    */
   serializeAs?: 'value' | 'wrapped';
 
   /**
-   * Map of GraphQL enum type name → import path for hand-authored enums.
+   * Only used in `enums` mode. Map of GraphQL enum type name → import path
+   * (relative to the enums output file) for hand-authored enums. Listing a
+   * name here implies it is skipped from generation; it does not also need to
+   * appear in `skipEnums` (though it may).
    *
-   * In `enums` mode: forwarded so `enumRegistry` stays complete. Listing a
-   * name here implies it is skipped from generation; it no longer needs to
-   * appear in `skipEnums` (though it may, for backward compatibility).
-   *
-   * In `external-defines` mode: required and non-empty — these are the enums
-   * the defines output emits factories for. Must match the `enums` mode
-   * target's map; hoist it to a shared constant.
+   * When set, the preset emits TWO files from the one `generates` entry: the
+   * enums output (generated enums + `define<Name>Input` functions, importing
+   * no user code) and a sibling `<name>Registry.<ext>` file holding
+   * `enumRegistry` (which imports the hand-authored enums). Point bootstrap
+   * code (patchSchemaEnumSerializers, Apollo typePolicies setup) at the
+   * registry file; never import it from code reachable by an enum.
    */
   externalEnums?: Record<string, string>;
 };
@@ -90,25 +87,22 @@ const validateConfig = (config: SmartEnumPresetConfig): void => {
   if (
     config.mode !== 'enums' &&
     config.mode !== 'type-policies' &&
-    config.mode !== 'with-enum-values' &&
-    config.mode !== 'external-defines'
+    config.mode !== 'with-enum-values'
   ) {
     throw new TypeError(
-      `${PRESET_PREFIX} presetConfig.mode must be one of 'enums', 'type-policies', 'with-enum-values', or 'external-defines'. Got: ${String(config.mode)}`,
+      `${PRESET_PREFIX} presetConfig.mode must be one of 'enums', 'type-policies', or 'with-enum-values'. Got: ${String(config.mode)}`,
     );
   }
 
-  if (config.mode === 'external-defines') {
+  if (config.externalEnums !== undefined) {
     const externalEnums = config.externalEnums;
     if (
-      externalEnums === undefined ||
       typeof externalEnums !== 'object' ||
       externalEnums === null ||
-      Array.isArray(externalEnums) ||
-      Object.keys(externalEnums).length === 0
+      Array.isArray(externalEnums)
     ) {
       throw new TypeError(
-        `${PRESET_PREFIX} presetConfig.externalEnums must be a non-empty object in 'external-defines' mode — a defines output with no external enums would be empty, which is almost certainly a config mistake. Use the same map as your 'enums' mode target.`,
+        `${PRESET_PREFIX} presetConfig.externalEnums must be a plain object of enum type name → import path.`,
       );
     }
   }
@@ -210,6 +204,35 @@ const buildEnumValuesMap = (
   return map;
 };
 
+/**
+ * Derive the sibling registry file for an enums output, plus the import path
+ * from the registry file back to the enums file.
+ *
+ * './src/enums/graphqlSmartEnums.ts' →
+ *   registryFilename: './src/enums/graphqlSmartEnumsRegistry.ts'
+ *   enumsImportPath:  './graphqlSmartEnums'
+ *
+ * The registry always sits in the same directory as the enums file so that
+ * the (output-file-relative) `externalEnums` import paths stay valid for both.
+ */
+const deriveRegistryOutput = (
+  baseOutputDir: string,
+): { registryFilename: string; enumsImportPath: string } => {
+  const slashIndex = baseOutputDir.lastIndexOf('/');
+  const dir = slashIndex >= 0 ? baseOutputDir.slice(0, slashIndex + 1) : '';
+  const basename =
+    slashIndex >= 0 ? baseOutputDir.slice(slashIndex + 1) : baseOutputDir;
+
+  const extIndex = basename.lastIndexOf('.');
+  const stem = extIndex > 0 ? basename.slice(0, extIndex) : basename;
+  const ext = extIndex > 0 ? basename.slice(extIndex) : '';
+
+  return {
+    registryFilename: `${dir}${stem}Registry${ext}`,
+    enumsImportPath: `./${stem}`,
+  };
+};
+
 export const preset: Types.OutputPreset<SmartEnumPresetConfig> = {
   buildGeneratesSection: (options): Types.GenerateOptions[] => {
     const presetConfig = options.presetConfig as SmartEnumPresetConfig;
@@ -224,43 +247,22 @@ export const preset: Types.OutputPreset<SmartEnumPresetConfig> = {
 
     validateSkipEnumsAgainstSchema(schemaAst, presetConfig.skipEnums);
     if (presetConfig.mode === 'enums') {
-      return [
-        {
-          ...options,
-          filename: options.baseOutputDir,
-          plugins: [{ [SMART_ENUM_PLUGIN]: {} }],
-          pluginMap: {
-            ...options.pluginMap,
-            [SMART_ENUM_PLUGIN]: smartEnumCodegen,
-          },
-          config: {
-            ...options.config,
-            ...(presetConfig.enumClassSuffix !== undefined
-              ? { enumClassSuffix: presetConfig.enumClassSuffix }
-              : {}),
-            ...(presetConfig.emitDescriptionsAsDisplay !== undefined
-              ? {
-                  emitDescriptionsAsDisplay:
-                    presetConfig.emitDescriptionsAsDisplay,
-                }
-              : {}),
-            ...(presetConfig.serializeAs !== undefined
-              ? { serializeAs: presetConfig.serializeAs }
-              : {}),
-            ...(presetConfig.skipEnums !== undefined
-              ? { skipEnums: presetConfig.skipEnums }
-              : {}),
-            ...(presetConfig.externalEnums !== undefined
-              ? { externalEnums: presetConfig.externalEnums }
-              : {}),
-          },
-        },
-      ];
-    }
+      const sharedPluginConfig = {
+        ...(presetConfig.enumClassSuffix !== undefined
+          ? { enumClassSuffix: presetConfig.enumClassSuffix }
+          : {}),
+        ...(presetConfig.serializeAs !== undefined
+          ? { serializeAs: presetConfig.serializeAs }
+          : {}),
+        ...(presetConfig.skipEnums !== undefined
+          ? { skipEnums: presetConfig.skipEnums }
+          : {}),
+        ...(presetConfig.externalEnums !== undefined
+          ? { externalEnums: presetConfig.externalEnums }
+          : {}),
+      };
 
-    if (presetConfig.mode === 'external-defines') {
-    return [
-      {
+      const enumsEntry = {
         ...options,
         filename: options.baseOutputDir,
         plugins: [{ [SMART_ENUM_PLUGIN]: {} }],
@@ -270,17 +272,54 @@ export const preset: Types.OutputPreset<SmartEnumPresetConfig> = {
         },
         config: {
           ...options.config,
-          emit: 'externalDefines',
-          externalEnums: presetConfig.externalEnums,
-          ...(presetConfig.serializeAs !== undefined
-            ? { serializeAs: presetConfig.serializeAs }
+          ...sharedPluginConfig,
+          ...(presetConfig.emitDescriptionsAsDisplay !== undefined
+            ? {
+                emitDescriptionsAsDisplay:
+                  presetConfig.emitDescriptionsAsDisplay,
+              }
             : {}),
         },
-      },
-    ];
-  }
+      };
 
-  if (presetConfig.mode === 'type-policies') {
+      const hasExternalEnums =
+        presetConfig.externalEnums !== undefined &&
+        Object.keys(presetConfig.externalEnums).length > 0;
+
+      if (!hasExternalEnums) {
+        return [enumsEntry];
+      }
+
+      // With external enums, enumRegistry moves to an auto-emitted sibling
+      // file. The registry imports the hand-authored enums, so it must not
+      // live in (or be re-exported from) the enums file that user code
+      // imports — that edge completes a load-order-dependent import cycle
+      // that TDZ-crashes at module evaluation.
+      const { registryFilename, enumsImportPath } = deriveRegistryOutput(
+        options.baseOutputDir,
+      );
+
+      return [
+        enumsEntry,
+        {
+          ...options,
+          filename: registryFilename,
+          plugins: [{ [SMART_ENUM_PLUGIN]: {} }],
+          pluginMap: {
+            ...options.pluginMap,
+            [SMART_ENUM_PLUGIN]: smartEnumCodegen,
+          },
+          config: {
+            ...options.config,
+            ...sharedPluginConfig,
+            emit: 'enumRegistry',
+            enumsImportPath,
+          },
+        },
+      ];
+    }
+
+    if (presetConfig.mode === 'type-policies') {
       return [
         {
           ...options,

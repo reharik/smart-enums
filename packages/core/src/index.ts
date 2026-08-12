@@ -34,6 +34,7 @@ export {
   serializeForTransport,
   initializeSmartEnumMappings,
   getGlobalEnumRegistry,
+  resetSmartEnumMappings,
 } from './utilities/transport/index.js';
 export {
   prepareForDatabase,

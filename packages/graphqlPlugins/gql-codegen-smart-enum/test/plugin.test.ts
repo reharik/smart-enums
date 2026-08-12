@@ -508,84 +508,8 @@ describe('SmartEnum plugin', () => {
   });
 
   describe('externalEnums config', () => {
-    describe('When skipEnums and externalEnums reference a hand-authored enum', () => {
-      it('should emit imports for each external enum', async () => {
-        const schema = buildSchema(`
-      enum Status { OPEN, CLOSED }
-      enum CustomEnum { A, B }
-    `);
-
-        const output = await normalizeOutput(
-          plugin(schema, [], {
-            skipEnums: ['CustomEnum'],
-            externalEnums: { CustomEnum: '../hand-authored/customEnum' },
-          }),
-        );
-
-        expect(output).toContain(
-          "import { CustomEnum } from '../hand-authored/customEnum';",
-        );
-      });
-
-      it('should include external enums in enumRegistry alongside generated ones', async () => {
-        const schema = buildSchema(`
-      enum Status { OPEN, CLOSED }
-      enum CustomEnum { A, B }
-    `);
-
-        const output = await normalizeOutput(
-          plugin(schema, [], {
-            skipEnums: ['CustomEnum'],
-            externalEnums: { CustomEnum: '../hand-authored/customEnum' },
-          }),
-        );
-
-        expect(output).toMatch(
-          /export const enumRegistry = \{[^}]*CustomEnum[^}]*Status[^}]*\}/s,
-        );
-      });
-
-      it('should not re-export external enums as named exports', async () => {
-        const schema = buildSchema(`
-      enum CustomEnum { A }
-    `);
-
-        const output = await normalizeOutput(
-          plugin(schema, [], {
-            skipEnums: ['CustomEnum'],
-            externalEnums: { CustomEnum: '../hand-authored/customEnum' },
-          }),
-        );
-
-        expect(output).toContain('import { CustomEnum }');
-        expect(output).not.toContain('export { CustomEnum }');
-        expect(output).not.toContain('export const CustomEnum');
-      });
-    });
-
-    describe('When enumClassSuffix is set for external enums', () => {
-      it('should apply enumClassSuffix to external enum imports and values', async () => {
-        const schema = buildSchema(`
-      enum CustomEnum { A }
-    `);
-
-        const output = await normalizeOutput(
-          plugin(schema, [], {
-            enumClassSuffix: 'Enum',
-            skipEnums: ['CustomEnum'],
-            externalEnums: { CustomEnum: '../hand-authored/customEnum' },
-          }),
-        );
-
-        expect(output).toContain(
-          "import { CustomEnumEnum } from '../hand-authored/customEnum';",
-        );
-        expect(output).toContain('CustomEnum: CustomEnumEnum');
-      });
-    });
-
-    describe('When externalEnums lists a type that is not in skipEnums', () => {
-      it('should imply skip: import and register it without generating it', async () => {
+    describe('When externalEnums lists a type (with or without skipEnums)', () => {
+      it('should imply skip: emit a definer, not a generated body', async () => {
         const schema = buildSchema(`
           enum Status { OPEN }
           enum CustomEnum { A, B }
@@ -597,14 +521,27 @@ describe('SmartEnum plugin', () => {
           }),
         );
 
-        expect(output).toContain(
-          "import { CustomEnum } from '../hand-authored/customEnum';",
-        );
         expect(output).not.toContain('customEnumInput');
-        expect(output).not.toContain('export const CustomEnum');
-        expect(output).toMatch(
-          /export const enumRegistry = \{[^}]*CustomEnum[^}]*Status[^}]*\}/s,
+        // (the definer's @example mentions the name; only real code lines count)
+        expect(output).not.toMatch(/^export const CustomEnum = /m);
+        expect(output).toContain('export const defineCustomEnumInput');
+      });
+
+      it('should behave identically when the name is also in skipEnums (back-compat)', async () => {
+        const schema = buildSchema(`
+          enum Status { OPEN }
+          enum CustomEnum { A, B }
+        `);
+
+        const output = await normalizeOutput(
+          plugin(schema, [], {
+            skipEnums: ['CustomEnum'],
+            externalEnums: { CustomEnum: '../hand-authored/customEnum' },
+          }),
         );
+
+        expect(output).not.toMatch(/^export const CustomEnum = /m);
+        expect(output).toContain('export const defineCustomEnumInput');
       });
     });
 
@@ -620,52 +557,21 @@ describe('SmartEnum plugin', () => {
         ).toThrow();
       });
     });
-
-    describe('When all schema enums are skipped but externalEnums supplies the registry', () => {
-      it('should emit imports and enumRegistry without generated enum bodies', async () => {
-        const schema = buildSchema(`
-          enum PaymentStatus { PENDING }
-          enum SortDirection { ASC }
-        `);
-
-        const output = await normalizeOutput(
-          plugin(schema, [], {
-            skipEnums: ['PaymentStatus', 'SortDirection'],
-            externalEnums: {
-              PaymentStatus: '../hand-authored/payment',
-              SortDirection: '../hand-authored/sort',
-            },
-          }),
-        );
-
-        expect(output).toContain(
-          "import { PaymentStatus } from '../hand-authored/payment';",
-        );
-        expect(output).toContain(
-          "import { SortDirection } from '../hand-authored/sort';",
-        );
-        expect(output).not.toContain('import { enumeration');
-        expect(output).toContain(
-          'export const enumRegistry = { PaymentStatus, SortDirection } as const;',
-        );
-      });
-    });
   });
 
-  describe('emit: externalDefines', () => {
+  describe('externalEnums definers in the enums output', () => {
     const definesSchema = buildSchema(`
       enum EntityType { ALBUM AUTHORIZATION COMMENT MEDIA_ITEM REACTION USER }
       enum Status { OPEN, CLOSED }
     `);
 
-    it('should emit exactly the checked-in fixture for the sample enum', async () => {
+    it('should emit exactly the checked-in fixture for an all-external schema', async () => {
       const schema = buildSchema(
         'enum EntityType { ALBUM AUTHORIZATION COMMENT MEDIA_ITEM REACTION USER }',
       );
 
       const output = await normalizeOutput(
         plugin(schema, [], {
-          emit: 'externalDefines',
           externalEnums: { EntityType: '../consumer/entityType' },
         }),
       );
@@ -680,7 +586,6 @@ describe('SmartEnum plugin', () => {
     it('should emit the key list in schema order with camelCase derivation', async () => {
       const output = await normalizeOutput(
         plugin(definesSchema, [], {
-          emit: 'externalDefines',
           externalEnums: { EntityType: '../consumer/entityType' },
         }),
       );
@@ -705,7 +610,6 @@ describe('SmartEnum plugin', () => {
     it('should emit an input definer that pins the input to the schema keys', async () => {
       const output = await normalizeOutput(
         plugin(definesSchema, [], {
-          emit: 'externalDefines',
           externalEnums: { EntityType: '../consumer/entityType' },
         }),
       );
@@ -721,15 +625,47 @@ describe('SmartEnum plugin', () => {
       );
     });
 
-    it('should import nothing at all', async () => {
-      // The plain-X return type plus zero imports is what keeps declaration
-      // emit cheap in consuming packages (a generic returning enumeration(...)
-      // forces tsc to expand smart-enum's internal conditional types, which
-      // OOMs) and what makes the file safe to import from a hand-written enum
-      // without a cycle.
+    it('should emit definers alongside generated enums, without a registry', async () => {
       const output = await normalizeOutput(
         plugin(definesSchema, [], {
-          emit: 'externalDefines',
+          externalEnums: { EntityType: '../consumer/entityType' },
+        }),
+      );
+
+      // Status is generated as usual...
+      expect(output).toContain("export const Status = enumeration");
+      // ...EntityType gets a definer instead of a generated body (the
+      // definer's @example mentions the name; only real code lines count)...
+      expect(output).toContain('export const defineEntityTypeInput');
+      expect(output).not.toMatch(/^export const EntityType = /m);
+      // ...and the registry moves to the emit: 'enumRegistry' output.
+      expect(output).not.toContain('enumRegistry');
+    });
+
+    it('should never import user code', async () => {
+      // The registry is the only piece that imports hand-authored enums, and
+      // it lives in its own emit. User code imports generated enums from this
+      // file, and the hand-authored enums' import closures may include that
+      // user code — an import back from here would form a load-order-dependent
+      // cycle that TDZ-crashes at module evaluation.
+      const output = await normalizeOutput(
+        plugin(definesSchema, [], {
+          externalEnums: { EntityType: '../consumer/entityType' },
+        }),
+      );
+
+      const realImports = [
+        ...output.matchAll(/^import .+ from '([^']+)';$/gm),
+      ].map(match => match[1]);
+      expect(realImports).toEqual(['@reharik/smart-enum']);
+    });
+
+    it('should import nothing at all when every enum is external', async () => {
+      // The plain-X return type plus zero imports keeps declaration emit cheap
+      // in consuming packages (a generic returning enumeration(...) forces tsc
+      // to expand smart-enum's internal conditional types, which OOMs).
+      const output = await normalizeOutput(
+        plugin(definesSchema, [], {
           externalEnums: {
             EntityType: '../consumer/entityType',
             Status: '../consumer/status',
@@ -743,10 +679,9 @@ describe('SmartEnum plugin', () => {
       expect(realImports).toEqual([]);
     });
 
-    it('should emit the Exact helper once for multiple enums', async () => {
+    it('should emit the Exact helper once for multiple external enums', async () => {
       const output = await normalizeOutput(
         plugin(definesSchema, [], {
-          emit: 'externalDefines',
           externalEnums: {
             EntityType: '../consumer/entityType',
             Status: '../consumer/status',
@@ -764,7 +699,6 @@ describe('SmartEnum plugin', () => {
     it('should not emit anything for enums listed only in skipEnums', async () => {
       const output = await normalizeOutput(
         plugin(definesSchema, [], {
-          emit: 'externalDefines',
           skipEnums: ['Status'],
           externalEnums: { EntityType: '../consumer/entityType' },
         }),
@@ -773,21 +707,12 @@ describe('SmartEnum plugin', () => {
       expect(output).not.toContain('Status');
     });
 
-    it('should return empty output when no externalEnums are configured', async () => {
-      const output = await normalizeOutput(
-        plugin(definesSchema, [], { emit: 'externalDefines' }),
-      );
-
-      expect(output).toBe('');
-    });
-
     it('should include serializeAs in the emitted usage example', async () => {
       // The definer returns the input, so serializeAs has nowhere to live at
       // runtime — it surfaces in the @example so consumers copy the right
       // enumeration() call for their pipeline.
       const output = await normalizeOutput(
         plugin(definesSchema, [], {
-          emit: 'externalDefines',
           serializeAs: 'value',
           externalEnums: { EntityType: '../consumer/entityType' },
         }),
@@ -797,20 +722,156 @@ describe('SmartEnum plugin', () => {
     });
 
     it('should omit serializeAs from the usage example when not configured', async () => {
+      const schema = buildSchema(
+        'enum EntityType { ALBUM AUTHORIZATION COMMENT MEDIA_ITEM REACTION USER }',
+      );
       const output = await normalizeOutput(
-        plugin(definesSchema, [], {
-          emit: 'externalDefines',
+        plugin(schema, [], {
           externalEnums: { EntityType: '../consumer/entityType' },
         }),
       );
 
       expect(output).not.toContain('serializeAs');
     });
+  });
+
+  describe('emit: enumRegistry', () => {
+    const registrySchema = buildSchema(`
+      enum Status { OPEN, CLOSED }
+      enum Priority { LOW, HIGH }
+      enum CustomEnum { A, B }
+    `);
+
+    it('should import generated enums from enumsImportPath and externals from their paths', async () => {
+      const output = await normalizeOutput(
+        plugin(registrySchema, [], {
+          emit: 'enumRegistry',
+          enumsImportPath: './graphqlSmartEnums',
+          externalEnums: { CustomEnum: '../hand-authored/customEnum' },
+        }),
+      );
+
+      expect(output).toContain(
+        "import { Priority, Status } from './graphqlSmartEnums';",
+      );
+      expect(output).toContain(
+        "import { CustomEnum } from '../hand-authored/customEnum';",
+      );
+      expect(output).toContain(
+        'export const enumRegistry = { CustomEnum, Priority, Status } as const;',
+      );
+    });
+
+    it('should contain nothing but imports and the registry', async () => {
+      const output = await normalizeOutput(
+        plugin(registrySchema, [], {
+          emit: 'enumRegistry',
+          enumsImportPath: './graphqlSmartEnums',
+          externalEnums: { CustomEnum: '../hand-authored/customEnum' },
+        }),
+      );
+
+      expect(output).not.toContain('enumeration(');
+      expect(output).not.toContain('defineCustomEnumInput');
+      expect(output).not.toContain('export { CustomEnum }');
+      expect(output).not.toContain('export const CustomEnum');
+    });
+
+    it('should apply enumClassSuffix to generated and external identifiers', async () => {
+      const output = await normalizeOutput(
+        plugin(registrySchema, [], {
+          emit: 'enumRegistry',
+          enumsImportPath: './graphqlSmartEnums',
+          enumClassSuffix: 'Enum',
+          externalEnums: { CustomEnum: '../hand-authored/customEnum' },
+        }),
+      );
+
+      expect(output).toContain(
+        "import { PriorityEnum, StatusEnum } from './graphqlSmartEnums';",
+      );
+      expect(output).toContain(
+        "import { CustomEnumEnum } from '../hand-authored/customEnum';",
+      );
+      expect(output).toContain(
+        'export const enumRegistry = { CustomEnum: CustomEnumEnum, Priority: PriorityEnum, Status: StatusEnum } as const;',
+      );
+    });
+
+    it('should respect skipEnums', async () => {
+      const output = await normalizeOutput(
+        plugin(registrySchema, [], {
+          emit: 'enumRegistry',
+          enumsImportPath: './graphqlSmartEnums',
+          skipEnums: ['Priority'],
+          externalEnums: { CustomEnum: '../hand-authored/customEnum' },
+        }),
+      );
+
+      expect(output).not.toContain('Priority');
+      expect(output).toContain(
+        'export const enumRegistry = { CustomEnum, Status } as const;',
+      );
+    });
+
+    it('should work without externalEnums (generated-only registry)', async () => {
+      const schema = buildSchema('enum Status { OPEN }');
+
+      const output = await normalizeOutput(
+        plugin(schema, [], {
+          emit: 'enumRegistry',
+          enumsImportPath: './graphqlSmartEnums',
+        }),
+      );
+
+      expect(output).toContain(
+        "import { Status } from './graphqlSmartEnums';",
+      );
+      expect(output).toContain(
+        'export const enumRegistry = { Status } as const;',
+      );
+    });
+
+    it('should omit the generated import when every enum is external', async () => {
+      const schema = buildSchema('enum CustomEnum { A }');
+
+      const output = await normalizeOutput(
+        plugin(schema, [], {
+          emit: 'enumRegistry',
+          enumsImportPath: './graphqlSmartEnums',
+          externalEnums: { CustomEnum: '../hand-authored/customEnum' },
+        }),
+      );
+
+      expect(output).not.toContain('./graphqlSmartEnums');
+      expect(output).toContain(
+        'export const enumRegistry = { CustomEnum } as const;',
+      );
+    });
+
+    it('should return empty output when there are no enums at all', async () => {
+      const schema = buildSchema('type Query { hello: String }');
+
+      const output = await normalizeOutput(
+        plugin(schema, [], {
+          emit: 'enumRegistry',
+          enumsImportPath: './graphqlSmartEnums',
+        }),
+      );
+
+      expect(output).toBe('');
+    });
+
+    it('should require enumsImportPath', () => {
+      expect(() =>
+        plugin(registrySchema, [], { emit: 'enumRegistry' }),
+      ).toThrow(/enumsImportPath is required/);
+    });
 
     it('should reject invalid emit values', () => {
       expect(() =>
-        plugin(definesSchema, [], { emit: 'bogus' as 'enums' }),
-      ).toThrow(/emit must be 'enums' or 'externalDefines'/);
+        plugin(registrySchema, [], { emit: 'bogus' as 'enums' }),
+      ).toThrow(/emit must be 'enums' or 'enumRegistry'/);
     });
   });
 });

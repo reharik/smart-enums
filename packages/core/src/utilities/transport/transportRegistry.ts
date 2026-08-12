@@ -3,6 +3,7 @@ import type {
   LogLevel,
   SmartEnumMappingsConfig,
 } from '../../types.js';
+import { globalSlot } from '../globalState.js';
 import { info, setLogger, getLogger, type Logger } from '../logger.js';
 
 const createLevelFilteredLogger = (logger: Logger, level: LogLevel): Logger => {
@@ -39,7 +40,13 @@ const createLevelFilteredLogger = (logger: Logger, level: LogLevel): Logger => {
   };
 };
 
-let globalEnumRegistry: Record<string, AnyEnumLike> | undefined;
+// Keyed on globalThis so every loaded copy of the library reads the same
+// registry. With a module-level `let`, `reviveAfterTransport` imported from an
+// unconfigured copy saw no registry even though `initializeSmartEnumMappings`
+// had been called — through another copy. See globalState.ts.
+const state = globalSlot<{
+  registry: Record<string, AnyEnumLike> | undefined;
+}>('enumRegistry', () => ({ registry: undefined }));
 
 /**
  * Wire-format registry for `reviveAfterTransport` / `reviveSmartEnums`.
@@ -48,7 +55,7 @@ let globalEnumRegistry: Record<string, AnyEnumLike> | undefined;
 export const initializeSmartEnumMappings = (
   config: SmartEnumMappingsConfig,
 ): void => {
-  globalEnumRegistry = config.enumRegistry;
+  state.registry = config.enumRegistry;
 
   const logLevel = config.logLevel ?? 'error';
   const logger = config.logger ?? getLogger();
@@ -63,4 +70,12 @@ export const initializeSmartEnumMappings = (
 
 export const getGlobalEnumRegistry = ():
   | Record<string, AnyEnumLike>
-  | undefined => globalEnumRegistry;
+  | undefined => state.registry;
+
+/**
+ * Reset the registry to its initial uninitialized state.
+ * Primarily useful for tests.
+ */
+export const resetSmartEnumMappings = (): void => {
+  state.registry = undefined;
+};

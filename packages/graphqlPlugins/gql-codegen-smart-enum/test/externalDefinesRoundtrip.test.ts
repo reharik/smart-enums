@@ -13,8 +13,8 @@ describe('externalDefines consumer round-trip', () => {
   describe('When a hand-written enum is built from the pinned input', () => {
     // This mirrors the documented consumer pattern: the emitted function pins
     // the input's key set, then the enum is declared like any other smart
-    // enum. Imports resolve and everything runs at module scope without a TDZ
-    // crash because the defines output imports no code at all.
+    // enum. The fixture is the enums output for an all-external schema, which
+    // imports nothing — so everything runs at module scope without a TDZ crash.
     const input = defineEntityTypeInput({
       album: { table: 'albums', soft: true },
       authorization: { table: 'auth', soft: false },

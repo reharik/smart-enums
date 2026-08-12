@@ -1,6 +1,15 @@
 import { SerializationMode } from '../types.js';
 
-let globalDefault: SerializationMode | undefined;
+import { globalSlot } from './globalState.js';
+
+// Keyed on globalThis so every loaded copy of the library resolves the same
+// default. With a module-level `let`, an enum built by one copy serialized
+// with that copy's default, and setDefaultSerializationMode called on another
+// copy silently had no effect. See globalState.ts.
+const state = globalSlot<{ mode: SerializationMode | undefined }>(
+  'serializationMode',
+  () => ({ mode: undefined }),
+);
 
 /**
  * Set the global default serialization mode for all smart-enum items
@@ -12,7 +21,7 @@ let globalDefault: SerializationMode | undefined;
  * setDefaultSerializationMode('value');
  */
 export const setDefaultSerializationMode = (mode: SerializationMode): void => {
-  globalDefault = mode;
+  state.mode = mode;
 };
 
 /**
@@ -20,7 +29,7 @@ export const setDefaultSerializationMode = (mode: SerializationMode): void => {
  * Primarily useful for tests.
  */
 export const resetDefaultSerializationMode = (): void => {
-  globalDefault = undefined;
+  state.mode = undefined;
 };
 
 /**
@@ -29,4 +38,4 @@ export const resetDefaultSerializationMode = (): void => {
  */
 export const resolveSerializationMode = (
   perEnum: SerializationMode | undefined,
-): SerializationMode => perEnum ?? globalDefault ?? 'wrapped';
+): SerializationMode => perEnum ?? state.mode ?? 'wrapped';

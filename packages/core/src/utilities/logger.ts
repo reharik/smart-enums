@@ -4,6 +4,7 @@
  * This interface allows users to inject their own logging implementation
  * or use the default console logger.
  */
+import { globalSlot } from './globalState.js';
 
 export type Logger = {
   debug(message: string, ...args: unknown[]): void;
@@ -34,10 +35,15 @@ const consoleLogger: Logger = {
 };
 
 /**
- * Global logger instance
- * Defaults to console logger
+ * Global logger instance, defaults to console logger.
+ *
+ * Keyed on globalThis so every loaded copy of the library logs through the
+ * same instance — a logger injected via one copy applies to all of them.
+ * See globalState.ts.
  */
-let globalLogger: Logger = consoleLogger;
+const state = globalSlot<{ logger: Logger }>('logger', () => ({
+  logger: consoleLogger,
+}));
 
 /**
  * Sets the global logger instance
@@ -58,7 +64,7 @@ let globalLogger: Logger = consoleLogger;
  * ```
  */
 export function setLogger(logger: Logger): void {
-  globalLogger = logger;
+  state.logger = logger;
 }
 
 /**
@@ -67,22 +73,22 @@ export function setLogger(logger: Logger): void {
  * @returns The current logger instance
  */
 export function getLogger(): Logger {
-  return globalLogger;
+  return state.logger;
 }
 
 // Internal convenience functions for library use
 export function debug(message: string, ...args: unknown[]): void {
-  globalLogger.debug(message, ...args);
+  state.logger.debug(message, ...args);
 }
 
 export function info(message: string, ...args: unknown[]): void {
-  globalLogger.info(message, ...args);
+  state.logger.info(message, ...args);
 }
 
 export function warn(message: string, ...args: unknown[]): void {
-  globalLogger.warn(message, ...args);
+  state.logger.warn(message, ...args);
 }
 
 export function error(message: string, ...args: unknown[]): void {
-  globalLogger.error(message, ...args);
+  state.logger.error(message, ...args);
 }

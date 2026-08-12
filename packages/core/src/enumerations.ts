@@ -14,8 +14,12 @@ import {
   type PropertyAutoFormatter,
   type StandardEnumItem,
 } from './types.js';
+import './utilities/duplicateLoadDetection.js';
 import { enumItemsEqual } from './utilities/enumItemsEqual.js';
+import { globalSlot } from './utilities/globalState.js';
+import { warn } from './utilities/logger.js';
 import { resolveSerializationMode } from './utilities/serializationMode.js';
+import { parseStackFrames } from './utilities/stackLocation.js';
 
 export type EnumItem<TEnum> = {
   [K in keyof TEnum]: TEnum[K] extends { __smart_enum_brand: true }
@@ -28,21 +32,43 @@ export type EnumItem<TEnum> = {
  *
  * Enum names are the wire/identity key: equality keys on `__smart_enum_type`
  * (see {@link enumItemsEqual}) and revival looks enums up by name (see
- * `reviveSmartEnums`). Two *different* enums sharing a name would make both
- * ambiguous, so we reject that collision here — a name may only be reused if the
- * new definition has the *same* members (that is harmless: members compare equal
- * across instances under the string-based identity).
+ * `reviveSmartEnums`). Two *different* enums sharing a name make both
+ * ambiguous, so registering a name with new members warns — a name reused
+ * with the *same* members is harmless (members compare equal across instances
+ * under the string-based identity) and stays quiet.
  *
  * The signature is the sorted set of `key=value` pairs; extras/formatters/
  * `serializeAs` don't affect wire identity and are intentionally ignored.
  *
- * Limitation: this registry is module-scoped, so it only catches collisions
- * within a single library instance — duplicate copies of `@reharik/smart-enum`
- * each keep their own registry. That is acceptable: it catches the likely
- * accidental case (defining conflicting enums in one app) and documents the
- * invariant the string-based identity relies on.
+ * The registry is keyed on globalThis (see globalState.ts), so the guard holds
+ * across duplicate copies of `@reharik/smart-enum`. That realm-global scope is
+ * also why this warns instead of throwing: the registry outlives module
+ * reloads, so a dev-server hot reload that re-evaluates an enum module after a
+ * members edit re-registers a changed signature. That is ordinary development,
+ * not a duplicate-name mistake — fatal would fail every HMR cycle. The
+ * registration is updated after warning so the steady state stays quiet.
  */
-const registeredEnumSignatures = new Map<string, string>();
+type EnumRegistration = { signature: string; location: string | undefined };
+
+const registeredEnumSignatures = globalSlot<Map<string, EnumRegistration>>(
+  'enumNameRegistry',
+  () => new Map<string, EnumRegistration>(),
+);
+
+/**
+ * Best-effort file that called `enumeration()` — the frame after
+ * `enumeration` itself. Falls back to this library copy's own frame when
+ * function names have been minified away (still distinguishes copies in the
+ * cross-copy collision case), or undefined when the stack is unparseable.
+ */
+const getRegistrationLocation = (): string | undefined => {
+  const frames = parseStackFrames(
+    new Error('stack probe for enum registration location').stack,
+  );
+  const idx = frames.findIndex(f => f.fn === 'enumeration');
+  if (idx !== -1 && idx + 1 < frames.length) return frames[idx + 1].file;
+  return frames[0]?.file;
+};
 
 const registerEnumName = (
   enumType: string,
@@ -52,16 +78,21 @@ const registerEnumName = (
     .map(item => `${item.key}=${item.value}`)
     .sort()
     .join('|');
+  const location = getRegistrationLocation();
 
   const existing = registeredEnumSignatures.get(enumType);
-  if (existing !== undefined && existing !== signature) {
-    throw new Error(
-      `Enum name '${enumType}' is already defined with different members; ` +
-        `enum names must be unique because they are the wire/identity key ` +
-        `(equality and revival key on __smart_enum_type + value).`,
+  if (existing !== undefined && existing.signature !== signature) {
+    warn(
+      `Enum name '${enumType}' was redefined with different members ` +
+        `(previously registered at ${existing.location ?? 'unknown location'}, ` +
+        `now at ${location ?? 'unknown location'}). Enum names are the ` +
+        `wire/identity key (equality and revival key on __smart_enum_type + ` +
+        `value), so two different enums sharing a name make both ambiguous. ` +
+        `A hot reload after editing members is harmless; otherwise rename ` +
+        `one of the enums.`,
     );
   }
-  registeredEnumSignatures.set(enumType, signature);
+  registeredEnumSignatures.set(enumType, { signature, location });
 };
 
 function normalizeInput<TInput extends readonly string[] | ObjectEnumInput>(

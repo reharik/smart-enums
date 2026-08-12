@@ -10,6 +10,7 @@
 import { enumeration } from '../enumerations.js';
 import { isSmartEnumItem } from '../utilities/typeGuards.js';
 import { enumItemsEqual } from '../utilities/enumItemsEqual.js';
+import { getLogger, setLogger } from '../utilities/logger.js';
 
 // swc emits CommonJS for tests, so `require` exists at runtime; no @types/node.
 declare const require: (id: string) => unknown;
@@ -21,6 +22,20 @@ const loadCopy = (): typeof import('../index.js') => {
   });
   if (!mod) throw new Error('failed to load isolated copy');
   return mod;
+};
+
+// The name-uniqueness guard warns rather than throws: the registry is
+// realm-global and outlives module reloads, so a members edit + hot reload
+// re-registers a changed signature — ordinary development, not a
+// duplicate-name mistake.
+const captureWarnings = (): { lines: string[]; restore: () => void } => {
+  const lines: string[] = [];
+  const original = getLogger();
+  setLogger({
+    ...original,
+    warn: (message: string) => lines.push(message),
+  });
+  return { lines, restore: () => setLogger(original) };
 };
 
 describe('package-resistant equality and detection', () => {
@@ -152,20 +167,45 @@ describe('package-resistant equality and detection', () => {
   });
 
   describe('creation-time name-uniqueness guard', () => {
-    it('throws when a name is reused with different members', () => {
-      enumeration('DupDifferent', { input: { a: {} } });
-      expect(() => enumeration('DupDifferent', { input: { b: {} } })).toThrow(
-        /already defined with different members/,
-      );
+    it('warns when a name is reused with different members, naming the enum', () => {
+      const { lines, restore } = captureWarnings();
+      try {
+        enumeration('DupDifferent', { input: { a: {} } });
+        const madeAnyway = enumeration('DupDifferent', { input: { b: {} } });
+
+        expect(lines).toHaveLength(1);
+        expect(lines[0]).toContain(
+          "Enum name 'DupDifferent' was redefined with different members",
+        );
+        expect(madeAnyway.b.value).toBe('B');
+      } finally {
+        restore();
+      }
     });
 
-    it('allows re-registering the same name with identical members', () => {
-      expect(() =>
-        enumeration('DupSame', { input: { a: {}, b: {} } }),
-      ).not.toThrow();
-      expect(() =>
-        enumeration('DupSame', { input: { a: {}, b: {} } }),
-      ).not.toThrow();
+    it('goes quiet again once the new definition is re-registered (hot-reload steady state)', () => {
+      const { lines, restore } = captureWarnings();
+      try {
+        enumeration('DupSteadyState', { input: { a: {} } });
+        enumeration('DupSteadyState', { input: { b: {} } }); // the "edit" warns…
+        enumeration('DupSteadyState', { input: { b: {} } }); // …the next reload doesn't
+
+        expect(lines).toHaveLength(1);
+      } finally {
+        restore();
+      }
+    });
+
+    it('stays silent re-registering the same name with identical members', () => {
+      const { lines, restore } = captureWarnings();
+      try {
+        enumeration('DupSame', { input: { a: {}, b: {} } });
+        enumeration('DupSame', { input: { a: {}, b: {} } });
+
+        expect(lines).toEqual([]);
+      } finally {
+        restore();
+      }
     });
   });
 });

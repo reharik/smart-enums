@@ -25,25 +25,37 @@ export type SmartEnumPluginConfig = SharedPluginConfig & {
   emitDescriptionsAsDisplay?: boolean;
   serializeAs?: 'value' | 'wrapped';
   /**
-   * Map of GraphQL enum type name → relative import path. Each name must exist
-   * in the schema. Listing a name here implies it is skipped from generation;
-   * it does not also need to appear in `skipEnums` (though it may). Imports
-   * populate `enumRegistry` for `patchSchemaEnumSerializers` without
-   * re-exporting the symbols.
+   * Map of GraphQL enum type name → relative import path (relative to the
+   * OUTPUT FILE) for hand-authored enums. Each name must exist in the schema.
+   * Listing a name here implies it is skipped from generation; it does not
+   * also need to appear in `skipEnums` (though it may).
+   *
+   * When set, the 'enums' output additionally emits a `define<Name>Input`
+   * function per entry (schema key list + input pinning) and STOPS emitting
+   * `enumRegistry` — the registry must then come from a second `generates`
+   * entry with `emit: 'enumRegistry'`. Keeping the registry (the only piece
+   * that imports user code) out of this file is what prevents import cycles:
+   * user code freely imports generated enums, and hand-authored enums' import
+   * closures may include that user code, so this file must never import back.
    */
   externalEnums?: Record<string, string>;
   /**
    * Which output to produce.
    *
-   * - 'enums' (default): generated enums, external-enum imports, `enumRegistry`.
-   * - 'externalDefines': schema key lists and `define<Name>Input` functions for
-   *   each `externalEnums` entry. Each function pins a hand-written enum's
-   *   input object to the schema's key set and returns it unchanged, typed as
-   *   the plain input type — cheap for declaration emit, and the output
-   *   imports nothing at all, so hand-written enums can import from it without
-   *   creating an import cycle with the 'enums' output.
+   * - 'enums' (default): generated enums; plus, when `externalEnums` is set,
+   *   `define<Name>Input` functions that pin each hand-authored enum's input
+   *   to the schema's key set. Never imports user code.
+   * - 'enumRegistry': the `enumRegistry` barrel only — imports generated
+   *   enums from `enumsImportPath` and hand-authored enums from their
+   *   `externalEnums` paths. Emit this into its own file that only bootstrap
+   *   code imports (a pure sink in the module graph).
    */
-  emit?: 'enums' | 'externalDefines';
+  emit?: 'enums' | 'enumRegistry';
+  /**
+   * Required when `emit: 'enumRegistry'`: import path of the 'enums' output,
+   * relative to the registry output file (e.g. './graphqlSmartEnums').
+   */
+  enumsImportPath?: string;
 };
 
 const PLUGIN_PREFIX = '[graphql-codegen-smart-enum]';
@@ -145,11 +157,22 @@ const validateConfig = (config: SmartEnumPluginConfig): void => {
   if (
     config.emit !== undefined &&
     config.emit !== 'enums' &&
-    config.emit !== 'externalDefines'
+    config.emit !== 'enumRegistry'
   ) {
     throw new TypeError(
-      `[graphql-codegen-smart-enum] config.emit must be 'enums' or 'externalDefines'`,
+      `[graphql-codegen-smart-enum] config.emit must be 'enums' or 'enumRegistry'`,
     );
+  }
+
+  if (config.emit === 'enumRegistry') {
+    if (
+      typeof config.enumsImportPath !== 'string' ||
+      config.enumsImportPath.trim().length === 0
+    ) {
+      throw new TypeError(
+        `[graphql-codegen-smart-enum] config.enumsImportPath is required (non-empty) when emit is 'enumRegistry' — it is the import path of the 'enums' output relative to the registry file.`,
+      );
+    }
   }
 };
 
@@ -516,32 +539,64 @@ const buildDefineBlock = (
   ];
 };
 
-const buildExternalDefinesOutput = (
+const buildEnumRegistryOutput = (
   schema: GraphQLSchema,
   config: SmartEnumPluginConfig,
 ): string => {
+  const enumClassSuffix = config.enumClassSuffix ?? DEFAULT_ENUM_CLASS_SUFFIX;
   const externalEnumTypeNames = Object.keys(config.externalEnums ?? {}).sort(
     (a, b) => a.localeCompare(b),
   );
 
-  if (externalEnumTypeNames.length === 0) {
+  // externalEnums implies skip, same as in the enums output.
+  const enumTypes = filterSkippedEnumTypes(getEnumTypes(schema), [
+    ...(config.skipEnums ?? []),
+    ...externalEnumTypeNames,
+  ]);
+
+  const generatedRows = enumTypes.map(enumType => ({
+    graphqlTypeName: enumType.name,
+    identifier: `${enumType.name}${enumClassSuffix}`,
+  }));
+
+  const externalRows = externalEnumTypeNames.map(typeName => ({
+    graphqlTypeName: typeName,
+    identifier: `${typeName}${enumClassSuffix}`,
+    importPath: config.externalEnums![typeName],
+  }));
+
+  if (generatedRows.length === 0 && externalRows.length === 0) {
     return '';
   }
 
-  const enumTypeByName = new Map(
-    getEnumTypes(schema).map(enumType => [enumType.name, enumType]),
+  const generatedImportLine =
+    generatedRows.length > 0
+      ? `import { ${generatedRows
+          .map(row => row.identifier)
+          .sort((a, b) => a.localeCompare(b))
+          .join(', ')} } from '${escapeString(config.enumsImportPath!)}';`
+      : '';
+
+  const externalImportLines = buildExternalImportLines(externalRows);
+
+  const combinedRows = [...generatedRows, ...externalRows].sort((a, b) =>
+    a.graphqlTypeName.localeCompare(b.graphqlTypeName, undefined, {
+      sensitivity: 'base',
+    }),
   );
 
-  const lines: string[] = [...HEADER_LINES, '', ...EXACT_HELPER_LINES];
+  const registryLine = `export const enumRegistry = { ${combinedRows
+    .map(row => formatRegistryProperty(row.graphqlTypeName, row.identifier))
+    .join(', ')} } as const;`;
 
-  for (const enumName of externalEnumTypeNames) {
-    lines.push(
-      '',
-      ...buildDefineBlock(enumTypeByName.get(enumName)!, config.serializeAs),
-    );
+  const lines: string[] = [...HEADER_LINES];
+  if (generatedImportLine.length > 0) {
+    lines.push('', generatedImportLine);
   }
-
-  lines.push('');
+  if (externalImportLines.length > 0) {
+    lines.push('', ...externalImportLines);
+  }
+  lines.push('', registryLine, '');
   return lines.join('\n');
 };
 
@@ -553,8 +608,8 @@ export const plugin: PluginFunction<SmartEnumPluginConfig> = (
   validateConfig(config);
   validateExternalEnumsConfig(schema, config);
 
-  if (config.emit === 'externalDefines') {
-    return buildExternalDefinesOutput(schema, config);
+  if (config.emit === 'enumRegistry') {
+    return buildEnumRegistryOutput(schema, config);
   }
 
   const enumClassSuffix = config.enumClassSuffix ?? DEFAULT_ENUM_CLASS_SUFFIX;
@@ -571,13 +626,15 @@ export const plugin: PluginFunction<SmartEnumPluginConfig> = (
     ...externalEnumTypeNames,
   ]);
 
-  const externalRegistryEntries = externalEnumTypeNames.map(typeName => ({
-    graphqlTypeName: typeName,
-    importPath: config.externalEnums![typeName],
-    identifier: `${typeName}${enumClassSuffix}`,
-  }));
+  // With external enums, the registry moves to its own emit ('enumRegistry')
+  // and this file emits input definers instead. That keeps this output free of
+  // user imports: user code imports generated enums from here, and the
+  // hand-authored enums' import closures may include that user code — an
+  // import back would form a load-order-dependent cycle that TDZ-crashes at
+  // module evaluation.
+  const hasExternalEnums = externalEnumTypeNames.length > 0;
 
-  if (enumTypes.length === 0 && externalRegistryEntries.length === 0) {
+  if (enumTypes.length === 0 && !hasExternalEnums) {
     return '';
   }
 
@@ -594,33 +651,19 @@ export const plugin: PluginFunction<SmartEnumPluginConfig> = (
   const typeLines = blocks.map(block => block.typeLine);
   const enumLines = blocks.map(block => block.enumLine);
 
-  const generatedRegistryRows = enumTypes.map(enumType => ({
-    graphqlTypeName: enumType.name,
-    identifier: `${enumType.name}${enumClassSuffix}`,
-  }));
-
-  const combinedRegistryRows = [
-    ...generatedRegistryRows,
-    ...externalRegistryEntries.map(e => ({
-      graphqlTypeName: e.graphqlTypeName,
-      identifier: e.identifier,
-    })),
-  ].sort((a, b) =>
-    a.graphqlTypeName.localeCompare(b.graphqlTypeName, undefined, {
-      sensitivity: 'base',
-    }),
-  );
-
-  const registryProperties = combinedRegistryRows.map(row =>
-    formatRegistryProperty(row.graphqlTypeName, row.identifier),
-  );
-
+  // Registry stays inline only when there are no external enums (it then has
+  // no user imports and is harmless here).
   const registryLine =
-    registryProperties.length > 0
-      ? `export const enumRegistry = { ${registryProperties.join(', ')} } as const;`
+    !hasExternalEnums && enumTypes.length > 0
+      ? `export const enumRegistry = { ${enumTypes
+          .map(enumType =>
+            formatRegistryProperty(
+              enumType.name,
+              `${enumType.name}${enumClassSuffix}`,
+            ),
+          )
+          .join(', ')} } as const;`
       : '';
-
-  const externalImportLines = buildExternalImportLines(externalRegistryEntries);
 
   const smartEnumImportLine =
     enumTypes.length > 0
@@ -640,16 +683,24 @@ export const plugin: PluginFunction<SmartEnumPluginConfig> = (
     appendBlock([smartEnumImportLine]);
   }
 
-  if (externalImportLines.length > 0) {
-    appendBlock(externalImportLines);
-  }
-
   appendBlock(inputLines);
   appendBlock(typeLines);
   appendBlock(enumLines);
 
   if (registryLine.length > 0) {
     appendBlock([registryLine]);
+  }
+
+  if (hasExternalEnums) {
+    const enumTypeByName = new Map(
+      getEnumTypes(schema).map(enumType => [enumType.name, enumType]),
+    );
+    appendBlock(EXACT_HELPER_LINES);
+    for (const enumName of externalEnumTypeNames) {
+      appendBlock(
+        buildDefineBlock(enumTypeByName.get(enumName)!, config.serializeAs),
+      );
+    }
   }
 
   lines.push('');

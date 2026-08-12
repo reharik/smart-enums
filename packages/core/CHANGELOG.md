@@ -5,6 +5,123 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] - Unreleased
+
+> **Release coordination:** `@reharik/smart-enum-knex` has an outstanding fix of
+> the same "loud beats silent" family — under `strict`, a mapping key that
+> matches no row field is currently ignored silently. Plan a coordinated
+> release of both packages so the two behavior changes land (and are documented)
+> together.
+
+### Why this release exists — the incident
+
+A consumer's Nx monorepo ended up with two stray nested installs at
+`packages/*/node_modules/@reharik/smart-enum`, created by a container-side
+`npm install` through a bind mount. They were invisible in `package-lock.json`
+(a single hoisted entry; every package declared `^0.9.0`) and only showed up as
+missing "deduped" markers in `npm ls`. The effect: enums built by one copy of
+the library serialized through *that copy's* module-level default, so
+`setDefaultSerializationMode('value')` called on the other copy had no effect.
+The result was `{ __smart_enum_type, value }` objects on the wire where bare
+strings were expected — silently, and only on the REST path, since the GraphQL
+path mapped the items to plain objects before serialization ever ran.
+
+The lesson this release encodes: **module-level mutable state plus multiple
+module instances equals silent wrong behavior.** The library cannot prevent
+duplicate instances — bundling, hoisting accidents, mixed ESM/CJS loading, and
+consumers' build configs all create them, and until now even importing two of
+this package's *own entry points* (`.` and `./transport`, say) loaded two
+copies of every internal module, because each entry is bundled standalone.
+What the library can do is make its state survive duplication, the same way
+`0.6.0` made `.equals()` compare string identity instead of references.
+**Do not reintroduce module-level mutable state**; use the `globalSlot` helper
+(`utilities/globalState.ts`) instead.
+
+### Changed
+
+- **All shared mutable state now lives on `globalThis`**, keyed by
+  `Symbol.for('@reharik/smart-enum:…')`, so every loaded copy of the library —
+  duplicate install, extra bundle chunk, ESM+CJS pair, or two of this package's
+  own entry points — reads and writes the same state. No API signatures
+  changed. The four pieces, and what each one silently broke when a second
+  module instance existed and only one was configured:
+  - _Default serialization mode_ (`setDefaultSerializationMode`): enums built
+    by an unconfigured copy kept emitting wrapped `{ __smart_enum_type, value }`
+    shapes — the incident above.
+  - _Transport enum registry_ (`initializeSmartEnumMappings`):
+    `reviveAfterTransport` imported from an unconfigured copy silently returned
+    payloads unrevived, handing back wire shapes *typed* as enum members.
+  - _Logger_ (`SmartEnumMappingsConfig.logger` / `logLevel`): an injected
+    logger and level filter didn't apply to other copies, which kept logging
+    unfiltered to the console.
+  - _Enum-name uniqueness registry_: the creation-time guard against two
+    different enums sharing a name (the wire/identity key) could not see names
+    registered through another copy. It now holds realm-wide — **and it now
+    warns instead of throwing.** The severity changed *because* the scope
+    changed: module-scoped, a name collision was always a real duplicate-name
+    mistake, so throwing was right. Realm-global, the registry outlives module
+    reloads, so a dev-server hot reload that re-evaluates an enum module after
+    a members edit re-registers a changed signature — ordinary development,
+    not a mistake — and throwing would fail every HMR cycle. This guard's
+    failure mode was also never silent wrong output, only a *missing warning*;
+    the other three slots earn their realm-global strictness precisely because
+    theirs was. So: a redefinition with different members logs a warning
+    through the library's logger (filterable) naming the enum and the
+    best-effort file of each registration, the registration is updated so the
+    post-reload steady state stays quiet, and identical re-registration
+    remains silent as before. Code that relied on the 0.6.0 throw
+    (`Enum name '…' is already defined with different members`) should watch
+    for the warning instead.
+- **BREAKING-ish: `reviveAfterTransport` now throws when no registry has been
+  initialized** instead of returning the payload untouched. The silent
+  pass-through was a wrong-data path that fired even with a single library
+  instance whenever `initializeSmartEnumMappings` was never called: wire shapes
+  came back typed as enum members and the failure surfaced far downstream.
+  Nothing useful can be done with a half-revived payload, so it is now loud.
+  Migration — if you relied on the pass-through:
+
+  ```ts
+  // before: silently returned `payload` unrevived when uninitialized
+  const dto = reviveAfterTransport<Dto>(payload);
+
+  // after: initialize once at startup, before any revival
+  initializeSmartEnumMappings({ enumRegistry: { Status, Color } });
+  const dto = reviveAfterTransport<Dto>(payload);
+  ```
+
+- `getSubsetByProp` now compares prop values that are themselves enum members
+  by string identity (`__smart_enum_type` + `value`) instead of reference
+  identity. Passing a member from a second `enumeration()` call or a duplicate
+  library copy previously returned a silently *empty* subset — the same failure
+  `.equals()` was hardened against in `0.6.0`, applied to the one comparison
+  that still used references. Plain string/number props are compared exactly as
+  before.
+- `patchSchemaEnumSerializers` is now idempotent per schema (stamped with a
+  non-enumerable string marker, so a second *copy* of the library recognizes it
+  too). Double-patching previously wrapped `parseValue` twice, and the second
+  wrapper called `fromValue(<enum item>)` — which threw `No enum value found`,
+  an error that names the wrong thing entirely and costs an hour of debugging
+  in exactly the duplicate-instance setups above.
+
+### Added
+
+- **Duplicate-install detection.** On load, each copy of the library registers
+  its version and on-disk location (directory) in a realm-global slot; when a
+  second *distinct location* registers, the library logs a warning naming every
+  copy (`0.9.0 at …/node_modules/@reharik/smart-enum/dist, 0.9.0 at
+  packages/api/node_modules/@reharik/smart-enum/dist`) and suggesting
+  `npm ls @reharik/smart-enum`. It's a warning, not an error: string-based
+  identity and globalThis-keyed state mean duplicates mostly *work* — but a
+  duplicate install is a packaging bug, and the silent kind cost a real
+  debugging session (see the incident above). Legitimate multi-instance cases —
+  the package's own entry-point bundles, ESM+CJS pairs — share one directory
+  and are deliberately not flagged; unidentifiable locations stay silent rather
+  than false-positive.
+- `resetSmartEnumMappings()` — clears the transport registry back to
+  uninitialized; the registry counterpart of `resetDefaultSerializationMode`,
+  primarily for tests (which now need it, since the registry outlives a module
+  instance).
+
 ## [0.9.0] - 2026-08-04
 
 ### Added

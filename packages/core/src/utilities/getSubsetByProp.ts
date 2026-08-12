@@ -7,6 +7,7 @@ import type {
   StandardEnumItem,
 } from '../types.js';
 
+import { enumItemsEqual } from './enumItemsEqual.js';
 import { isSmartEnumItem } from './typeGuards.js';
 
 const RESERVED_ENUM_MEMBER_KEYS = new Set([
@@ -52,7 +53,12 @@ export const getSubsetByProp = <
       continue;
     }
     const item = entry as StandardEnumItem;
-    if (Object.is((item as Record<string, unknown>)[prop], value)) {
+    const propValue = (item as Record<string, unknown>)[prop];
+    // When the prop itself holds an enum member, compare by string identity —
+    // `Object.is` on members is reference equality, which silently fails
+    // across separate enumeration() calls and duplicate library copies (the
+    // same reason `.equals()` is value-based).
+    if (Object.is(propValue, value) || enumItemsEqual(propValue, value)) {
       memberEntries[key] = item;
       matching.push(item);
     }

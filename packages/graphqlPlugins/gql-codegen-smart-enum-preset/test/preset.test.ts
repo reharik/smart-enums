@@ -99,33 +99,24 @@ describe('smart-enum preset', () => {
       );
     });
 
-    it("should throw when externalEnums is missing in 'external-defines' mode", () => {
-      const options = buildOptions({
-        presetConfig: { mode: 'external-defines' },
-      });
-      expect(() => preset.buildGeneratesSection(options as never)).toThrow(
-        /externalEnums must be a non-empty object in 'external-defines' mode/,
-      );
-    });
-
-    it("should throw when externalEnums is empty in 'external-defines' mode", () => {
-      const options = buildOptions({
-        presetConfig: { mode: 'external-defines', externalEnums: {} },
-      });
-      expect(() => preset.buildGeneratesSection(options as never)).toThrow(
-        /externalEnums must be a non-empty object in 'external-defines' mode/,
-      );
-    });
-
-    it("should throw when externalEnums is not a plain object in 'external-defines' mode", () => {
+    it('should throw when externalEnums is not a plain object', () => {
       const options = buildOptions({
         presetConfig: {
-          mode: 'external-defines',
+          mode: 'enums',
           externalEnums: ['PaymentStatus'],
         },
       });
       expect(() => preset.buildGeneratesSection(options as never)).toThrow(
-        /externalEnums must be a non-empty object in 'external-defines' mode/,
+        /externalEnums must be a plain object/,
+      );
+    });
+
+    it("should reject the removed 'external-defines' mode", () => {
+      const options = buildOptions({
+        presetConfig: { mode: 'external-defines' },
+      });
+      expect(() => preset.buildGeneratesSection(options as never)).toThrow(
+        /presetConfig\.mode must be one of/,
       );
     });
   });
@@ -186,99 +177,117 @@ describe('smart-enum preset', () => {
     });
   });
 
-  describe("'external-defines' mode", () => {
+  describe("'enums' mode with externalEnums (auto-split registry)", () => {
     const externalEnums = { PaymentStatus: '../enums/paymentStatus' };
 
-    it('should produce a single output configured to run the enum-definition plugin', () => {
+    type PluginRunner = Record<
+      string,
+      {
+        plugin: (
+          schema: unknown,
+          documents: unknown,
+          config: unknown,
+        ) => string;
+      }
+    >;
+
+    it('should produce two outputs: the enums file and a derived sibling registry file', () => {
       const options = buildOptions({
-        presetConfig: { mode: 'external-defines', externalEnums },
+        baseOutputDir: './src/enums/graphqlSmartEnums.ts',
+        presetConfig: { mode: 'enums', externalEnums },
+      });
+
+      const result = preset.buildGeneratesSection(options as never);
+
+      expect(result).toHaveLength(2);
+      expect(result[0]?.filename).toBe('./src/enums/graphqlSmartEnums.ts');
+      expect(result[1]?.filename).toBe(
+        './src/enums/graphqlSmartEnumsRegistry.ts',
+      );
+      expect(result[0]?.plugins).toEqual([{ [smartEnumPluginName]: {} }]);
+      expect(result[1]?.plugins).toEqual([{ [smartEnumPluginName]: {} }]);
+    });
+
+    it('should configure the registry entry with emit: enumRegistry and a derived enumsImportPath', () => {
+      const options = buildOptions({
+        baseOutputDir: './src/enums/graphqlSmartEnums.ts',
+        presetConfig: {
+          mode: 'enums',
+          externalEnums,
+          skipEnums: ['Internal'],
+          enumClassSuffix: 'Enum',
+        },
+      });
+
+      const result = preset.buildGeneratesSection(options as never);
+      const enumsConfig = result[0]?.config as Record<string, unknown>;
+      const registryConfig = result[1]?.config as Record<string, unknown>;
+
+      expect(enumsConfig).not.toHaveProperty('emit');
+      expect(enumsConfig.externalEnums).toEqual(externalEnums);
+
+      expect(registryConfig.emit).toBe('enumRegistry');
+      expect(registryConfig.enumsImportPath).toBe('./graphqlSmartEnums');
+      expect(registryConfig.externalEnums).toEqual(externalEnums);
+      expect(registryConfig.skipEnums).toEqual(['Internal']);
+      expect(registryConfig.enumClassSuffix).toBe('Enum');
+    });
+
+    it('should produce a single output when externalEnums is absent', () => {
+      const options = buildOptions({
+        presetConfig: { mode: 'enums' },
       });
 
       const result = preset.buildGeneratesSection(options as never);
 
       expect(result).toHaveLength(1);
-      expect(result[0]?.plugins).toEqual([{ [smartEnumPluginName]: {} }]);
-
-      const map = result[0]?.pluginMap as
-        | Record<string, { plugin?: unknown }>
-        | undefined;
-      expect(typeof map?.[smartEnumPluginName]?.plugin).toBe('function');
     });
 
-    it("should set emit: 'externalDefines' and forward externalEnums and serializeAs", () => {
+    it('should produce a single output when externalEnums is empty', () => {
       const options = buildOptions({
-        presetConfig: {
-          mode: 'external-defines',
-          externalEnums,
-          serializeAs: 'value',
-        },
+        presetConfig: { mode: 'enums', externalEnums: {} },
       });
 
       const result = preset.buildGeneratesSection(options as never);
-      const config = result[0]?.config as Record<string, unknown>;
 
-      expect(config.emit).toBe('externalDefines');
-      expect(config.externalEnums).toEqual(externalEnums);
-      expect(config.serializeAs).toBe('value');
+      expect(result).toHaveLength(1);
     });
 
-    it('should not include serializeAs when unset', () => {
+    it('should emit an enums file with definers and no user imports, and a registry file that has both', () => {
       const options = buildOptions({
-        presetConfig: { mode: 'external-defines', externalEnums },
+        baseOutputDir: './src/enums/graphqlSmartEnums.ts',
+        presetConfig: { mode: 'enums', externalEnums },
       });
 
       const result = preset.buildGeneratesSection(options as never);
-      const config = result[0]?.config as Record<string, unknown>;
 
-      expect(config).not.toHaveProperty('serializeAs');
-    });
+      const enumsOutput = (result[0]?.pluginMap as PluginRunner)[
+        smartEnumPluginName
+      ]!.plugin(testSchema, [], result[0]?.config);
+      const registryOutput = (result[1]?.pluginMap as PluginRunner)[
+        smartEnumPluginName
+      ]!.plugin(testSchema, [], result[1]?.config);
 
-    it("should win over a consumer-supplied emit in the output-level config", () => {
-      const options = buildOptions({
-        config: { emit: 'enums' },
-        presetConfig: { mode: 'external-defines', externalEnums },
-      });
-
-      const result = preset.buildGeneratesSection(options as never);
-      const config = result[0]?.config as Record<string, unknown>;
-
-      expect(config.emit).toBe('externalDefines');
-    });
-
-    it('should produce a defines-only output that imports no user module', () => {
-      const options = buildOptions({
-        presetConfig: { mode: 'external-defines', externalEnums },
-      });
-
-      const result = preset.buildGeneratesSection(options as never);
-      const map = result[0]?.pluginMap as Record<
-        string,
-        {
-          plugin: (
-            schema: unknown,
-            documents: unknown,
-            config: unknown,
-          ) => string;
-        }
-      >;
-
-      const output = map[smartEnumPluginName]!.plugin(
-        testSchema,
-        [],
-        result[0]?.config,
-      );
-
-      expect(output).toContain('export const paymentStatusKeys = [');
-      expect(output).toContain('export const definePaymentStatusInput = <');
-      expect(output).not.toContain('enumRegistry');
-      // no generated enum bodies — those belong to the 'enums' target
-      // (the @example JSDoc mentions enumeration(); only real code lines count)
-      expect(output).not.toMatch(/^export const PaymentStatus = enumeration/m);
-
-      const realImports = [
-        ...output.matchAll(/^import .+ from '([^']+)';$/gm),
+      // Enums file: generated enums + definer, no registry, no user imports.
+      expect(enumsOutput).toContain('export const definePaymentStatusInput');
+      expect(enumsOutput).toContain('export const SortDirection = enumeration');
+      expect(enumsOutput).not.toContain('enumRegistry');
+      const enumsImports = [
+        ...enumsOutput.matchAll(/^import .+ from '([^']+)';$/gm),
       ].map(match => match[1]);
-      expect(realImports).toEqual([]);
+      expect(enumsImports).toEqual(['@reharik/smart-enum']);
+
+      // Registry file: imports both sides, exports only the registry.
+      expect(registryOutput).toContain(
+        "import { Internal, SortDirection } from './graphqlSmartEnums';",
+      );
+      expect(registryOutput).toContain(
+        "import { PaymentStatus } from '../enums/paymentStatus';",
+      );
+      expect(registryOutput).toContain(
+        'export const enumRegistry = { Internal, PaymentStatus, SortDirection } as const;',
+      );
+      expect(registryOutput).not.toContain('enumeration(');
     });
   });
 
