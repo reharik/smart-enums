@@ -3,4 +3,4 @@
  * diagnostics (see utilities/duplicateLoadDetection.ts). A test fails when
  * this drifts from package.json, so bump both together.
  */
-export const LIBRARY_VERSION = '0.9.0';
+export const LIBRARY_VERSION = '0.10.0';

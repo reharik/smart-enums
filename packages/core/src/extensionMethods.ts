@@ -63,5 +63,8 @@ export const addExtensionMethods = <TItem extends StandardEnumItem>(
     keys: () => enumItems.map(item => item.key),
 
     switchOn: switchOnImpl as CoreEnumMethods<TItem>['switchOn'],
+
+    toOptions: (): Array<{ value: string; label: string }> =>
+      [...enumItems].map(item => ({ value: item.value, label: item.display })),
   };
 };

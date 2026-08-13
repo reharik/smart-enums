@@ -493,6 +493,23 @@ export type CoreEnumMethods<TItem extends StandardEnumItem> = {
     prop: P,
     handlers: { [K in SwitchKeys<T, P>]: (v: SwitchArm<T, P, K>) => R },
   ): R;
+
+  /**
+   * Maps the members to `{ value, label }` pairs (from each member's `value` and
+   * `display`) in declaration order — ready to feed a select/dropdown component.
+   * On a {@link pickEnum} / {@link omitEnum} / {@link getSubsetByProp} view, the
+   * options are scoped to the subset.
+   *
+   * Returns a fresh array of fresh objects on every call, so mutating a result
+   * never leaks back into the enum.
+   *
+   * @example
+   * ```ts
+   * <Select options={Status.toOptions()} />
+   * // [{ value: 'ACTIVE', label: 'Active' }, …]
+   * ```
+   */
+  toOptions(): Array<{ value: string; label: string }>;
 };
 
 /**

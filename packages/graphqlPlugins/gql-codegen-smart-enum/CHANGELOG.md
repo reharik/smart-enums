@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.0
+
+- **BREAKING: `emit: 'externalDefines'` is now `emit: 'enumRegistry'`**, and the split between the two outputs moved. The reasoning: `enumRegistry` is the only generated code that imports user code (the hand-authored enums), so it must live in a file nothing else in the module graph imports — otherwise user code importing generated enums can form a load-order-dependent import cycle.
+  - The `'enums'` output, when `externalEnums` is set, now emits the `define<Name>Input` functions inline (schema key list + input pinning, importing no user code) and **stops emitting `enumRegistry`**.
+  - The new `'enumRegistry'` output emits only the registry barrel: it imports generated enums via the new **required `enumsImportPath`** config (path of the `'enums'` output relative to the registry file) and hand-authored enums via their `externalEnums` paths. Emit it into its own file that only bootstrap code imports.
+- `externalEnums` paths are now documented as relative to the output file; each name must still exist in the schema, and listing a name still implies skipping it from generation.
+
+## 0.3.0 – 0.6.0
+
+See git history.
+
 ## 0.2.6
 
 - **`skipEnums` config** — optional `string[]` of GraphQL enum type names to omit from the generated file. Use when certain schema enums should be handled only by the TypeScript plugin (or outside this plugin).

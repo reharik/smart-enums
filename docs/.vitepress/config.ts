@@ -22,6 +22,7 @@ export default defineConfig({
       { text: 'GraphQL', link: '/graphql/overview' },
       { text: 'Database', link: '/database/revival' },
       { text: 'Packages', link: '/packages/overview' },
+      { text: 'Blog', link: 'https://cannibalcode.com' },
     ],
 
     sidebar: [

@@ -5,13 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.10.0] - Unreleased
+## [0.10.0] - 2026-08-13
 
-> **Release coordination:** `@reharik/smart-enum-knex` has an outstanding fix of
-> the same "loud beats silent" family — under `strict`, a mapping key that
-> matches no row field is currently ignored silently. Plan a coordinated
-> release of both packages so the two behavior changes land (and are documented)
-> together.
+> **Release coordination:** `@reharik/smart-enum-knex` had a fix of the same
+> "loud beats silent" family — under `strict`, a mapping key that matches no
+> row field was ignored silently. That fix shipped in
+> `@reharik/smart-enum-knex` 0.1.0 (2026-08-03), so both behavior changes are
+> now published and documented.
 
 ### Why this release exists — the incident
 
@@ -105,6 +105,12 @@ What the library can do is make its state survive duplication, the same way
 
 ### Added
 
+- `toOptions()` on every enum object — and on `pickEnum` / `omitEnum` /
+  `getSubsetByProp` views, scoped to the subset. Maps the members to
+  `Array<{ value, label }>` (from each member's `value` and `display`) in
+  declaration order, ready to feed a select/dropdown component. Returns a
+  fresh array of fresh objects on every call, so mutating a result never
+  leaks back into the enum.
 - **Duplicate-install detection.** On load, each copy of the library registers
   its version and on-disk location (directory) in a realm-global slot; when a
   second *distinct location* registers, the library logs a warning naming every
