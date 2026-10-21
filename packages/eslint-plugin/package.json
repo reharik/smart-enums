@@ -1,0 +1,71 @@
+{
+  "name": "@reharik/eslint-plugin-smart-enum",
+  "version": "0.1.0",
+  "homepage": "https://reharik.github.io/smart-enums/eslint/no-smart-enum-reference-equality",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/reharik/smart-enums.git",
+    "directory": "packages/eslint-plugin"
+  },
+  "bugs": "https://github.com/reharik/smart-enums/issues",
+  "description": "Type-aware ESLint rules for @reharik/smart-enum",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "CHANGELOG.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "npm run clean && tsup",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "pretest": "npm run build --prefix ../core",
+    "test": "npm run typecheck && jest --config jest.config.cjs",
+    "prepublishOnly": "npm run build",
+    "publish:npm": "npm publish --access public --otp=$NPM_OTP"
+  },
+  "dependencies": {
+    "@typescript-eslint/utils": "^8.41.0"
+  },
+  "peerDependencies": {
+    "@typescript-eslint/parser": "^8",
+    "eslint": ">=9",
+    "typescript": ">=5"
+  },
+  "devDependencies": {
+    "@reharik/smart-enum": "*",
+    "@swc/core": "^1.13.5",
+    "@swc/jest": "^0.2.39",
+    "@types/jest": "^30.0.0",
+    "@typescript-eslint/parser": "^8.41.0",
+    "@typescript-eslint/rule-tester": "^8.41.0",
+    "eslint": "^9.34.0",
+    "jest": "^30.0.5",
+    "tsup": "^8.5.0",
+    "typescript": "^5.8.3"
+  },
+  "keywords": [
+    "eslint",
+    "eslintplugin",
+    "eslint-plugin",
+    "@reharik/smart-enum",
+    "smart enum"
+  ]
+}

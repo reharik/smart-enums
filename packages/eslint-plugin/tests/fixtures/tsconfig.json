@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "target": "es2022",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "types": [],
+    "paths": {
+      "smart-enum-copy": ["./smart-enum-copy/index.d.ts"]
+    }
+  },
+  "include": ["file.ts", "enums.ts"]
+}

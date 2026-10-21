@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "lib": ["esnext"],
+    "strict": true,
+    "skipLibCheck": true,
+    "moduleResolution": "nodenext",
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "inlineSourceMap": true,
+    "target": "es2022",
+    "module": "nodenext",
+    "outDir": "dist",
+    "rootDir": "src",
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "declaration": true,
+    "declarationMap": true
+  },
+  "include": ["src/**/*.ts"]
+}

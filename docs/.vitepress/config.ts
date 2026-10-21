@@ -74,6 +74,15 @@ export default defineConfig({
         ],
       },
       {
+        text: 'ESLint',
+        items: [
+          {
+            text: 'no-smart-enum-reference-equality',
+            link: '/eslint/no-smart-enum-reference-equality',
+          },
+        ],
+      },
+      {
         text: 'Packages',
         items: [{ text: 'Ecosystem overview', link: '/packages/overview' }],
       },
