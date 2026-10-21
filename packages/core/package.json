@@ -1,6 +1,12 @@
 {
   "name": "@reharik/smart-enum",
   "version": "0.10.0",
+  "homepage": "https://reharik.github.io/smart-enums/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/reharik/smart-enums.git"
+  },
+  "bugs": "https://github.com/reharik/smart-enums/issues",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

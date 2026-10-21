@@ -1,6 +1,12 @@
 {
   "name": "@reharik/graphql-codegen-smart-enum-type-policies",
   "version": "0.1.5",
+  "homepage": "https://reharik.github.io/smart-enums/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/reharik/smart-enums.git"
+  },
+  "bugs": "https://github.com/reharik/smart-enums/issues",
   "description": "GraphQL Code Generator plugin for SmartEnum type policies generation from schema enums",
   "license": "MIT",
   "type": "module",

@@ -3,6 +3,7 @@
 A [GraphQL Code Generator](https://the-guild.dev/graphql/codegen) plugin that generates [Apollo Client `typePolicies`](https://www.apollographql.com/docs/react/caching/cache-configuration/) so enum fields come out of the cache as live [`@reharik/smart-enum`](https://www.npmjs.com/package/@reharik/smart-enum) members instead of raw strings.
 
 📖 **Full documentation:** https://reharik.github.io/smart-enums/graphql/type-policies
+📖 **Blog:** https://cannibalcode.com/
 
 ## The problem it removes
 
@@ -32,17 +33,17 @@ import { smartEnumTypePolicies } from './generated/graphql-smart-enum-type-polic
 new InMemoryCache({ typePolicies: { ...smartEnumTypePolicies } });
 
 // then, in a component:
-data.order.status.display;   // 'Paid' — a real member, straight from the cache
+data.order.status.display; // 'Paid' — a real member, straight from the cache
 ```
 
 It unwraps `NonNull`/`List` wrappers (lists rehydrate element by element), skips non-enum and introspection fields, and emits stable, alphabetized output. Config options, null/undefined handling, and the merge-order gotcha (a later policy for the same type can shadow these) are in the [docs](https://reharik.github.io/smart-enums/graphql/type-policies).
 
 ## Related packages
 
-| Package | Purpose |
-| --- | --- |
-| [`@reharik/smart-enum`](https://www.npmjs.com/package/@reharik/smart-enum) | Core library (runtime dependency) |
-| [`@reharik/graphql-codegen-smart-enum`](https://www.npmjs.com/package/@reharik/graphql-codegen-smart-enum) | Generate the enum definitions this imports |
+| Package                                                                                                                  | Purpose                                         |
+| ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
+| [`@reharik/smart-enum`](https://www.npmjs.com/package/@reharik/smart-enum)                                               | Core library (runtime dependency)               |
+| [`@reharik/graphql-codegen-smart-enum`](https://www.npmjs.com/package/@reharik/graphql-codegen-smart-enum)               | Generate the enum definitions this imports      |
 | [`@reharik/graphql-codegen-smart-enum-preset`](https://www.npmjs.com/package/@reharik/graphql-codegen-smart-enum-preset) | Wires the whole stack with zero per-enum config |
 
 ## License

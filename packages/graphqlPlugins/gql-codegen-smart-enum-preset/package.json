@@ -1,6 +1,12 @@
 {
   "name": "@reharik/graphql-codegen-smart-enum-preset",
   "version": "0.5.0",
+  "homepage": "https://reharik.github.io/smart-enums/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/reharik/smart-enums.git"
+  },
+  "bugs": "https://github.com/reharik/smart-enums/issues",
   "description": "GraphQL Code Generator preset for end-to-end smart-enum integration. Auto-derives enumValues maps and orchestrates smart-enum codegen plugins.",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -52,9 +58,5 @@
     "smart-enum",
     "typescript"
   ],
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/reharik/smart-enums"
-  }
+  "license": "MIT"
 }

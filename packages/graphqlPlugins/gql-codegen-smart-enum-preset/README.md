@@ -3,6 +3,7 @@
 A [GraphQL Code Generator](https://the-guild.dev/graphql/codegen) preset that wires smart enums across your whole codegen setup — definitions, resolver types, operation types, and Apollo policies — and auto-derives the `enumValues` map from your schema, so adding a new enum needs zero codegen-config changes.
 
 📖 **Full documentation:** https://reharik.github.io/smart-enums/graphql/preset
+📖 **Blog:** https://cannibalcode.com/
 
 ## The problem it removes
 
@@ -36,10 +37,10 @@ Three modes cover the stack: `enums` (generate the definitions — plus drift-pr
 
 ## Related packages
 
-| Package | Purpose |
-| --- | --- |
-| [`@reharik/smart-enum`](https://www.npmjs.com/package/@reharik/smart-enum) | Core library |
-| [`@reharik/graphql-codegen-smart-enum`](https://www.npmjs.com/package/@reharik/graphql-codegen-smart-enum) | Definitions (used by `enums` mode) |
+| Package                                                                                                                                | Purpose                                        |
+| -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| [`@reharik/smart-enum`](https://www.npmjs.com/package/@reharik/smart-enum)                                                             | Core library                                   |
+| [`@reharik/graphql-codegen-smart-enum`](https://www.npmjs.com/package/@reharik/graphql-codegen-smart-enum)                             | Definitions (used by `enums` mode)             |
 | [`@reharik/graphql-codegen-smart-enum-type-policies`](https://www.npmjs.com/package/@reharik/graphql-codegen-smart-enum-type-policies) | Apollo policies (used by `type-policies` mode) |
 
 ## License

@@ -1,6 +1,12 @@
 {
   "name": "@reharik/graphql-codegen-smart-enum",
   "version": "0.7.0",
+  "homepage": "https://reharik.github.io/smart-enums/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/reharik/smart-enums.git"
+  },
+  "bugs": "https://github.com/reharik/smart-enums/issues",
   "description": "GraphQL Code Generator plugin for SmartEnum generation from schema enums",
   "license": "MIT",
   "type": "module",

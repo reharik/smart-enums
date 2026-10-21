@@ -3,6 +3,7 @@
 Type-safe, feature-rich enumerations for TypeScript. Every member is a frozen object that carries its own wire value, display label, ordering, and any custom fields you give it — with runtime lookup, iteration, serialization, and database revival built in.
 
 📖 **Full documentation:** https://reharik.github.io/smart-enums/
+📖 **Blog:** https://cannibalcode.com/
 
 ## The idea
 

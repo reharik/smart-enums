@@ -1,6 +1,12 @@
 {
   "name": "@reharik/smart-enum-knex",
   "version": "0.1.0",
+  "homepage": "https://reharik.github.io/smart-enums/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/reharik/smart-enums.git"
+  },
+  "bugs": "https://github.com/reharik/smart-enums/issues",
   "description": "Thin Knex adapter for @reharik/smart-enum row revival via explicit query context",
   "type": "module",
   "main": "./dist/index.cjs",
