@@ -18,12 +18,14 @@ npm install --save-dev @reharik/eslint-plugin-smart-enum @typescript-eslint/pars
 
 ## Configure (flat config)
 
+### 1. Enable type information (required)
+
 ::: danger This rule is type-aware
 Without type information it does **nothing useful**. You must give the parser a TypeScript
-program via `parserOptions.projectService: true` or `parserOptions.project`. The plugin's
-`recommended` config deliberately does **not** set a parser or parser options — you own that.
-If type information is missing, typescript-eslint throws a "requires type information" error;
-if your files are matched by a config block that has no `.ts` parser at all, the rule never runs.
+program via `parserOptions.projectService: true` or `parserOptions.project`. The plugin does
+**not** set a parser or parser options — you own that. If type information is missing,
+typescript-eslint throws a "requires type information" error; if your files are matched by a
+config block that has no `.ts` parser at all, the rule never runs.
 :::
 
 ```js
@@ -42,17 +44,29 @@ export default [
       },
     },
   },
-  smartEnum.configs.recommended,
+  // 2. add the rule here — see below
 ];
 ```
 
-Or enable the rule by hand:
+### 2. Add the rule
+
+Pick one of these and add it to the array after the parser block.
+
+**Recommended config** — turns the rule on as `error` for every file ESLint lints:
+
+```js
+smartEnum.configs.recommended,
+```
+
+**Explicit plugin and rule** — use this to set the rule to `'warn'` or to limit it
+to certain files:
 
 ```js
 {
+  files: ['src/**/*.ts'],
   plugins: { 'smart-enum': smartEnum },
-  rules: { 'smart-enum/no-smart-enum-reference-equality': 'error' },
-}
+  rules: { 'smart-enum/no-smart-enum-reference-equality': 'warn' },
+},
 ```
 
 ## Before / after
