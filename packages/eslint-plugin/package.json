@@ -1,6 +1,6 @@
 {
   "name": "@reharik/eslint-plugin-smart-enum",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "homepage": "https://reharik.github.io/smart-enums/eslint/no-smart-enum-reference-equality",
   "repository": {
     "type": "git",
